@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { TagModal } from "@/features/trackings/components/modal/tag-modal";
 
 interface listTagsProps {
-  tags: Lead["leadTags"];
+  tags?: Lead["leadTags"];
   leadId: string;
   trackingId: string;
 }
@@ -38,41 +38,42 @@ interface listTagsProps {
 export function ListTags({ tags, leadId, trackingId }: listTagsProps) {
   return (
     <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
-      {tags.slice(0, 6).map(({ tag }) => {
-        const textColor = getContrastColor(tag.color || "");
-        return (
-          <Tooltip key={tag.id}>
-            <TooltipTrigger asChild>
-              <Badge
-                // variant="outline"
-                className="px-1 py-0 text-[10px] h-4 font-normal"
-                style={{
-                  backgroundColor: tag.color ?? undefined,
-                  color: textColor,
-                }}
-              >
-                {tag.name}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{tag.name}</p>
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
-      {tags.length > 6 && (
+      {tags &&
+        tags.slice(0, 6).map(({ tag }) => {
+          const textColor = getContrastColor(tag.color || "");
+          return (
+            <Tooltip key={tag.id}>
+              <TooltipTrigger asChild>
+                <Badge
+                  // variant="outline"
+                  className="px-1 py-0 text-[10px] h-4 font-normal"
+                  style={{
+                    backgroundColor: tag.color ?? undefined,
+                    color: textColor,
+                  }}
+                >
+                  {tag.name}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{tag.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      {tags && tags.length > 6 && (
         <Badge
           variant="outline"
           className="px-1 py-0 text-[10px] h-4 font-normal bg-muted"
         >
-          +{tags.length - 6}
+          +{tags && tags.length - 6}
         </Badge>
       )}
       <Tooltip>
         <TooltipTrigger asChild>
           <AddTagsButton
             leadId={leadId}
-            existingTagIds={tags.map((lt) => lt.tag.id)}
+            existingTagIds={tags?.map((lt) => lt.tag.id) || []}
             trackingId={trackingId}
           />
         </TooltipTrigger>

@@ -37,7 +37,7 @@ import { phoneMaskFull } from "@/utils/format-phone";
 
 interface LeadBoxConversation extends Conversation {
   lead: Lead & {
-    leadTags: {
+    leadTags?: {
       tag: {
         id: string;
         name: string;
@@ -128,13 +128,13 @@ export function LeadBox({
               )}
             </div>
           </div>
-          {/* <div className="mt-1">
+          <div className="mt-1">
             <ListTags
               tags={item.lead.leadTags}
               leadId={item.lead.id}
               trackingId={item.trackingId}
             />
-          </div> */}
+          </div>
         </div>
         <div className="flex flex-col items-end justify-between h-full min-w-[60px] py-1">
           <div className="flex items-center gap-1">

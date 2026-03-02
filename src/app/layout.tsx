@@ -15,6 +15,9 @@ const inter = Inter({
 // 1918 x 850
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  ),
   title: "Nasa.ex",
   description: "Suas ideias e Seus Planos. Bem-vindo ao N.A.S.A",
   icons: {

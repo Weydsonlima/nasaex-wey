@@ -11,7 +11,7 @@ const prisma = new PrismaClient({
   adapter,
 });
 
-const trackingId = "cmhtiltbu0001gk6g16gqybyv";
+const trackingId = "cmm0zu8ib0000f4sliuby0q77";
 const statusId = "cmhwf3nmx0003gkp8svthw3tm";
 const statusId2 = "cmhxef2sy0001gkiokbbs6nl3";
 

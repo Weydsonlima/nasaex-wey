@@ -1,4 +1,4 @@
-import { MigrationData } from "../_components/imigration-data";
+import { MigrationData } from "@/features/settings/components/imigration-data";
 
 export default function Page() {
   return (

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { phoneMask } from "@/utils/format-phone";
+import { phoneMask, phoneMaskFull } from "@/utils/format-phone";
 import {
   Tooltip,
   TooltipContent,
@@ -152,7 +152,7 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
         </LeadItemContainer>
         <LeadItemContainer>
           <Phone className="size-3" />
-          {phoneMask(data.phone) || "(00) 00000-0000"}
+          {phoneMaskFull(data.phone) || "(00) 00000-0000"}
         </LeadItemContainer>
         <LeadItemContainer className="items-baseline">
           <Tag className="size-3" />

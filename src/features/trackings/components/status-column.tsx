@@ -79,7 +79,7 @@ export function StatusColumn({
     ],
   );
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteLeadsByStatus({
       statusId: status.id,
       trackingId,
@@ -134,9 +134,15 @@ export function StatusColumn({
         <ScrollArea className="flex-1 min-h-0">
           <ol className="mx-1 px-1 py-2 flex flex-col gap-y-2">
             <SortableContext items={leads.map((l) => l.id)}>
-              {leads.map((lead) => (
-                <LeadItem key={lead.id} data={lead} />
-              ))}
+              {isLoading && (
+                <div className="flex flex-col gap-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-32 rounded-md shadow-sm" />
+                  ))}
+                </div>
+              )}
+              {!isLoading &&
+                leads.map((lead) => <LeadItem key={lead.id} data={lead} />)}
             </SortableContext>
 
             {/* ✅ Elemento sentinela no final da lista */}

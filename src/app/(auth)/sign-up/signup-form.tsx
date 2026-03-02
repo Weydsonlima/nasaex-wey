@@ -19,6 +19,8 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useQueryState } from "nuqs";
 
 const signUpSchema = z
   .object({
@@ -40,17 +42,30 @@ export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const [callbackUrl] = useQueryState("callbackUrl");
+  const [emailParam] = useQueryState("email");
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<SignUpData>({
     resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: emailParam || "",
+    },
   });
   const [isLoading, setIsLoading] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setConfirmPassword] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (emailParam) {
+      setValue("email", emailParam);
+    }
+  }, [emailParam, setValue]);
 
   const onSignUp = (data: SignUpData) => {
     setIsLoading(async () => {
@@ -59,12 +74,12 @@ export function SignupForm({
           email: data.email,
           password: data.password,
           name: data.name,
-          callbackURL: "/tracking",
+          callbackURL: callbackUrl ? callbackUrl : "/tracking",
         },
         {
           onSuccess: () => {
             toast.success("Conta criada com succeso");
-            router.push("/tracking");
+            router.push(callbackUrl ? callbackUrl : "/tracking");
           },
           onError: (err) => {
             console.log(err);
@@ -76,9 +91,9 @@ export function SignupForm({
   };
 
   const onSignInWithGoogle = async () => {
-    const data = await authClient.signIn.social({
+    await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/tracking",
+      callbackURL: callbackUrl ? callbackUrl : "/tracking",
       scopes: ["https://www.googleapis.com/auth/drive.file"],
     });
   };
@@ -225,7 +240,12 @@ export function SignupForm({
             Entrar com Google
           </Button>
           <FieldDescription className="px-6 text-center">
-            Já possui uma conta? <a href="/sign-in">Entrar</a>
+            Já possui uma conta?{" "}
+            <a
+              href={`/sign-in${callbackUrl ? `?callbackUrl=${callbackUrl}` : ""}`}
+            >
+              Entrar
+            </a>
           </FieldDescription>
         </Field>
       </FieldGroup>

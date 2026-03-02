@@ -8,6 +8,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -63,7 +64,7 @@ export function InvitationsTab({
   };
 
   const copyInvitationLink = async (invitationId: string) => {
-    const link = `https://orbita.nasaex.com/accept-invitation/${invitationId}`;
+    const link = `${process.env.NEXT_PUBLIC_BASE_URL}/accept-invitation?inviteId=${invitationId}`;
     await navigator.clipboard.writeText(link);
     toast.success("Link de convite copiado");
   };
@@ -152,9 +153,10 @@ export function InvitationsTab({
                           className="cursor-pointer"
                           onClick={() => copyInvitationLink(invitation.id)}
                         >
-                          <Copy className="size-4 mr-2" />
+                          <Copy className="size-4" />
                           Copiar Link
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="cursor-pointer"
                           variant="destructive"

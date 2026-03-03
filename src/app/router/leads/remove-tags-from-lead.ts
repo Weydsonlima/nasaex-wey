@@ -5,11 +5,11 @@ import { z } from "zod";
 import { requireOrgMiddleware } from "../../middlewares/org";
 import { recordLeadHistory } from "./utils/history";
 
-export const addTagsToLead = base
+export const removeTagsFromLead = base
   .use(requiredAuthMiddleware)
   .use(requireOrgMiddleware)
   .route({
-    path: "/leads/add-tags",
+    path: "/leads/remove-tags",
     method: "POST",
   })
   .input(
@@ -28,23 +28,24 @@ export const addTagsToLead = base
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const created = await tx.leadTag.createMany({
-        data: input.tagIds.map((tagId) => ({
+      const deleted = await tx.leadTag.deleteMany({
+        where: {
           leadId: input.leadId,
-          tagId,
-        })),
-        skipDuplicates: true,
+          tagId: {
+            in: input.tagIds,
+          },
+        },
       });
 
       await recordLeadHistory({
         leadId: input.leadId,
         userId: context.user.id,
         action: lead.currentAction,
-        notes: "Tags adicionadas ao lead",
+        notes: "Tags removidas do lead",
         tx,
       });
 
-      return created;
+      return deleted;
     });
 
     return {

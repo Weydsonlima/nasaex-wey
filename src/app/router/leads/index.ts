@@ -24,6 +24,7 @@ import { updateWhatsappTagsLead } from "./update-whatsapp-labels";
 import { addTagsToLead } from "./add-tags";
 import { addHistoricLead } from "./add-historic-lead";
 import { listHistoric } from "./list-historic";
+import { removeTagsFromLead } from "./remove-tags-from-lead";
 
 export const leadRoutes = {
   list: listLead,
@@ -50,6 +51,7 @@ export const leadRoutes = {
   createFile: createLeadFile,
   updateWhatsappTags: updateWhatsappTagsLead,
   addTags: addTagsToLead,
+  removeTags: removeTagsFromLead,
   addHistoricLead: addHistoricLead,
   listHistoric: listHistoric,
 };

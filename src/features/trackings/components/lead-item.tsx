@@ -162,7 +162,7 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
         </LeadItemContainer>
         <LeadItemContainer className="items-baseline">
           <Tag className="size-3" />
-          <ListLeadTags leadId={data.id} />
+          <ListLeadTags leadId={data.id} tags={data.leadTags} />
         </LeadItemContainer>
       </div>
       <Separator />
@@ -187,11 +187,9 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Avatar className="size-4">
+            <Avatar className="size-4 border-border border">
               <AvatarImage
-                src={
-                  data.responsible?.image || "https://github.com/ElFabrica.png"
-                }
+                src={data.responsible?.image || "/user-placeholder.png"}
                 alt="photo user"
               />
               <AvatarFallback>
@@ -200,7 +198,7 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
             </Avatar>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{data.responsible?.name}</p>
+            <p>{data.responsible?.name || "Sem responsável"}</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -222,8 +220,11 @@ function LeadItemContainer({ className, ...props }: LeadItemContainerProps) {
   );
 }
 
-function ListLeadTags({ leadId }: { leadId: string }) {
-  const { tags: leadTags } = useQueryTagByLead(leadId);
+function ListLeadTags({ leadId, tags }: { leadId: string; tags: any[] }) {
+  const { tags: leadTags } = useQueryTagByLead(
+    leadId,
+    tags.map((t) => t.tag),
+  );
 
   return (
     <div className="flex flex-wrap gap-1">

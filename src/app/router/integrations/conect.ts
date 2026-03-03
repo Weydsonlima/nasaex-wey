@@ -46,7 +46,7 @@ export const connectInstanceUazapi = base
         url: `${process.env.NEXT_PUBLIC_APP_URL}/api/chat/webhook?trackingId=${trackingId}`,
         enabled: true,
         events: ["messages", "connection", "labels", "chat_labels"],
-        action: "add",
+        action: "update",
         excludeMessages: ["wasSentByApi", "isGroupYes"],
       },
     });

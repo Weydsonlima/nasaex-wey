@@ -69,7 +69,6 @@ export function LeadBox({
 }: UserBloxProps) {
   const router = useRouter();
   const { conversationId } = useParams();
-  const [showTagModal, setShowTagModal] = useState(false);
   const markRead = useMutationMarkReadMessage();
 
   const handleClick = useCallback(() => {

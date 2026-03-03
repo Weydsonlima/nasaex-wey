@@ -6,6 +6,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowUpRight,
+  CheckIcon,
   Grip,
   Mail,
   Phone,
@@ -43,7 +44,10 @@ import {
 } from "@/components/ui/command";
 import { useQueryTags } from "@/features/tags/hooks/use-tags";
 import { useParams } from "next/navigation";
-import { useAddTagsOptimistic } from "../hooks/use-leads";
+import {
+  useAddTagsOptimistic,
+  useRemoveTagOptimistic,
+} from "../hooks/use-leads";
 import { cn } from "@/lib/utils";
 
 const TEMP_COLOR = {
@@ -261,16 +265,36 @@ function AddTagsButton({
   };
 
   const { addTags } = useAddTagsOptimistic({ leadId, trackingId });
+  const { removeTags } = useRemoveTagOptimistic({ leadId });
 
   const onSelectTag = (tagId: string) => {
-    addTags.mutate({
-      leadId,
-      tagIds: [tagId],
-    });
-    setOpen(false);
-  };
+    if (existingTagIds.includes(tagId)) {
+      removeTags.mutate(
+        {
+          leadId,
+          tagIds: [tagId],
+        },
+        {
+          onSuccess: () => {
+            setOpen(false);
+          },
+        },
+      );
+      return;
+    }
 
-  const availableTags = tags?.filter((tag) => !existingTagIds.includes(tag.id));
+    addTags.mutate(
+      {
+        leadId,
+        tagIds: [tagId],
+      },
+      {
+        onSuccess: () => {
+          setOpen(false);
+        },
+      },
+    );
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -300,20 +324,25 @@ function AddTagsButton({
               </span>
             </CommandEmpty>
             <CommandGroup>
-              {availableTags?.map((tag) => (
-                <CommandItem
-                  key={tag.id}
-                  value={`${tag.name}-${tag.id}`}
-                  onSelect={() => onSelectTag(tag.id)}
-                  className="cursor-pointer"
-                >
-                  <Tag
-                    className="mr-2 h-3.5 w-3.5"
-                    style={{ color: tag.color || "", fill: tag.color || "" }}
-                  />
-                  <span>{tag.name}</span>
-                </CommandItem>
-              ))}
+              {tags?.map((tag) => {
+                const isTagSelected = existingTagIds.includes(tag.id);
+
+                return (
+                  <CommandItem
+                    key={tag.id}
+                    value={`${tag.name}-${tag.id}`}
+                    onSelect={() => onSelectTag(tag.id)}
+                    className="cursor-pointer"
+                  >
+                    <Tag
+                      className="mr-2 size-3.5"
+                      style={{ color: tag.color || "", fill: tag.color || "" }}
+                    />
+                    <span>{tag.name}</span>
+                    {isTagSelected && <CheckIcon className="ml-auto size-4" />}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

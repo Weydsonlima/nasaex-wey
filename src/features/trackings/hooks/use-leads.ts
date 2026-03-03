@@ -89,9 +89,6 @@ export function useAddTagsOptimistic({
 
         return { previousData };
       },
-      onSuccess: () => {
-        toast.success("Tag adicionada com sucesso");
-      },
       onError: (err, _, context) => {
         if (context?.previousData) {
           context.previousData.forEach(([queryKey, data]) => {
@@ -109,4 +106,61 @@ export function useAddTagsOptimistic({
   );
 
   return { addTags };
+}
+
+export function useRemoveTagOptimistic({ leadId }: { leadId: string }) {
+  const queryClient = useQueryClient();
+
+  const removeTags = useMutation(
+    orpc.leads.removeTags.mutationOptions({
+      onMutate: async (data: { leadId: string; tagIds: string[] }) => {
+        const queryKey = ["leads.listLeadsByStatus"];
+
+        await queryClient.cancelQueries({ queryKey });
+
+        const previousData = queryClient.getQueriesData({ queryKey });
+
+        queryClient.setQueriesData({ queryKey }, (oldData: any) => {
+          if (!oldData || !oldData.pages) return oldData;
+
+          const newPages = oldData.pages.map((page: any) => ({
+            ...page,
+            leads: page.leads.map((lead: any) => {
+              if (lead.id === leadId) {
+                return {
+                  ...lead,
+                  leadTags: lead.leadTags?.filter(
+                    (lt: any) => !data.tagIds.includes(lt.tag.id),
+                  ),
+                };
+              }
+              return lead;
+            }),
+          }));
+
+          return {
+            ...oldData,
+            pages: newPages,
+          };
+        });
+
+        return { previousData };
+      },
+      onError: (err, _, context) => {
+        if (context?.previousData) {
+          context.previousData.forEach(([queryKey, data]) => {
+            queryClient.setQueryData(queryKey, data);
+          });
+        }
+        toast.error("Erro ao remover tags");
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["leads.listLeadsByStatus"],
+        });
+      },
+    }),
+  );
+
+  return { removeTags };
 }

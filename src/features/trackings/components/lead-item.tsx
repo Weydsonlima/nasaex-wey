@@ -44,7 +44,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useQueryTags } from "@/features/tags/hooks/use-tags";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   useAddTagsOptimistic,
   useRemoveTagOptimistic,
@@ -66,6 +66,7 @@ const TEMP_TEXT = {
 } as const;
 
 export const LeadItem = memo(({ data }: { data: Lead }) => {
+  const router = useRouter();
   const { toggleLead, isSelected } = useLeadStore();
   const { trackingId } = useParams<{ trackingId: string }>();
   const selected = isSelected(data.id);
@@ -140,11 +141,12 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
             variant="ghost"
             className="size-7 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
             asChild
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/contatos/${data.id}`);
+            }}
           >
-            <Link href={`/contatos/${data.id}`}>
-              <ArrowUpRight className="size-3.5" />
-            </Link>
+            <ArrowUpRight className="size-3.5" />
           </Button>
         </div>
       </div>

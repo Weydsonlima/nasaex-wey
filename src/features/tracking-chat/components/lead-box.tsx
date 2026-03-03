@@ -4,25 +4,19 @@ import type { Conversation, Lead } from "@/generated/prisma/client";
 import { LeadSource } from "@/generated/prisma/enums";
 import { format, isToday, isYesterday } from "date-fns";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { AvatarLead } from "./avatar-lead";
-import { SelectedConversationOptions } from "./selected-conversation";
 import { colorsByTemperature, LeadSourceColors } from "../utils/card-lead";
 import {
   ArrowUpRightIcon,
   CalendarIcon,
-  ChevronDownIcon,
   ClipboardListIcon,
   GlobeIcon,
-  PlusIcon,
   RocketIcon,
-  TagIcon,
   UserIcon,
 } from "lucide-react";
 
-import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ListTags } from "./list-tags";
-import { AddTagLead } from "./add-tag-lead-depreceated";
 import { Badge } from "@/components/ui/badge";
 import { MessageTypeIcon, getMessageTypeName } from "./message-type-icon";
 import { useMutationMarkReadMessage } from "../hooks/use-messages";

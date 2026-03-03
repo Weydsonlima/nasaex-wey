@@ -41,126 +41,108 @@ export function useAddTagsOptimistic({
   trackingId: string;
 }) {
   const queryClient = useQueryClient();
-  const { tags } = useQueryTags({ trackingId });
 
-  const addTags = useMutation(
+  return useMutation(
     orpc.leads.addTags.mutationOptions({
       onMutate: async (newTagData: { leadId: string; tagIds: string[] }) => {
-        const queryKey = ["leads.listLeadsByStatus"];
+        const queryKey = orpc.tags.getTagByLead.queryKey({
+          input: { leadId },
+        });
 
         await queryClient.cancelQueries({ queryKey });
 
-        const previousData = queryClient.getQueriesData({ queryKey });
+        const previousTags = queryClient.getQueryData<any>(queryKey);
 
-        queryClient.setQueriesData({ queryKey }, (oldData: any) => {
-          if (!oldData || !oldData.pages) return oldData;
+        const allTags = queryClient.getQueryData<any>(
+          orpc.tags.listTags.queryKey({
+            input: { query: { trackingId } },
+          }),
+        );
 
-          const newPages = oldData.pages.map((page: any) => ({
-            ...page,
-            leads: page.leads.map((lead: any) => {
-              if (lead.id === leadId) {
-                const selectedTags = tags?.filter((t) =>
-                  newTagData.tagIds.includes(t.id),
-                );
+        queryClient.setQueryData(queryKey, (old: any) => {
+          const currentTags = old?.tags || [];
 
-                const existingIds =
-                  lead.leadTags?.map((lt: any) => lt.tag.id) || [];
-                const tagsToAdd =
-                  selectedTags?.filter((t) => !existingIds.includes(t.id)) ||
-                  [];
+          const addedTags =
+            allTags?.tags?.filter((t: any) =>
+              newTagData.tagIds.includes(t.id),
+            ) || [];
 
-                return {
-                  ...lead,
-                  leadTags: [
-                    ...(lead.leadTags || []),
-                    ...tagsToAdd.map((tag) => ({ tag })),
-                  ],
-                };
-              }
-              return lead;
-            }),
-          }));
+          const existingIds = currentTags.map((t: any) => t.id);
+          const uniqueAddedTags = addedTags.filter(
+            (t: any) => !existingIds.includes(t.id),
+          );
 
           return {
-            ...oldData,
-            pages: newPages,
+            ...old,
+            tags: [...currentTags, ...uniqueAddedTags],
           };
         });
 
-        return { previousData };
+        return { previousTags };
       },
       onError: (err, _, context) => {
-        if (context?.previousData) {
-          context.previousData.forEach(([queryKey, data]) => {
-            queryClient.setQueryData(queryKey, data);
-          });
+        const queryKey = orpc.tags.getTagByLead.queryKey({
+          input: { leadId },
+        });
+        if (context?.previousTags) {
+          queryClient.setQueryData(queryKey, context.previousTags);
         }
         toast.error("Erro ao adicionar tags");
       },
       onSettled: () => {
         queryClient.invalidateQueries({
-          queryKey: ["leads.listLeadsByStatus"],
+          queryKey: orpc.tags.getTagByLead.queryKey({
+            input: { leadId },
+          }),
         });
       },
     }),
   );
-
-  return { addTags };
 }
 
 export function useRemoveTagOptimistic({ leadId }: { leadId: string }) {
   const queryClient = useQueryClient();
 
-  const removeTags = useMutation(
+  return useMutation(
     orpc.leads.removeTags.mutationOptions({
       onMutate: async (data: { leadId: string; tagIds: string[] }) => {
-        const queryKey = ["leads.listLeadsByStatus"];
+        const queryKey = orpc.tags.getTagByLead.queryKey({
+          input: { leadId },
+        });
 
         await queryClient.cancelQueries({ queryKey });
 
-        const previousData = queryClient.getQueriesData({ queryKey });
+        const previousTags = queryClient.getQueryData<any>(queryKey);
 
-        queryClient.setQueriesData({ queryKey }, (oldData: any) => {
-          if (!oldData || !oldData.pages) return oldData;
-
-          const newPages = oldData.pages.map((page: any) => ({
-            ...page,
-            leads: page.leads.map((lead: any) => {
-              if (lead.id === leadId) {
-                return {
-                  ...lead,
-                  leadTags: lead.leadTags?.filter(
-                    (lt: any) => !data.tagIds.includes(lt.tag.id),
-                  ),
-                };
-              }
-              return lead;
-            }),
-          }));
-
+        queryClient.setQueryData(queryKey, (old: any) => {
+          const currentTags = old?.tags || [];
           return {
-            ...oldData,
-            pages: newPages,
+            ...old,
+            tags: currentTags.filter((t: any) => !data.tagIds.includes(t.id)),
           };
         });
 
-        return { previousData };
+        return { previousTags };
       },
+      // onSuccess: () => {
+      //   toast.success("Tag removida com sucesso");
+      // },
       onError: (err, _, context) => {
-        if (context?.previousData) {
-          context.previousData.forEach(([queryKey, data]) => {
-            queryClient.setQueryData(queryKey, data);
-          });
+        const queryKey = orpc.tags.getTagByLead.queryKey({
+          input: { leadId },
+        });
+        if (context?.previousTags) {
+          queryClient.setQueryData(queryKey, context.previousTags);
         }
         toast.error("Erro ao remover tags");
       },
       onSettled: () => {
         queryClient.invalidateQueries({
-          queryKey: ["leads.listLeadsByStatus"],
+          queryKey: orpc.tags.getTagByLead.queryKey({
+            input: { leadId },
+          }),
         });
       },
     }),
   );
-
-  return { removeTags };
 }

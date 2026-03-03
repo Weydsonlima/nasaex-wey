@@ -15,8 +15,9 @@ import {
   Tag,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useQueryTagByLead } from "@/features/tracking-chat/hooks/use-leads-conversation";
 import { Button } from "@/components/ui/button";
-import { phoneMask, phoneMaskFull } from "@/utils/format-phone";
+import { phoneMaskFull } from "@/utils/format-phone";
 import {
   Tooltip,
   TooltipContent,
@@ -66,6 +67,7 @@ const TEMP_TEXT = {
 
 export const LeadItem = memo(({ data }: { data: Lead }) => {
   const { toggleLead, isSelected } = useLeadStore();
+  const { trackingId } = useParams<{ trackingId: string }>();
   const selected = isSelected(data.id);
 
   const {
@@ -160,36 +162,7 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
         </LeadItemContainer>
         <LeadItemContainer className="items-baseline">
           <Tag className="size-3" />
-          <div className="flex flex-wrap gap-1">
-            {data.leadTags && data.leadTags.length > 0 && (
-              <>
-                {data.leadTags.slice(0, 8).map((lt) => (
-                  <Badge
-                    key={lt.tag.id}
-                    className="px-1 py-0 text-[10px] h-4 font-normal"
-                    style={{
-                      backgroundColor: lt.tag.color || "",
-                      color: "white",
-                    }}
-                  >
-                    {lt.tag.name}
-                  </Badge>
-                ))}
-                {data.leadTags.length > 8 && (
-                  <Badge
-                    variant="outline"
-                    className="px-1 py-0 text-[10px] h-4 font-normal bg-muted"
-                  >
-                    +{data.leadTags.length - 8}
-                  </Badge>
-                )}
-              </>
-            )}
-            <AddTagsButton
-              leadId={data.id}
-              existingTagIds={data.leadTags?.map((lt) => lt.tag.id) || []}
-            />
-          </div>
+          <ListLeadTags leadId={data.id} />
         </LeadItemContainer>
       </div>
       <Separator />
@@ -249,6 +222,43 @@ function LeadItemContainer({ className, ...props }: LeadItemContainerProps) {
   );
 }
 
+function ListLeadTags({ leadId }: { leadId: string }) {
+  const { tags: leadTags } = useQueryTagByLead(leadId);
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {leadTags && leadTags.length > 0 && (
+        <>
+          {leadTags.slice(0, 8).map((tag) => (
+            <Badge
+              key={tag.id}
+              className="px-1 py-0 text-[10px] h-4 font-normal"
+              style={{
+                backgroundColor: tag.color || "",
+                color: "white",
+              }}
+            >
+              {tag.name}
+            </Badge>
+          ))}
+          {leadTags.length > 8 && (
+            <Badge
+              variant="outline"
+              className="px-1 py-0 text-[10px] h-4 font-normal bg-muted"
+            >
+              +{leadTags.length - 8}
+            </Badge>
+          )}
+        </>
+      )}
+      <AddTagsButton
+        leadId={leadId}
+        existingTagIds={leadTags?.map((lt) => lt.id) || []}
+      />
+    </div>
+  );
+}
+
 function AddTagsButton({
   leadId,
   existingTagIds,
@@ -264,22 +274,12 @@ function AddTagsButton({
     setOpen(!open);
   };
 
-  const { addTags } = useAddTagsOptimistic({ leadId, trackingId });
-  const { removeTags } = useRemoveTagOptimistic({ leadId });
+  const addTags = useAddTagsOptimistic({ leadId, trackingId });
+  const removeTags = useRemoveTagOptimistic({ leadId });
 
   const onSelectTag = (tagId: string) => {
     if (existingTagIds.includes(tagId)) {
-      removeTags.mutate(
-        {
-          leadId,
-          tagIds: [tagId],
-        },
-        {
-          onSuccess: () => {
-            setOpen(false);
-          },
-        },
-      );
+      removeTags.mutate({ leadId, tagIds: [tagId] });
       return;
     }
 

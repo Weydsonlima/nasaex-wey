@@ -7,9 +7,13 @@ import {
 } from "@/components/ui/tooltip";
 import { Lead } from "@/features/trackings/types";
 import { getContrastColor } from "@/utils/get-contrast-color";
-import { PlusIcon, Settings, SettingsIcon, TagIcon } from "lucide-react";
-import { useAddTagsOptimistic } from "@/features/trackings/hooks/use-leads";
+import { PlusIcon, SettingsIcon, TagIcon, XIcon } from "lucide-react";
 import { useQueryTags } from "@/features/tags/hooks/use-tags";
+import {
+  useAddTagToLeadOptimistic,
+  useQueryTagByLead,
+  useRemoveTagFromLeadOptimistic,
+} from "../hooks/use-leads-conversation";
 import {
   Popover,
   PopoverContent,
@@ -25,8 +29,6 @@ import {
 } from "@/components/ui/command";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMutationLeadUpdate } from "@/features/leads/hooks/use-lead-update";
-import { toast } from "sonner";
 import { TagModal } from "@/features/trackings/components/modal/tag-modal";
 
 interface listTagsProps {
@@ -35,45 +37,36 @@ interface listTagsProps {
   trackingId: string;
 }
 
-export function ListTags({ tags, leadId, trackingId }: listTagsProps) {
+export function ListTags({ leadId, trackingId }: listTagsProps) {
+  const { tags: leadTags } = useQueryTagByLead(leadId);
+
   return (
     <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
-      {tags &&
-        tags.slice(0, 6).map(({ tag }) => {
+      {leadTags &&
+        leadTags.slice(0, 6).map((tag) => {
           const textColor = getContrastColor(tag.color || "");
           return (
-            <Tooltip key={tag.id}>
-              <TooltipTrigger asChild>
-                <Badge
-                  // variant="outline"
-                  className="px-1 py-0 text-[10px] h-4 font-normal"
-                  style={{
-                    backgroundColor: tag.color ?? undefined,
-                    color: textColor,
-                  }}
-                >
-                  {tag.name}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{tag.name}</p>
-              </TooltipContent>
-            </Tooltip>
+            <TagBadge
+              key={tag.id}
+              tag={tag}
+              textColor={textColor}
+              leadId={leadId}
+            />
           );
         })}
-      {tags && tags.length > 6 && (
+      {leadTags && leadTags.length > 6 && (
         <Badge
           variant="outline"
           className="px-1 py-0 text-[10px] h-4 font-normal bg-muted"
         >
-          +{tags && tags.length - 6}
+          +{leadTags && leadTags.length - 6}
         </Badge>
       )}
       <Tooltip>
         <TooltipTrigger asChild>
           <AddTagsButton
             leadId={leadId}
-            existingTagIds={tags?.map((lt) => lt.tag.id) || []}
+            existingTagIds={leadTags?.map((lt) => lt.id) || []}
             trackingId={trackingId}
           />
         </TooltipTrigger>
@@ -82,6 +75,37 @@ export function ListTags({ tags, leadId, trackingId }: listTagsProps) {
         </TooltipContent>
       </Tooltip>
     </div>
+  );
+}
+
+function TagBadge({
+  tag,
+  textColor,
+  leadId,
+}: {
+  tag: any;
+  textColor: string;
+  leadId: string;
+}) {
+  const { mutate: removeTag } = useRemoveTagFromLeadOptimistic(leadId);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          className="px-1 py-0 text-[10px] h-4 font-normal"
+          style={{
+            backgroundColor: tag.color ?? undefined,
+            color: textColor,
+          }}
+        >
+          {tag.name}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{tag.name} (Clique no X para remover)</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -95,32 +119,30 @@ export function AddTagsButton({
   trackingId: string;
 }) {
   const [open, setOpen] = useState(false);
-  const { tags } = useQueryTags({});
+  const { tags } = useQueryTags({ trackingId });
   const [openTagModal, setOpenTagModal] = useState(false);
+  const { mutate: removeTag } = useRemoveTagFromLeadOptimistic(leadId);
 
   const handleOpen = () => {
     setOpen(!open);
   };
 
-  const update = useMutationLeadUpdate(leadId, trackingId);
+  const { mutate: addTag } = useAddTagToLeadOptimistic(leadId, trackingId);
 
   const onSelectTag = (tagId: string) => {
-    update.mutate(
+    if (existingTagIds.includes(tagId)) {
+      removeTag({ leadId, tagIds: [tagId] });
+      return;
+    }
+
+    addTag(
       {
-        tagIds: [...existingTagIds, tagId],
-        id: leadId,
+        tagIds: [tagId],
+        leadId: leadId,
       },
       {
         onSuccess: () => {
-          toast.success(`Tag adicionada com sucesso`, {
-            position: "bottom-right",
-          });
           setOpen(false);
-        },
-        onError: () => {
-          toast.error(`Erro ao adicionar tag`, {
-            position: "bottom-right",
-          });
         },
       },
     );

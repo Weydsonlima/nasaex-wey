@@ -16,7 +16,7 @@ export const getMany = base
     }),
   )
   .handler(async ({ input }) => {
-    const status = await prisma.status.findMany({
+    const result = await prisma.status.findMany({
       where: {
         trackingId: input.trackingId,
       },
@@ -25,16 +25,24 @@ export const getMany = base
         name: true,
         color: true,
         order: true,
+        _count: {
+          select: {
+            leads: true,
+          },
+        },
       },
       orderBy: {
         order: "asc",
       },
     });
 
-    const ordered = status.map((s) => ({
-      ...s,
+    const status = result.map((s) => ({
+      id: s.id,
+      name: s.name,
+      color: s.color,
       order: s.order.toString(),
+      leads: s._count.leads,
     }));
 
-    return ordered;
+    return status;
   });

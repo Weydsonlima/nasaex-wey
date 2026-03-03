@@ -41,10 +41,11 @@ interface BoardContainerProps {
 }
 
 interface Status {
-  order: string;
   id: string;
+  order: string;
   name: string;
   color: string | null;
+  leads: number;
 }
 
 export function BoardContainer({ trackingId }: BoardContainerProps) {

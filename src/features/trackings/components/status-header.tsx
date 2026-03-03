@@ -34,6 +34,7 @@ interface StatusHeaderProps {
   name: string;
   color: string | null;
   trackingId: string;
+  leads: number;
 }
 
 export const updateSatusName = z.object({
@@ -134,6 +135,9 @@ export const StatusHeader = ({
             className="rounded-sm px-2 "
           >
             {data.name}
+          </span>
+          <span className="text-xs text-muted-foreground ml-2">
+            {data.leads}
           </span>
         </div>
       )}

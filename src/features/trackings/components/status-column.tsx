@@ -17,6 +17,7 @@ interface StatusColumnProps {
     id: string;
     name: string;
     color: string | null;
+    leads: number;
   };
   index: number;
   trackingId: string;

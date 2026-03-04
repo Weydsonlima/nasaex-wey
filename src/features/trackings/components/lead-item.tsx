@@ -200,7 +200,7 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
             </Avatar>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{data.responsible?.name || "Sem responsável"}</p>
+            {data.responsible?.name || "Sem responsável"}
           </TooltipContent>
         </Tooltip>
       </div>

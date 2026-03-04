@@ -7,6 +7,7 @@ import { sendTextMessage } from "./message/send-text-message";
 import { sendImageMessage } from "./message/send-image";
 import { sendDocumentMessage } from "./message/send-document";
 import { sendMessageChannel } from "@/inngest/channels/send-message";
+import { normalizePhone } from "@/utils/format-phone";
 
 type SendMessageNodeData = {
   action?: SendMessageFormValues;
@@ -84,13 +85,17 @@ export const sendMessageExecutor: NodeExecutor<SendMessageNodeData> = async ({
       }
 
       const typeMessage = data.action?.payload.type;
+      const phone =
+        data.action?.target.sendMode === "CUSTOM"
+          ? normalizePhone(data.action.target.phone)
+          : lead.phone;
 
       switch (typeMessage) {
         case "TEXT":
           await sendTextMessage({
             body: data.action?.payload.message || "",
             conversationId: conversation.id,
-            leadPhone: lead.phone,
+            leadPhone: phone,
             token: instance.apiKey,
           });
 
@@ -99,7 +104,7 @@ export const sendMessageExecutor: NodeExecutor<SendMessageNodeData> = async ({
           await sendImageMessage({
             body: data.action?.payload.caption || "",
             conversationId: conversation.id,
-            leadPhone: lead.phone,
+            leadPhone: phone,
             token: instance.apiKey,
             mediaUrl: data.action?.payload.imageUrl || "",
           });
@@ -108,7 +113,7 @@ export const sendMessageExecutor: NodeExecutor<SendMessageNodeData> = async ({
           await sendDocumentMessage({
             body: data.action?.payload.caption || "",
             conversationId: conversation.id,
-            leadPhone: lead.phone,
+            leadPhone: phone,
             token: instance.apiKey,
             mediaUrl: data.action?.payload.documentUrl || "",
             fileName: data.action?.payload.fileName || "",

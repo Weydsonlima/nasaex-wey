@@ -14,8 +14,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -23,12 +36,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryInstances } from "@/features/tracking-settings/hooks/use-integration";
+import { cn } from "@/lib/utils";
+import { countries } from "@/types/some";
+import { phoneMask } from "@/utils/format-phone";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { InfoIcon } from "lucide-react";
+import { ChevronDownIcon, InfoIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -40,10 +58,7 @@ const leadTargetSchema = z.object({
 
 const customTargetSchema = z.object({
   sendMode: z.literal("CUSTOM"),
-  phone: z
-    .string()
-    .min(10, "Telefone inválido")
-    .regex(/^\d+$/, "Telefone deve conter apenas números"),
+  phone: z.string(),
 });
 
 const targetSchema = z.discriminatedUnion("sendMode", [
@@ -99,6 +114,7 @@ export const SendMessageDialog = ({
   defaultValues,
 }: Props) => {
   const { trackingId } = useParams<{ trackingId: string }>();
+  const [countrySelected, setCountrySelected] = useState(countries[0]);
   const form = useForm<SendMessageFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues ?? {
@@ -114,7 +130,7 @@ export const SendMessageDialog = ({
 
   const { instance, instanceLoading } = useQueryInstances(trackingId);
 
-  // const sendMode = form.watch("target.sendMode");
+  const sendMode = form.watch("target.sendMode");
   const messageType = form.watch("payload.type");
 
   const handleSubmit = (values: SendMessageFormValues) => {
@@ -147,26 +163,112 @@ export const SendMessageDialog = ({
         )}
         {!instanceLoading && instance && (
           <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <Controller
+              control={form.control}
+              name="payload.type"
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel>Tipo de mensagem</FieldLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de mensagem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TEXT">Texto</SelectItem>
+                      <SelectItem value="IMAGE">Imagem</SelectItem>
+                      <SelectItem value="DOCUMENT">Documento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="target.sendMode"
+              render={({ field }) => {
+                const isCustomMode = field.value === "CUSTOM";
+
+                return (
+                  <div className="flex items-center justify-end mt-2">
+                    <span className="text-sm mr-2">Customizar envio</span>
+                    <Switch
+                      checked={isCustomMode}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          field.onChange("CUSTOM");
+                        } else {
+                          field.onChange("LEAD");
+                        }
+                      }}
+                    />
+                  </div>
+                );
+              }}
+            />
+
             <FieldGroup>
-              <Controller
-                control={form.control}
-                name="payload.type"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel>Tipo de mensagem</FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo de mensagem" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TEXT">Texto</SelectItem>
-                        <SelectItem value="IMAGE">Imagem</SelectItem>
-                        <SelectItem value="DOCUMENT">Documento</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                )}
-              />
+              {sendMode === "CUSTOM" && (
+                <Controller
+                  control={form.control}
+                  name="target.phone"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel>Número</FieldLabel>
+                      <InputGroup>
+                        <InputGroupAddon>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className={cn(
+                                  "text-xs flex items-center hover:bg-accent transition-all px-1 rounded-sm py-1 gap-x-1",
+                                  countrySelected && "bg-accent",
+                                )}
+                              >
+                                <img
+                                  src={countrySelected.flag}
+                                  alt={countrySelected.country}
+                                  className="size-4 rounded-sm"
+                                />
+                                <span>{countrySelected.ddi}</span>
+                                <ChevronDownIcon className="size-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="[--radius:0.95rem] max-h-30 overflow-y-auto"
+                            >
+                              <DropdownMenuGroup>
+                                {countries.map((country) => (
+                                  <DropdownMenuItem
+                                    key={country.code}
+                                    onClick={() => setCountrySelected(country)}
+                                    className="cursor-pointer"
+                                  >
+                                    <img
+                                      src={country.flag}
+                                      alt={country.country}
+                                      className="size-5 rounded-sm"
+                                    />
+                                    <span>{country.ddi}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(phoneMask(e.target.value));
+                          }}
+                          placeholder="(00) 0000-0000"
+                        />
+                      </InputGroup>
+                    </Field>
+                  )}
+                />
+              )}
 
               {messageType === "TEXT" && (
                 <Controller

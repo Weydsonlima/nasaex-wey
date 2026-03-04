@@ -1,6 +1,6 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { LeadDetails } from "./lead-details";
 import { orpc } from "@/lib/orpc";
 import { useParams } from "next/navigation";
@@ -9,13 +9,17 @@ import { LeadInfo } from "./lead-info";
 export function LeadContainer() {
   const params = useParams<{ leadId: string }>();
 
-  const { data } = useSuspenseQuery(
+  const { data, isLoading } = useQuery(
     orpc.leads.get.queryOptions({
       input: {
         id: params.leadId,
       },
     }),
   );
+
+  if (!data) {
+    return <div>Lead não encontrado</div>;
+  }
 
   return (
     <div className="flex h-screen min-h-full overflow-hidden">

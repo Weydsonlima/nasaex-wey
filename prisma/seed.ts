@@ -1,6 +1,8 @@
 import { PrismaClient, Temperature } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { faker } from "@faker-js/faker";
+import { createId } from "@paralleldrive/cuid2";
+
 import "dotenv/config";
 import z from "zod";
 import { slugify } from "@/lib/utils";
@@ -66,7 +68,7 @@ const trackingId = "cmm0zu8ib0000f4sliuby0q77";
 const statusId = "cmm108n8q000jf4sl3ul5jdi8";
 const statusId2 = "cmm0zu8ij0002f4sla8lzvw32";
 
-const organizationCrescerId = "42RDntMnMdxd39qSgMyLhBjR1zupwWft";
+const organizationCrescerId = "";
 
 const statusIds = [statusId, statusId2];
 
@@ -79,6 +81,13 @@ const tagsIds = [
 ];
 
 async function main() {
+  // Mapas para manter referência entre IDs do Bubble e novos cuid()
+  const trackingIdMap = new Map<string, string>(); // bubbleId -> cuidId
+  const statusIdMap = new Map<string, string>(); // bubbleId -> cuidId
+  const tagIdMap = new Map<string, string>(); // bubbleId -> cuidId
+  const leadIdMap = new Map<string, string>(); // bubbleId -> cuidId
+  const conversationIdMap = new Map<string, string>(); // bubbleId -> cuidId
+
   const email = "arthur.fabricyo@gmail.com";
 
   const response = await fetch(
@@ -197,8 +206,11 @@ async function main() {
       }
 
       for (const t of trackings) {
+        const newTrackingId = createId();
+        trackingIdMap.set(t._id, newTrackingId);
+
         await tx.tracking.upsert({
-          where: { id: t._id },
+          where: { id: newTrackingId },
           update: {
             name: t.title || "Sem nome",
             globalAiActive: t.global_ai_active || false,
@@ -207,26 +219,35 @@ async function main() {
               : new Date(),
           },
           create: {
-            id: t._id,
+            id: newTrackingId,
             name: t.title || "Sem nome",
             organizationId: organization.id,
             globalAiActive: t.global_ai_active || false,
             createdAt: t["Created Date"]
               ? new Date(t["Created Date"])
               : new Date(),
+            aiSettings: {
+              create: {
+                assistantName: "John",
+                prompt: `Você é a assistente de IA da ${organization.name}`,
+                finishSentence:
+                  "Quando o cliente quiser conversar com um consultou ou atendente humano",
+              },
+            },
           },
         });
+
         await tx.trackingParticipant.upsert({
           where: {
             userId_trackingId: {
               userId: user.id,
-              trackingId: t._id,
+              trackingId: newTrackingId,
             },
           },
           update: {},
           create: {
             userId: user.id,
-            trackingId: t._id,
+            trackingId: newTrackingId,
             role: "OWNER", // Or "MEMBER", depending on preference. Assuming OWNER for integration init.
           },
         });
@@ -245,8 +266,18 @@ async function main() {
           continue;
         }
 
+        const newStatusId = createId();
+        const mappedTrackingId = trackingIdMap.get(s.tracking);
+
+        if (!mappedTrackingId) {
+          console.warn(`Pulando status ${s._id}: Tracking não foi mapeado.`);
+          continue;
+        }
+
+        statusIdMap.set(s._id, newStatusId);
+
         await tx.status.upsert({
-          where: { id: s._id },
+          where: { id: newStatusId },
           update: {
             name: s.title || "Sem nome",
             color: s.color ? mapColor(s.color) : "#1447e6",
@@ -256,11 +287,11 @@ async function main() {
               : new Date(),
           },
           create: {
-            id: s._id,
+            id: newStatusId,
             name: s.title || "Sem nome",
             color: s.color ? mapColor(s.color) : "#1447e6",
             order: s.order || 0,
-            trackingId: s.tracking,
+            trackingId: mappedTrackingId,
             createdAt: s["Created Date"]
               ? new Date(s["Created Date"])
               : new Date(),
@@ -277,21 +308,28 @@ async function main() {
           );
         }
 
+        const newTagId = createId();
+        const mappedTrackingId = tag.tracking
+          ? trackingIdMap.get(tag.tracking)
+          : null;
+
+        tagIdMap.set(tag._id, newTagId);
+
         const tagSlug = slugify(tag.name);
         await tx.tag.upsert({
-          where: { id: tag._id },
+          where: { id: newTagId },
           update: {
             name: tag.name,
             slug: tagSlug,
             color: tag.cor_fundo ? mapColor(tag.cor_fundo) : "#1447e6",
           },
           create: {
-            id: tag._id,
+            id: newTagId,
             name: tag.name,
             slug: tagSlug,
             color: tag.cor_fundo ? mapColor(tag.cor_fundo) : "#1447e6",
             organizationId: organization.id,
-            trackingId: tag.tracking || null,
+            trackingId: mappedTrackingId || null,
           },
         });
       }
@@ -328,7 +366,7 @@ async function main() {
           where: {
             phone_trackingId: {
               phone: lead.phone,
-              trackingId: lead.tracking,
+              trackingId: trackingIdMap.get(lead.tracking)!,
             },
           },
         });
@@ -340,37 +378,50 @@ async function main() {
           continue;
         }
 
-        const statusExists = await tx.status.findUnique({
-          where: { id: lead.status_person },
-        });
+        const mappedStatusId = statusIdMap.get(lead.status_person);
+        const mappedTrackingId = trackingIdMap.get(lead.tracking);
 
-        if (!statusExists) {
+        if (!mappedStatusId || !mappedTrackingId) {
           console.error(
-            `STATUS NÃO EXISTE: ${lead.status_person} | Lead: ${lead._id}`,
+            `IDs NÃO FORAM MAPEADOS: Status ${lead.status_person} -> ${mappedStatusId}, Tracking ${lead.tracking} -> ${mappedTrackingId}`,
           );
           continue;
         }
 
+        const statusExists = await tx.status.findUnique({
+          where: { id: mappedStatusId },
+        });
+
+        if (!statusExists) {
+          console.error(
+            `STATUS NÃO EXISTE: ${mappedStatusId} | Lead: ${lead._id}`,
+          );
+          continue;
+        }
+
+        const newLeadId = createId();
+        leadIdMap.set(lead._id, newLeadId);
+
         const leadRecord = await tx.lead.upsert({
-          where: { id: lead._id },
+          where: { id: newLeadId },
           update: {
             name: lead.name || "Sem nome",
             email: lead.email || null,
             phone: lead.phone,
             temperature: mapTemperature(lead.temperatura),
-            statusId: lead.status_person,
+            statusId: mappedStatusId,
             updatedAt: lead["Modified Date"]
               ? new Date(lead["Modified Date"])
               : new Date(),
           },
           create: {
-            id: lead._id,
+            id: newLeadId,
             name: lead.name || "Sem nome",
             email: lead.email || null,
             phone: lead.phone,
             temperature: mapTemperature(lead.temperatura),
-            statusId: lead.status_person,
-            trackingId: lead.tracking,
+            statusId: mappedStatusId,
+            trackingId: mappedTrackingId,
             createdAt: lead["Created Date"]
               ? new Date(lead["Created Date"])
               : new Date(),
@@ -385,24 +436,25 @@ async function main() {
         }
 
         for (const tagId of leadTagIds) {
-          if (upsertedTagIds.has(tagId)) {
+          const mappedTagId = tagIdMap.get(tagId);
+          if (mappedTagId) {
             await tx.leadTag
               .upsert({
                 where: {
                   leadId_tagId: {
                     leadId: leadRecord.id,
-                    tagId: tagId,
+                    tagId: mappedTagId,
                   },
                 },
                 update: {},
                 create: {
                   leadId: leadRecord.id,
-                  tagId: tagId,
+                  tagId: mappedTagId,
                 },
               })
               .catch(() =>
                 console.warn(
-                  `Falha ao vincular tag ${tagId} ao lead ${leadRecord.id}`,
+                  `Falha ao vincular tag ${mappedTagId} ao lead ${leadRecord.id}`,
                 ),
               );
           }
@@ -414,16 +466,19 @@ async function main() {
           messagesByConversation.has(lead.conversation)
         ) {
           const convId = lead.conversation;
+          const newConversationId = createId();
+          conversationIdMap.set(convId, newConversationId);
+
           await tx.conversation.upsert({
-            where: { id: convId },
+            where: { id: newConversationId },
             update: {
               isActive: true,
-              trackingId: lead.tracking,
+              trackingId: mappedTrackingId,
             },
             create: {
-              id: convId,
+              id: newConversationId,
               leadId: leadRecord.id,
-              trackingId: lead.tracking,
+              trackingId: mappedTrackingId,
               remoteJid: `${lead.phone}@s.whatsapp.net`,
               isActive: true,
             },
@@ -445,7 +500,7 @@ async function main() {
                 messageId: msg._id,
                 body: msg.message,
                 fromMe: msg.fromMe ?? false,
-                conversationId: convId,
+                conversationId: newConversationId,
                 createdAt: msg["Created Date"]
                   ? new Date(msg["Created Date"])
                   : new Date(),

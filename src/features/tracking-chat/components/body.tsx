@@ -33,11 +33,7 @@ import { cn } from "@/lib/utils";
 import { EditMessage } from "./edit-message";
 
 import { useMessageStore } from "../context/use-message";
-import { toast } from "sonner";
-import {
-  useMutationEditMessage,
-  useMutationMarkReadMessage,
-} from "../hooks/use-messages";
+import { useMutationEditMessage } from "../hooks/use-messages";
 
 interface BodyProps {
   messageSelected: MarkedMessage | undefined;
@@ -376,19 +372,18 @@ export function Body({ messageSelected, onSelectMessage }: BodyProps) {
     useMessageStore();
 
   const mutationEdit = useMutationEditMessage({ conversationId });
-  const markRead = useMutationMarkReadMessage();
 
   const remoteJid = data?.pages[0].remoteJid;
 
-  useEffect(() => {
-    if (conversationId && remoteJid && token) {
-      markRead.mutate({
-        conversationId,
-        remoteJid,
-        token,
-      });
-    }
-  }, [conversationId, remoteJid, token, items]);
+  // useEffect(() => {
+  //   if (conversationId && remoteJid && token) {
+  //     markRead.mutate({
+  //       conversationId,
+  //       remoteJid,
+  //       token,
+  //     });
+  //   }
+  // }, [conversationId, remoteJid, token, items]);
 
   const isEmpty = !error && !isLoading && items.length === 0;
 

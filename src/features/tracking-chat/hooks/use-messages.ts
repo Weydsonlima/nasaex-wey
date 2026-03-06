@@ -586,7 +586,6 @@ export function useMutationMarkReadMessage() {
   return useMutation(
     orpc.message.markRead.mutationOptions({
       onMutate: async (variables) => {
-        // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
         await queryClient.cancelQueries({ queryKey: ["conversations.list"] });
 
         // Snapshot all relevant lists

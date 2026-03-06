@@ -31,6 +31,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { countries } from "@/types/some";
+import { toast } from "sonner";
 
 interface ConnectModalProps {
   open: boolean;
@@ -147,7 +148,8 @@ export function ConnectModal({
         hasGeneratedQRCode.current = true;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao gerar QR Code");
+      toast("Erro ao gerar QR code, se persistir, contate o suporte.");
+      onOpenChange(false);
     } finally {
       setLoading(false);
     }

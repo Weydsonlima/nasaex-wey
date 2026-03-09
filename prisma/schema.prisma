@@ -507,6 +507,7 @@ enum NodeType {
   NEW_LEAD
   MOVE_LEAD_STATUS
   LEAD_TAGGED
+  AI_FINISHED
   // LEAD_UNTAGGED
 
   // Execuções

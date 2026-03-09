@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         lead = await prisma.lead.create({
           data: {
             statusId: status.id,
-            name,
+            name: name ?? "Sem nome",
             phone,
             trackingId,
             source: LeadSource.WHATSAPP,

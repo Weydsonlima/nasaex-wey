@@ -259,7 +259,7 @@ function AddTagFilterButton({
       </Popover>
 
       <TagModal
-        trackingId={trackingId}
+        trackingId={trackingId === "ALL" ? undefined : trackingId}
         open={openTagModal}
         onOpenChange={setOpenTagModal}
       />

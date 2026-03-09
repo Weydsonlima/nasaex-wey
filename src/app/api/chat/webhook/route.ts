@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
       const fromMe = json.message.fromMe;
       const name = fromMe ? json.chat.name : json.message.senderName;
 
-      const phone = json.chat.phone.replace(/\D/g, "");
-      const remoteJid = json.chat.phone.replace(/\D/g, "") + "@s.whatsapp.net";
+      const phone = json.message.chatid.split("@")[0];
+      const remoteJid = json.message.chatid;
 
       const tracking = await prisma.tracking.findUnique({
         where: { id: trackingId },
@@ -619,7 +619,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
     if (json.EventType === "chat_labels") {
-      const remoteJid = json.chat.wa_chatid || json.chat.id;
+      const remoteJid = json.message.chatid;
       const labels = (json.chat.wa_label as string[]) || [];
 
       const conversation = await prisma.conversation.findFirst({

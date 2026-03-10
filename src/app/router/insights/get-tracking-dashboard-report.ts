@@ -15,6 +15,7 @@ export const getTrackingDashboardReport = base
   .input(
     z.object({
       trackingId: z.string().optional(),
+      organizationIds: z.array(z.string()).optional(),
       startDate: z.string().datetime().optional(),
       endDate: z.string().datetime().optional(),
       tagIds: z.array(z.string()).optional(),
@@ -22,8 +23,8 @@ export const getTrackingDashboardReport = base
   )
   .handler(async ({ input, errors, context }) => {
     try {
-      const { org } = context;
-      const { trackingId, startDate, endDate, tagIds } = input;
+      const { org, user } = context;
+      const { trackingId, organizationIds, startDate, endDate, tagIds } = input;
 
       const dateFilter =
         startDate || endDate
@@ -46,9 +47,20 @@ export const getTrackingDashboardReport = base
             }
           : {};
 
+      const organizationFilter = organizationIds
+        ? organizationIds.length > 0
+          ? { id: { in: organizationIds } }
+          : {}
+        : { id: org.id };
+
       const baseWhere = {
         ...(trackingId ? { trackingId } : {}),
-        tracking: { organizationId: org.id },
+        tracking: {
+          organization: {
+            ...organizationFilter,
+            members: { some: { userId: user.id } },
+          },
+        },
         ...dateFilter,
         ...tagFilter,
       };
@@ -165,7 +177,14 @@ export const getTrackingDashboardReport = base
         where: {
           ...(trackingId
             ? { trackingId }
-            : { tracking: { organizationId: org.id } }),
+            : {
+                tracking: {
+                  organization: {
+                    ...organizationFilter,
+                    members: { some: { userId: user.id } },
+                  },
+                },
+              }),
         },
         select: { id: true, name: true, color: true },
       });

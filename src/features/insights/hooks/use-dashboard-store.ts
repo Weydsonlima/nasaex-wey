@@ -5,6 +5,7 @@ import type { ChartType, DashboardSettings, DateRange } from "../types";
 
 interface DashboardState {
   trackingId?: string;
+  organizationIds: string[];
   tagIds: string[];
   dateRange: DateRange;
   settings: DashboardSettings;
@@ -28,6 +29,7 @@ const defaultSettings: DashboardSettings = {
 
 const defaultState: DashboardState = {
   trackingId: undefined,
+  organizationIds: [],
   tagIds: [],
   dateRange: { from: undefined, to: undefined },
   settings: defaultSettings,
@@ -61,6 +63,31 @@ export function setDateRange(dateRange: DateRange) {
 
 export function setTagIds(tagIds: string[]) {
   state = { ...state, tagIds };
+  emitChange();
+}
+
+export function setOrganizationIds(organizationIds: string[]) {
+  state = { ...state, organizationIds, trackingId: undefined };
+  emitChange();
+}
+
+export function toggleOrganizationId(organizationId: string) {
+  if (organizationId === "ALL") {
+    state = { ...state, organizationIds: [], trackingId: undefined };
+    emitChange();
+    return;
+  }
+
+  const newOrganizationIds = state.organizationIds.includes(organizationId)
+    ? state.organizationIds.filter((id) => id !== organizationId)
+    : [...state.organizationIds, organizationId];
+
+  // Sempre que mudar a empresa, limpamos o tracking selecionado para evitar inconsistência
+  state = {
+    ...state,
+    organizationIds: newOrganizationIds,
+    trackingId: undefined,
+  };
   emitChange();
 }
 
@@ -116,6 +143,8 @@ export function useDashboardStore() {
   const actions = useMemo(
     () => ({
       setTrackingId,
+      setOrganizationIds,
+      toggleOrganizationId,
       setDateRange,
       setTagIds,
       toggleTagId,
@@ -132,18 +161,24 @@ export function useDashboardStore() {
 export function useDashboardFilters() {
   const {
     trackingId,
+    organizationIds,
     tagIds,
     dateRange,
     setTrackingId,
+    setOrganizationIds,
+    toggleOrganizationId,
     setTagIds,
     toggleTagId,
     setDateRange,
   } = useDashboardStore();
   return {
     trackingId,
+    organizationIds,
     tagIds,
     dateRange,
     setTrackingId,
+    setOrganizationIds,
+    toggleOrganizationId,
     setTagIds,
     toggleTagId,
     setDateRange,

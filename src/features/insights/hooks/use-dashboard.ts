@@ -7,6 +7,7 @@ import { mockDashboardData } from "@/features/insights/types/mock";
 
 interface InsightFilter {
   trackingId?: string;
+  organizationIds?: string[];
   startDate?: string;
   endDate?: string;
   tagIds?: string[];
@@ -25,6 +26,7 @@ export const useQueryTrackingDashboardReport = (input: InsightFilter) => {
 
 interface UseDashboardDataOptions {
   trackingId?: string;
+  organizationIds?: string[];
   tagIds?: string[];
   dateRange: DateRange;
 }
@@ -37,9 +39,24 @@ export const useQueryListTrackings = () => {
     ...query,
   };
 };
+export const useQueryListAllTrackings = (organizationIds: string[]) => {
+  const { data, ...query } = useQuery(
+    orpc.tracking.listAllTrackings.queryOptions({
+      input: {
+        organizationionIds: organizationIds,
+      },
+    }),
+  );
+
+  return {
+    trackings: data ?? [],
+    ...query,
+  };
+};
 
 export function useDashboardData({
   trackingId,
+  organizationIds,
   tagIds,
   dateRange,
 }: UseDashboardDataOptions) {
@@ -49,6 +66,7 @@ export function useDashboardData({
   const { report, isLoading, isRefetching, refetch } =
     useQueryTrackingDashboardReport({
       trackingId,
+      organizationIds,
       startDate,
       endDate,
       tagIds,

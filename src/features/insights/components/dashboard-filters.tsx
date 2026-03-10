@@ -41,7 +41,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getContrastColor } from "@/utils/get-contrast-color";
 import { TagModal } from "@/features/trackings/components/modal/tag-modal";
 import { useState } from "react";
 
@@ -51,6 +50,10 @@ interface DashboardFiltersProps {
   dateRange: DateRange;
   trackingOptions: { id: string; name: string }[];
   onTrackingChange: (id: string) => void;
+  organizationIds: string[];
+  onOrganizationToggle: (id: string) => void;
+
+  organizationOptions: { id: string; name: string }[];
   onTagToggle: (tagId: string) => void;
   onDateRangeChange: (range: DateRange) => void;
   onRefresh: () => void;
@@ -66,6 +69,9 @@ export function DashboardFilters({
   onTagToggle,
   onDateRangeChange,
   onRefresh,
+  organizationIds,
+  organizationOptions,
+  onOrganizationToggle,
   isLoading = false,
 }: DashboardFiltersProps) {
   const { tags: allTags } = useTags({ trackingId });
@@ -73,6 +79,11 @@ export function DashboardFilters({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <OrganizationFilterButton
+          options={organizationOptions}
+          selectedIds={organizationIds}
+          onToggle={onOrganizationToggle}
+        />
         <Select value={trackingId} onValueChange={onTrackingChange}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Selecione um tracking" />
@@ -264,5 +275,60 @@ function AddTagFilterButton({
         onOpenChange={setOpenTagModal}
       />
     </>
+  );
+}
+
+function OrganizationFilterButton({
+  options,
+  selectedIds,
+  onToggle,
+}: {
+  options: { id: string; name: string }[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full sm:w-[200px] justify-between">
+          <span className="truncate">
+            {selectedIds.length === 0
+              ? "Todas as Empresas"
+              : selectedIds.length === 1
+                ? options.find((o) => o.id === selectedIds[0])?.name
+                : `${selectedIds.length} Empresas`}
+          </span>
+          <PlusIcon className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-0">
+        <Command>
+          <CommandInput placeholder="Filtrar empresas..." />
+          <CommandList>
+            <CommandEmpty>Nenhuma empresa encontrada.</CommandEmpty>
+            <CommandGroup className="max-h-64 overflow-auto">
+              {options.map((option) => (
+                <CommandItem
+                  key={option.id}
+                  onSelect={() => onToggle(option.id)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={
+                      option.id === "ALL"
+                        ? selectedIds.length === 0
+                        : selectedIds.includes(option.id)
+                    }
+                  />
+                  <span>{option.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -13,9 +13,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useDashboardStore } from "@/features/insights/hooks/use-dashboard-store";
 import {
   useDashboardData,
+  useQueryListAllTrackings,
   useQueryListTrackings,
 } from "@/features/insights/hooks/use-dashboard";
 import type { DashboardReport } from "@/features/insights/types";
+import { authClient } from "@/lib/auth-client";
 
 interface TrackingDashboardProps {
   initialData?: DashboardReport;
@@ -59,10 +61,12 @@ export function TrackingDashboard({
 }: TrackingDashboardProps) {
   const {
     trackingId,
+    organizationIds,
     tagIds,
     dateRange,
     settings,
     setTrackingId,
+    toggleOrganizationId,
     setDateRange,
     toggleTagId,
     toggleSection,
@@ -73,15 +77,22 @@ export function TrackingDashboard({
   // Usando Tanstack Query para fetch dos dados
   const { data, isLoading, isValidating, refresh } = useDashboardData({
     trackingId,
+    organizationIds,
     tagIds,
     dateRange,
   });
+  const { trackings } = useQueryListAllTrackings(organizationIds);
+  const { data: organization } = authClient.useListOrganizations();
 
-  const { trackings } = useQueryListTrackings();
+  const organizatins = organization || [];
 
   const trackingOptions = [
     { id: "ALL", name: "Todos os Trackings" },
     ...trackings.map((t) => ({ id: t.id, name: t.name })),
+  ];
+  const organizationOptions = [
+    { id: "ALL", name: "Todos as Empresas" },
+    ...organizatins.map((t) => ({ id: t.id, name: t.name })),
   ];
 
   return (
@@ -95,10 +106,13 @@ export function TrackingDashboard({
 
       <DashboardFilters
         trackingId={trackingId || "ALL"}
+        organizationIds={organizationIds}
         tagIds={tagIds}
         dateRange={dateRange}
         trackingOptions={trackingOptions}
+        organizationOptions={organizationOptions}
         onTrackingChange={(id) => setTrackingId(id === "ALL" ? "" : id)}
+        onOrganizationToggle={toggleOrganizationId}
         onTagToggle={toggleTagId}
         onDateRangeChange={setDateRange}
         onRefresh={refresh}

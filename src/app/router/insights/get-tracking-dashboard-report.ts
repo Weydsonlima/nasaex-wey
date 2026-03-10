@@ -84,8 +84,8 @@ export const getTrackingDashboardReport = base
         wonLeads,
         lostLeads,
         activeLeads,
-        soldThisMonth,
-        soldLastMonth,
+        soldThisMonthRes,
+        soldLastMonthRes,
         bySource,
         byStatus,
         byResponsible,
@@ -96,22 +96,32 @@ export const getTrackingDashboardReport = base
         prisma.lead.count({ where: { ...baseWhere, currentAction: "LOST" } }),
         prisma.lead.count({ where: { ...baseWhere, currentAction: "ACTIVE" } }),
 
-        // Vendidos esse mês
-        prisma.leadHistory.count({
+        // Valor Vendido esse mês
+        prisma.lead.aggregate({
           where: {
-            lead: baseWhere,
-            action: "WON",
-            createdAt: { gte: startOfMonth, lte: endOfMonth },
+            ...baseWhere,
+            history: {
+              some: {
+                action: "WON",
+                createdAt: { gte: startOfMonth, lte: endOfMonth },
+              },
+            },
           },
+          _sum: { amount: true },
         }),
 
-        // Vendidos mês passado
-        prisma.leadHistory.count({
+        // Valor Vendido mês passado
+        prisma.lead.aggregate({
           where: {
-            lead: baseWhere,
-            action: "WON",
-            createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
+            ...baseWhere,
+            history: {
+              some: {
+                action: "WON",
+                createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
+              },
+            },
           },
+          _sum: { amount: true },
         }),
 
         // Por canal
@@ -146,6 +156,9 @@ export const getTrackingDashboardReport = base
           take: 10,
         }),
       ]);
+
+      const soldThisMonth = Number(soldThisMonthRes._sum.amount || 0);
+      const soldLastMonth = Number(soldLastMonthRes._sum.amount || 0);
 
       // Enriquecer dados
       const statuses = await prisma.status.findMany({

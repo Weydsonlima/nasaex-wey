@@ -6,18 +6,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { SparklesIcon } from "lucide-react";
+import { CalendarIcon, SparklesIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { eventIteratorToStream } from "@orpc/client";
 import { client } from "@/lib/orpc";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { pt } from "react-day-picker/locale";
 import dayjs from "dayjs";
 import {
   Message,
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
 
 interface Props {
   conversationId: string;
@@ -25,6 +28,13 @@ interface Props {
 
 export function SummerizeConversation({ conversationId }: Props) {
   const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<DateRange>({
+    from: dayjs().startOf("day").toDate(),
+    to: dayjs().endOf("day").toDate(),
+  });
+  const dateRef = useRef(date);
+  dateRef.current = date;
+
   const {
     messages,
     status,
@@ -41,7 +51,8 @@ export function SummerizeConversation({ conversationId }: Props) {
           await client.ia.conversation.summary.generate(
             {
               conversationId: conversationId,
-              date: dayjs().startOf("day").toISOString(),
+              dateInit: dateRef.current.from?.toISOString() ?? "",
+              dateEnd: dateRef.current.to?.toISOString() ?? "",
             },
             { signal: options.abortSignal },
           ),
@@ -53,6 +64,10 @@ export function SummerizeConversation({ conversationId }: Props) {
     },
   });
 
+  const onSelectedDateRange = (dateRange: DateRange) => {
+    setDate(dateRange);
+  };
+
   const lastAssistent = messages.findLast((m) => m.role === "assistant");
 
   const summaryText =
@@ -61,26 +76,8 @@ export function SummerizeConversation({ conversationId }: Props) {
       .map((p) => p.text)
       .join("\n\n") ?? "";
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (nextOpen) {
-      const hasAssistantMessage = messages.some((m) => m.role === "assistant");
-
-      if (status !== "ready" || hasAssistantMessage) {
-        return;
-      }
-
-      sendMessage({ text: "Resuma a conversa de hoje" });
-    } else {
-      stop();
-      clearError();
-
-      setMessages([]);
-    }
-  };
-
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button size="sm">
           <SparklesIcon className="size-4" />
@@ -104,6 +101,7 @@ export function SummerizeConversation({ conversationId }: Props) {
               <SparklesIcon className="size-4" />
               Gerar resumo
             </Button>
+            <SelectDateRange onApply={onSelectedDateRange} dateRange={date} />
           </div>
 
           {status === "streaming" && (
@@ -151,4 +149,108 @@ export function SummerizeConversation({ conversationId }: Props) {
   );
 }
 
-// pnpm dlx shadcn@latest add @ai-elements/response
+interface SelectDateRangeProps {
+  onApply: (dateRange: DateRange) => void;
+  dateRange: DateRange | undefined;
+}
+
+export const SelectDateRange = ({
+  onApply,
+  dateRange,
+}: SelectDateRangeProps) => {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<DateRange | undefined>(dateRange);
+
+  useEffect(() => {
+    setDate(dateRange);
+  }, [dateRange]);
+
+  const intervals = [
+    {
+      label: "Hoje",
+      from: dayjs().toDate(),
+      to: dayjs().toDate(),
+    },
+    {
+      label: "Semana",
+      from: dayjs().day(0).toDate(),
+      to: dayjs().day(6).toDate(),
+    },
+    {
+      label: "Mês",
+      from: dayjs().startOf("month").toDate(),
+      to: dayjs().endOf("month").toDate(),
+    },
+    {
+      label: "Ano",
+      from: dayjs().startOf("year").toDate(),
+      to: dayjs().endOf("year").toDate(),
+    },
+    {
+      label: "Últimos 7 Dias",
+      from: dayjs().subtract(6, "day").toDate(),
+      to: dayjs().toDate(),
+    },
+    {
+      label: "Últimos 30 Dias",
+      from: dayjs().subtract(29, "day").toDate(),
+      to: dayjs().toDate(),
+    },
+  ];
+
+  const handleApply = () => {
+    if (date?.from && date?.to) {
+      onApply({
+        from: dayjs(date.from).startOf("day").toDate(),
+        to: dayjs(date.to).endOf("day").toDate(),
+      });
+      setOpen(false);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="icon-sm" variant="outline">
+          <CalendarIcon className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="center"
+        className="p-0 border rounded-lg shadow-sm w-fit flex overflow-hidden"
+      >
+        <div className="hidden md:flex flex-col gap-0.5 border-r border-border w-36 px-2 py-2">
+          {intervals.map((interval) => (
+            <Button
+              key={interval.label}
+              variant="ghost"
+              size="sm"
+              className="justify-start"
+              onClick={() => {
+                setDate({
+                  from: interval.from,
+                  to: interval.to,
+                });
+              }}
+            >
+              {interval.label}
+            </Button>
+          ))}
+        </div>
+        <div>
+          <Calendar
+            mode="range"
+            selected={date}
+            onSelect={setDate}
+            locale={pt}
+            timeZone="America/Sao_Paulo"
+            className="border-none"
+          />
+          <div className="flex justify-end gap-2 p-2">
+            <Button onClick={handleApply}>Aplicar</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};

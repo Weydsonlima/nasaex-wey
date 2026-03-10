@@ -3,16 +3,9 @@ import { base } from "@/app/middlewares/base";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { streamText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { google } from "@ai-sdk/google";
 import { streamToEventIterator } from "@orpc/client";
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.LLM_KEY,
-});
-
-const MODEL_ID = "z-ai/glm-4.5-air:free";
-
-const model = openrouter.chat(MODEL_ID);
+import dayjs from "dayjs";
 
 export const generateConversationSummary = base
   .use(requiredAuthMiddleware)
@@ -25,13 +18,14 @@ export const generateConversationSummary = base
   .input(
     z.object({
       conversationId: z.string(),
-      date: z.string(),
+      dateInit: z.string(),
+      dateEnd: z.string(),
     }),
   )
   .handler(async ({ input, errors }) => {
-    const { conversationId, date } = input;
+    const { conversationId, dateInit, dateEnd } = input;
 
-    console.log("Data", date);
+    console.log("dateInit", dateInit, "dateEnd", dateEnd);
 
     const conversation = await prisma.conversation.findUnique({
       where: {
@@ -42,7 +36,8 @@ export const generateConversationSummary = base
           take: 20,
           where: {
             createdAt: {
-              gte: new Date(date),
+              gte: new Date(dateInit),
+              lte: new Date(dateEnd),
             },
           },
           orderBy: {
@@ -52,13 +47,13 @@ export const generateConversationSummary = base
       },
     });
 
+    console.log("conversation", conversation);
+
     if (!conversation) {
       throw errors.NOT_FOUND({
         message: "Conversation not found",
       });
     }
-
-    console.log("Conversation", conversation);
 
     const messages = conversation?.messages.map((message) => {
       return {
@@ -71,6 +66,8 @@ export const generateConversationSummary = base
       };
     });
 
+    console.log("Message", messages);
+
     let lines: string[] = [];
 
     if (messages && messages.length > 0) {
@@ -82,16 +79,16 @@ export const generateConversationSummary = base
     const compiled = lines.join("\n");
 
     const system = [
-      "Você é um assistente de suporte ao cliente.",
-      "Ajude o cliente dando um resumo das conversas de hoje.",
-      "Responde apenas em portugues.",
-      "Estilo: Neutro, especifíco e consistente. Não adicione uma frase de encerramento.",
+      `
+        - Você é um assistente de suporte ao cliente.
+        - Ajude o cliente dando um resumo das conversas.
+        - Responde apenas em portugues.
+        - Estilo: Neutro, especifíco e consistente. Não adicione uma frase de encerramento.
+      `,
     ].join("\n");
 
-    console.log("Complid", compiled);
-
     const result = streamText({
-      model,
+      model: google("gemini-2.5-flash"),
       system,
       messages: [
         {

@@ -2,18 +2,9 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { z } from "zod";
 import { streamText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamToEventIterator } from "@orpc/client";
 import prisma from "@/lib/prisma";
-import ContatosPage from "@/app/(platform)/(tracking)/contatos/page";
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.LLM_KEY,
-});
-
-const MODEL_ID = "z-ai/glm-4.5-air:free";
-
-const model = openrouter.chat(MODEL_ID);
+import { google } from "@ai-sdk/google";
 
 export const generateCompose = base
   .use(requiredAuthMiddleware)
@@ -48,15 +39,11 @@ export const generateCompose = base
       });
     }
 
-    console.log("Conversation", conversation);
-
     const aiSettings = await prisma.aiSettings.findUnique({
       where: {
         trackingId: conversation.trackingId,
       },
     });
-
-    console.log("Passou aqui", aiSettings);
 
     if (!aiSettings) {
       throw errors.NOT_FOUND({
@@ -75,7 +62,7 @@ export const generateCompose = base
     ].join("\n");
 
     const result = streamText({
-      model,
+      model: google("gemini-2.5-flash"),
       system,
       messages: [
         {

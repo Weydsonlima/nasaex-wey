@@ -35,7 +35,7 @@ export const InputEditTag = ({
 }: EditingTagComponentProps) => {
   const [localTagIds, setLocalTagIds] = useState<string[]>(selectedTagIds);
   const [open, setOpen] = useState(false);
-  const { tags, isLoadingTags } = useTags({ trackingId });
+  const { tags } = useTags({ trackingId });
 
   const handleToggleTag = (tagId: string) => {
     setLocalTagIds((prev) =>

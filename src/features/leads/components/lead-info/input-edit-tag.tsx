@@ -118,7 +118,7 @@ export const InputEditTag = ({
                 {tags.map((tag) => (
                   <CommandItem
                     key={tag.id}
-                    value={tag.id}
+                    value={`${tag.name}-${tag.id}`}
                     onSelect={() => handleToggleTag(tag.id)}
                     className="text-xs"
                   >

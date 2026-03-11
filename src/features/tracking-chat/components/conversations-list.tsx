@@ -29,10 +29,15 @@ import { Instance } from "../types";
 import { useParams, useRouter } from "next/navigation";
 
 export function ConversationsList() {
-  const { conversationId } = useParams<{ conversationId: string }>();
+  const { conversationId, trackingId } = useParams<{
+    conversationId: string;
+    trackingId?: string;
+  }>();
   const [open, setOpen] = useState(false);
   const { trackings, isLoadingTrackings } = useQueryTracking();
-  const [selectedTracking, setSelectedTracking] = useState<string>("");
+  const [selectedTracking, setSelectedTracking] = useState<string>(
+    trackingId ?? "",
+  );
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 500);

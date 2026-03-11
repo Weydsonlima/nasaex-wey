@@ -50,6 +50,7 @@ import {
 } from "../hooks/use-leads";
 import { cn } from "@/lib/utils";
 import { CheckIaLead } from "@/features/tracking-chat/components/check-ia-lead";
+import { getContrastColor } from "@/utils/get-contrast-color";
 
 const TEMP_COLOR = {
   COLD: "#3498db",
@@ -253,8 +254,8 @@ function ListLeadTags({ leadId, tags }: { leadId: string; tags: any[] }) {
                 <Badge
                   className="px-1 py-0 text-[10px] h-4 font-normal max-w-50 inline-block truncate"
                   style={{
-                    backgroundColor: tag.color || "",
-                    color: "white",
+                    backgroundColor: tag.color || "#000000",
+                    color: getContrastColor(tag.color || "#000000"),
                   }}
                 >
                   {tag.name}

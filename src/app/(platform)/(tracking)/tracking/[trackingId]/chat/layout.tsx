@@ -15,7 +15,9 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const isMobile = useIsMobile();
-  const { conversationId } = useParams();
+  const { conversationId } = useParams<{
+    conversationId: string;
+  }>();
 
   if (isMobile && !conversationId) {
     return (

@@ -53,6 +53,10 @@ export function NavTracking() {
       label: "Tracking",
       href: `/tracking/${params.trackingId}`,
     },
+    // {
+    //   label: "Conversas",
+    //   href: `/tracking/${params.trackingId}/chat`,
+    // },
     {
       label: "Automações",
       href: `/tracking/${params.trackingId}/workflows`,

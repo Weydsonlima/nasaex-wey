@@ -20,7 +20,7 @@ import { useTags } from "@/features/tags/hooks/use-tags";
 import { TagModal } from "@/features/trackings/components/modal/tag-modal";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Plus, SettingsIcon, TagsIcon, XIcon } from "lucide-react";
+import { Plus, SettingsIcon, TagsIcon, XIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useState } from "react";

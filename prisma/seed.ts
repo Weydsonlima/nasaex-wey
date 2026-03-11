@@ -1,11 +1,9 @@
 import { PrismaClient, TagType, Temperature } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { faker } from "@faker-js/faker";
-import { createId } from "@paralleldrive/cuid2";
 
 import "dotenv/config";
 import z from "zod";
-import { slugify } from "@/lib/utils";
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,

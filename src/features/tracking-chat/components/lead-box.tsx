@@ -62,11 +62,14 @@ export function LeadBox({
   unreadCount,
 }: UserBloxProps) {
   const router = useRouter();
-  const { conversationId } = useParams();
+  const { conversationId, trackingId } = useParams<{
+    conversationId: string;
+    trackingId?: string;
+  }>();
   const markRead = useMutationMarkReadMessage();
 
   const handleClick = useCallback(() => {
-    router.push(`/tracking-chat/${item.id}`);
+    router.push(trackingId ? `${item.id}` : `/tracking-chat/${item.id}`);
     // if (unreadCount && unreadCount > 0 && instance?.token) {
     //   markRead.mutate({
     //     conversationId: item.id,

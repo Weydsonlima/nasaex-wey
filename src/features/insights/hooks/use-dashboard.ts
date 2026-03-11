@@ -1,6 +1,6 @@
 "use client";
 import { orpc } from "@/lib/orpc";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { DateRange } from "@/features/insights/types";
 import { mockDashboardData } from "@/features/insights/types/mock";
@@ -79,4 +79,41 @@ export function useDashboardData({
     isValidating: isRefetching,
     refresh: () => refetch(),
   };
+}
+
+export const useMutationShareInsights = () => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.insights.createShareInsights.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: orpc.insights.listInsightShares.queryKey({}),
+        });
+      },
+    }),
+  );
+};
+
+export function useQueryListInsightShares() {
+  const { data, ...query } = useQuery(
+    orpc.insights.listInsightShares.queryOptions({}),
+  );
+
+  return {
+    shares: data ?? [],
+    ...query,
+  };
+}
+
+export function useDeleteInsightShares() {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.insights.deleteInsight.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: orpc.insights.listInsightShares.queryKey({}),
+        });
+      },
+    }),
+  );
 }

@@ -1,10 +1,13 @@
 "use client";
 
-import { LayoutDashboard, RefreshCwIcon } from "lucide-react";
+import { LayoutDashboard, Link2Icon, RefreshCwIcon } from "lucide-react";
 import { SettingsPanel } from "./settings-panel";
 import type { DashboardSettings, ChartType } from "@/features/insights/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SharingInsights } from "./sharing-insight-modal";
+import { useDashboardStore } from "../hooks/use-dashboard-store";
+import { authClient } from "@/lib/auth-client";
 
 interface DashboardHeaderProps {
   settings: DashboardSettings;
@@ -28,6 +31,9 @@ export function DashboardHeader({
   onRefresh,
   isLoading,
 }: DashboardHeaderProps) {
+  const store = useDashboardStore();
+  const session = authClient.useSession();
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -44,6 +50,27 @@ export function DashboardHeader({
         </div>
       </div>
       <div className="space-x-2">
+        <SharingInsights
+          filters={{
+            trackingId: store.trackingId,
+            organizationIds:
+              store.organizationIds.length === 0
+                ? [session.data?.session.activeOrganizationId]
+                : store.organizationIds,
+            tagIds: store.tagIds,
+            dateRange: store.dateRange,
+          }}
+          settings={settings}
+        >
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={isLoading}
+            className="self-end sm:self-auto"
+          >
+            <Link2Icon className="size-4" />
+          </Button>
+        </SharingInsights>
         <Button
           variant="outline"
           size="icon"

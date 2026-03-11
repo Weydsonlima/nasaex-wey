@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { SharingInsights } from "./sharing-insight-modal";
 import { useDashboardStore } from "../hooks/use-dashboard-store";
 import { authClient } from "@/lib/auth-client";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 interface DashboardHeaderProps {
   settings: DashboardSettings;
@@ -50,44 +51,46 @@ export function DashboardHeader({
         </div>
       </div>
       <div className="space-x-2">
-        <SharingInsights
-          filters={{
-            trackingId: store.trackingId,
-            organizationIds:
-              store.organizationIds.length === 0
-                ? [session.data?.session.activeOrganizationId]
-                : store.organizationIds,
-            tagIds: store.tagIds,
-            dateRange: store.dateRange,
-          }}
-          settings={settings}
-        >
+        <ButtonGroup className="sm:block hidden">
+          <SharingInsights
+            filters={{
+              trackingId: store.trackingId,
+              organizationIds:
+                store.organizationIds.length === 0
+                  ? [session.data?.session.activeOrganizationId]
+                  : store.organizationIds,
+              tagIds: store.tagIds,
+              dateRange: store.dateRange,
+            }}
+            settings={settings}
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={isLoading}
+              className="self-end sm:self-auto"
+            >
+              <Link2Icon className="size-4" />
+            </Button>
+          </SharingInsights>
           <Button
             variant="outline"
             size="icon"
+            onClick={onRefresh}
             disabled={isLoading}
             className="self-end sm:self-auto"
           >
-            <Link2Icon className="size-4" />
+            <RefreshCwIcon
+              className={cn("h-4 w-4", isLoading && "animate-spin")}
+            />
           </Button>
-        </SharingInsights>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={onRefresh}
-          disabled={isLoading}
-          className="self-end sm:self-auto"
-        >
-          <RefreshCwIcon
-            className={cn("h-4 w-4", isLoading && "animate-spin")}
+          <SettingsPanel
+            settings={settings}
+            onToggleSection={onToggleSection}
+            onChartTypeChange={onChartTypeChange}
+            onReset={onReset}
           />
-        </Button>
-        <SettingsPanel
-          settings={settings}
-          onToggleSection={onToggleSection}
-          onChartTypeChange={onChartTypeChange}
-          onReset={onReset}
-        />
+        </ButtonGroup>
       </div>
     </div>
   );

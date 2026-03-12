@@ -11,6 +11,7 @@ import { CheckIcon, Search, UserIcon } from "lucide-react";
 import { useState } from "react";
 import { useListLeadsAtInsights } from "../hooks/use-list-lead";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 interface ListLeadByRelatoryModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -93,6 +94,10 @@ export function ListLeadByRelatoryModal({
                   </p>
                 </div>
               )}
+              {isLoading &&
+                Array.from({ length: 10 }).map((_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
             </div>
           </ScrollArea>
         </form>

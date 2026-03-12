@@ -1,6 +1,11 @@
 "use client";
 
-import { LayoutDashboard, Link2Icon, RefreshCwIcon } from "lucide-react";
+import {
+  FullscreenIcon,
+  LayoutDashboard,
+  Link2Icon,
+  RefreshCwIcon,
+} from "lucide-react";
 import { SettingsPanel } from "./settings-panel";
 import type { DashboardSettings, ChartType } from "@/features/insights/types";
 import { Button } from "@/components/ui/button";
@@ -9,6 +14,7 @@ import { SharingInsights } from "./sharing-insight-modal";
 import { useDashboardStore } from "../hooks/use-dashboard-store";
 import { authClient } from "@/lib/auth-client";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { enterFullscreen } from "@/utils/enter-full-screen";
 
 interface DashboardHeaderProps {
   settings: DashboardSettings;
@@ -90,6 +96,15 @@ export function DashboardHeader({
             onChartTypeChange={onChartTypeChange}
             onReset={onReset}
           />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => enterFullscreen()}
+            disabled={isLoading}
+            className="self-end sm:self-auto"
+          >
+            <FullscreenIcon className="h-4 w-4" />
+          </Button>
         </ButtonGroup>
       </div>
     </div>

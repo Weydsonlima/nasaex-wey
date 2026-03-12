@@ -384,7 +384,23 @@ export default function PublicInsightReportPage() {
                     ) : (
                       data?.topTags && (
                         <TagsChart
-                          data={data.topTags}
+                          data={[
+                            ...data.topTags,
+                            ...(data.summary.leadsWithoutTags > 0
+                              ? [
+                                  {
+                                    tag: {
+                                      id: "no-tags",
+                                      name: "Sem Tags",
+                                      color: "#94a3b8",
+                                    },
+                                    count: data.summary.leadsWithoutTags,
+                                    leadIds: [],
+                                    breakdown: [],
+                                  },
+                                ]
+                              : []),
+                          ]}
                           chartType={chartTypes.topTags}
                         />
                       )

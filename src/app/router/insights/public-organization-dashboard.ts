@@ -132,6 +132,7 @@ export const publicOrganizationDashboard = base
         wonLeads,
         lostLeads,
         activeLeads,
+        leadsWithoutTags,
         soldThisMonthRes,
         soldLastMonthRes,
         bySource,
@@ -148,6 +149,7 @@ export const publicOrganizationDashboard = base
         prisma.lead.count({ where: { ...baseWhere, currentAction: "WON" } }),
         prisma.lead.count({ where: { ...baseWhere, currentAction: "LOST" } }),
         prisma.lead.count({ where: { ...baseWhere, currentAction: "ACTIVE" } }),
+        prisma.lead.count({ where: { ...baseWhere, leadTags: { none: {} } } }),
 
         prisma.lead.aggregate({
           where: {
@@ -429,6 +431,7 @@ export const publicOrganizationDashboard = base
           activeLeads,
           wonLeads,
           lostLeads,
+          leadsWithoutTags,
           conversionRate:
             closedTotal > 0
               ? parseFloat(((wonLeads / closedTotal) * 100).toFixed(2))

@@ -14,11 +14,13 @@ export const publicOrganizationDashboard = base
     z.object({
       organizationId: z.string(),
       slug: z.string(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
     }),
   )
   .handler(async ({ input, errors }) => {
     try {
-      const { organizationId, slug } = input;
+      const { organizationId, slug, startDate: inputStartDate, endDate: inputEndDate } = input;
 
       // Validate the share exists and belongs to the organization
       const share = await prisma.insightShares.findFirst({
@@ -55,15 +57,18 @@ export const publicOrganizationDashboard = base
         tagIds?: string[];
       };
 
-      const { trackingId, organizationIds, startDate, endDate, tagIds } =
+      const { trackingId, organizationIds, tagIds } =
         savedFilters;
+
+      const startDate = inputStartDate || savedFilters.startDate;
+      const endDate = inputEndDate || savedFilters.endDate;
 
       const dateFilter =
         startDate || endDate
           ? {
               createdAt: {
-                ...(startDate ? { gte: new Date(startDate) } : {}),
-                ...(endDate ? { lte: new Date(endDate) } : {}),
+                ...(startDate ? { gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)) } : {}),
+                ...(endDate ? { lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) } : {}),
               },
             }
           : {};
@@ -413,6 +418,10 @@ export const publicOrganizationDashboard = base
         share: {
           name: share.name,
           settings: share.settings,
+          appliedFilters: {
+            startDate,
+            endDate,
+          },
         },
         organization: share.organization,
         summary: {

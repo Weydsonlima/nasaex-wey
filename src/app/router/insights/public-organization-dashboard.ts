@@ -55,13 +55,8 @@ export const publicOrganizationDashboard = base
         tagIds?: string[];
       };
 
-      const {
-        trackingId,
-        organizationIds,
-        startDate,
-        endDate,
-        tagIds,
-      } = savedFilters;
+      const { trackingId, organizationIds, startDate, endDate, tagIds } =
+        savedFilters;
 
       const dateFilter =
         startDate || endDate
@@ -359,7 +354,9 @@ export const publicOrganizationDashboard = base
         const key = row.responsibleId ?? "__unassigned__";
         if (!responsibleConsolidated[key]) {
           responsibleConsolidated[key] = {
-            user: row.responsibleId ? (userMap[row.responsibleId] ?? null) : null,
+            user: row.responsibleId
+              ? (userMap[row.responsibleId] ?? null)
+              : null,
             won: 0,
             total: 0,
             breakdown: {},
@@ -441,39 +438,44 @@ export const publicOrganizationDashboard = base
         byStatus: Object.entries(statusConsolidated).map(([id, val]) => ({
           status: statusMap[id] ?? { id, name: "Unknown", color: null },
           count: val.count,
+          leadIds: [],
           breakdown: Object.entries(val.breakdown).map(([name, count]) => ({
             name,
             count,
+            leadIds: [],
           })),
         })),
-        byChannel: Object.entries(channelConsolidated).map(
-          ([source, val]) => ({
-            source,
-            count: val.count,
-            breakdown: Object.entries(val.breakdown).map(([name, count]) => ({
-              name,
-              count,
-            })),
-          }),
-        ),
+        byChannel: Object.entries(channelConsolidated).map(([source, val]) => ({
+          source,
+          count: val.count,
+          leadIds: [],
+          breakdown: Object.entries(val.breakdown).map(([name, count]) => ({
+            name,
+            count,
+            leadIds: [],
+          })),
+        })),
         byAttendant: Object.entries(responsibleConsolidated).map(
           ([key, val]) => ({
             responsible: val.user,
             isUnassigned: key === "__unassigned__",
             total: val.total,
             won: val.won,
+            leadIds: [],
             breakdown: Object.entries(val.breakdown).map(([name, bVal]) => ({
               name,
               count: bVal.total,
               won: bVal.won,
+              leadIds: [],
             })),
           }),
         ),
         topTags: topTagIds.map((id) => ({
           tag: tagMap[id] ?? { id, name: "Unknown", color: null },
           count: tagConsolidated[id].count,
+          leadIds: [],
           breakdown: Object.entries(tagConsolidated[id].breakdown).map(
-            ([name, count]) => ({ name, count }),
+            ([name, count]) => ({ name, count, leadIds: [] }),
           ),
         })),
       };

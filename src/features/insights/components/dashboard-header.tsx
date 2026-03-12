@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ExpandIcon,
   FullscreenIcon,
   LayoutDashboard,
   Link2Icon,
@@ -14,7 +15,7 @@ import { SharingInsights } from "./sharing-insight-modal";
 import { useDashboardStore } from "../hooks/use-dashboard-store";
 import { authClient } from "@/lib/auth-client";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { enterFullscreen } from "@/utils/enter-full-screen";
+import { useFullscreen } from "@/hooks/use-full-screen";
 
 interface DashboardHeaderProps {
   settings: DashboardSettings;
@@ -40,6 +41,7 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const store = useDashboardStore();
   const session = authClient.useSession();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   return (
     <div className="flex items-center justify-between">
@@ -99,11 +101,15 @@ export function DashboardHeader({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => enterFullscreen()}
+            onClick={toggleFullscreen}
             disabled={isLoading}
             className="self-end sm:self-auto"
           >
-            <FullscreenIcon className="h-4 w-4" />
+            {isFullscreen ? (
+              <FullscreenIcon className="h-4 w-4" />
+            ) : (
+              <ExpandIcon className="h-4 w-4" />
+            )}
           </Button>
         </ButtonGroup>
       </div>

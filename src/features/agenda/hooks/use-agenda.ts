@@ -16,6 +16,12 @@ export const useSuspenseAgenda = (agendaId: string) => {
   );
 };
 
+export const useSuspenseAvailabilities = (agendaId: string) => {
+  return useSuspenseQuery(
+    orpc.agenda.getAvailabilities.queryOptions({ input: { agendaId } }),
+  );
+};
+
 export const useCreateAgenda = () => {
   const queryClient = useQueryClient();
 

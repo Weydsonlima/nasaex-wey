@@ -46,6 +46,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const AgendaList = () => {
   const [open, setOpen] = useState(false);
@@ -122,6 +123,16 @@ export const AgendaList = () => {
     </>
   );
 };
+
+export function SkeletonAgendaList() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Skeleton key={index} className="h-20" />
+      ))}
+    </div>
+  );
+}
 
 interface AgendaItemProps {
   agenda: {

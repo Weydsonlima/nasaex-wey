@@ -4,6 +4,7 @@ import { getManyAgendas } from "./get-many";
 import { deleteAgenda } from "./delete";
 import { getAgenda } from "./get";
 import { toggleActiveAgenda } from "./toggle-active";
+import { getAvailabilities } from "./get-availabilities";
 
 export const agendaRouter = {
   create: createAgenda,
@@ -12,4 +13,5 @@ export const agendaRouter = {
   duplicate: duplicateAgenda,
   delete: deleteAgenda,
   toggleActive: toggleActiveAgenda,
+  getAvailabilities: getAvailabilities,
 };

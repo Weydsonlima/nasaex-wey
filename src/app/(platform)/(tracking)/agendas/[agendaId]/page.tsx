@@ -10,8 +10,10 @@ export default async function Page({ params }: PageProps) {
   const { agendaId } = await params;
 
   return (
-    <Suspense fallback={<EntityLoading />}>
-      <EditorAgenda agendaId={agendaId} />
-    </Suspense>
+    <>
+      <Suspense fallback={<EntityLoading />}>
+        <EditorAgenda agendaId={agendaId} />
+      </Suspense>
+    </>
   );
 }

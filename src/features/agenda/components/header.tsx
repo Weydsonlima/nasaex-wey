@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DeleteAgendaModal } from "./delete-agenda-modal";
+import Link from "next/link";
 
 interface HeaderAgendaProps {
   agendaId: string;
@@ -67,8 +68,10 @@ export function HeaderAgenda({ agendaId }: HeaderAgendaProps) {
     <>
       <div className="sticky h-16 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <Button size="icon-sm" variant="ghost" onClick={() => router.back()}>
-            <ArrowLeftIcon />
+          <Button size="icon-sm" variant="ghost" asChild>
+            <Link href="/agendas">
+              <ArrowLeftIcon />
+            </Link>
           </Button>
 
           {data.agenda.name}

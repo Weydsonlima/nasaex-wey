@@ -95,20 +95,41 @@ export const getTrackingDashboardReport = base
           select: { id: true },
         }),
 
-        // Valor Vendido esse mês
+        // Valor de leads ativos
         prisma.lead.aggregate({
           where: {
             ...baseWhere,
-            currentAction: "ACTIVE",
+            history: {
+              some: {
+                action: "ACTIVE",
+              },
+              none: {
+                OR: [
+                  {
+                    action: "WON",
+                  },
+                  {
+                    action: "LOST",
+                  },
+                  {
+                    action: "DELETED",
+                  },
+                ],
+              },
+            },
           },
           _sum: { amount: true },
         }),
 
-        // Valor Vendido mês passado
+        // Valor valor de leads vendidos
         prisma.lead.aggregate({
           where: {
             ...baseWhere,
-            currentAction: "WON",
+            history: {
+              some: {
+                action: "WON",
+              },
+            },
           },
           _sum: { amount: true },
         }),

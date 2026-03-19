@@ -2,9 +2,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useQueryPublicAgenda } from "../../hooks/use-public-agenda";
-import { Calendar, Clock } from "lucide-react";
+import { CalendarX, Clock } from "lucide-react";
 import dayjs from "dayjs";
 import { Separator } from "@/components/ui/separator";
+import { RenderCalendar } from "./render-calendar";
 
 interface BookingFormProps {
   orgSlug: string;
@@ -16,7 +17,7 @@ export function BookingForm({ orgSlug, agendaSlug }: BookingFormProps) {
 
   return (
     <Card className="max-w-250 w-full mx-auto">
-      <CardContent className="p-5 md:grid md:grid-cols-[1fr_auto_1fr_auto_1fr]">
+      <CardContent className="p-5 md:grid md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-4">
         <div className="">
           {agenda?.organization.logo && (
             <img
@@ -34,7 +35,7 @@ export function BookingForm({ orgSlug, agendaSlug }: BookingFormProps) {
 
           <div className="mt-5 flex flex-col gap-y-3">
             <p className="flex items-center">
-              <Calendar className="size-4 mr-2 text-primary" />
+              <CalendarX className="size-4 mr-2 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">
                 {dayjs().format("D MMMM YYYY")}
               </span>
@@ -50,6 +51,8 @@ export function BookingForm({ orgSlug, agendaSlug }: BookingFormProps) {
         </div>
 
         <Separator orientation="vertical" className="w-px! h-full" />
+
+        <RenderCalendar availabilities={agenda?.availabilities as any} />
       </CardContent>
     </Card>
   );

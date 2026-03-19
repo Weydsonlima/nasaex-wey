@@ -1,11 +1,15 @@
 "use client";
 
+import { getLocalTimeZone, parseDate } from "@internationalized/date";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { useQueryPublicAgenda } from "../../hooks/use-public-agenda";
-import { CalendarX, Clock } from "lucide-react";
-import dayjs from "dayjs";
+import { CalendarXIcon, ClockIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { RenderCalendar } from "./render-calendar";
+import dayjs from "dayjs";
+import { useQueryState } from "nuqs";
+import { TimeTable } from "./time-table";
 
 interface BookingFormProps {
   orgSlug: string;
@@ -14,6 +18,10 @@ interface BookingFormProps {
 
 export function BookingForm({ orgSlug, agendaSlug }: BookingFormProps) {
   const { agenda, isLoading } = useQueryPublicAgenda({ orgSlug, agendaSlug });
+
+  const [date] = useQueryState("date");
+
+  const selectedDate = date ? parseDate(date).toDate(getLocalTimeZone()) : new Date();
 
   return (
     <Card className="max-w-250 w-full mx-auto">
@@ -35,14 +43,14 @@ export function BookingForm({ orgSlug, agendaSlug }: BookingFormProps) {
 
           <div className="mt-5 flex flex-col gap-y-3">
             <p className="flex items-center">
-              <CalendarX className="size-4 mr-2 text-primary" />
+              <CalendarXIcon className="size-4 mr-2 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">
-                {dayjs().format("D MMMM YYYY")}
+                {dayjs(selectedDate).format("D MMMM YYYY")}
               </span>
             </p>
 
             <p className="flex items-center">
-              <Clock className="size-4 mr-2 text-primary" />
+              <ClockIcon className="size-4 mr-2 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">
                 {agenda?.slotDuration} minutos
               </span>
@@ -53,6 +61,15 @@ export function BookingForm({ orgSlug, agendaSlug }: BookingFormProps) {
         <Separator orientation="vertical" className="w-px! h-full" />
 
         <RenderCalendar availabilities={agenda?.availabilities as any} />
+
+        <Separator orientation="vertical" className="w-px! h-full" />
+
+        <TimeTable
+          selectedDate={selectedDate}
+          orgSlug={orgSlug}
+          agendaSlug={agendaSlug}
+          slotDuration={agenda?.slotDuration as number}
+        />
       </CardContent>
     </Card>
   );

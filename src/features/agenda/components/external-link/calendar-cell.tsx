@@ -54,7 +54,7 @@ export function CalendarCell({
             finalIsDisabled ? "text-muted-foreground cursor-not-allowed" : "",
             isSelected ? "bg-primary text-white" : "",
             !isSelected && !finalIsDisabled
-              ? "hover:bg-primary/10 cursor-pointer"
+              ? "hover:bg-primary/10 cursor-pointer bg-secondary"
               : "",
           )}
         >

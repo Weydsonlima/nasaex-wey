@@ -105,6 +105,7 @@ model Organization {
   actions     Action[]
   insightShares InsightShares[]
   agendas     Agenda[]
+  widgets     Widget[]
 
   @@unique([slug])
   @@map("organization")
@@ -834,4 +835,23 @@ model Appointment {
   @@index([startsAt])
   @@index([status])
   @@map("appointments")
+}
+
+enum WidgetType {
+  LEADS_BY_TAG
+}
+
+model Widget {
+  id             String     @id @default(cuid())
+  title          String
+  type           WidgetType
+  config         Json       @default("{}")
+  order          Int        @default(0)
+  organizationId String     @map("organization_id")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("widgets")
 }

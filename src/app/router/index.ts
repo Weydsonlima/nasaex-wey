@@ -11,6 +11,7 @@ import { integrationsRouter } from "./integrations";
 import { iaRouter } from "./ia";
 import { insightsRouter } from "./insights";
 import { agendaRouter } from "./agenda";
+import { widgetsRouter } from "./widgets";
 
 export const router = {
   tracking: trackingRoutes,
@@ -26,4 +27,5 @@ export const router = {
   ia: iaRouter,
   insights: insightsRouter,
   agenda: agendaRouter,
+  widgets: widgetsRouter,
 };

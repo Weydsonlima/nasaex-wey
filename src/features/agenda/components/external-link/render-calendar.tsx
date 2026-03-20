@@ -2,8 +2,16 @@
 
 import { DayOfWeek } from "@/generated/prisma/enums";
 import { Calendar } from "./calendar";
-import { getLocalTimeZone, today } from "@internationalized/date";
+import {
+  getLocalTimeZone,
+  parseDate,
+  today,
+  CalendarDate,
+} from "@internationalized/date";
 import { DateValue } from "react-aria";
+import { useEffect, useState } from "react";
+import { useQueryState } from "nuqs";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface RenderCalendarProps {
   availabilities: {
@@ -14,7 +22,24 @@ interface RenderCalendarProps {
 }
 
 export function RenderCalendar({ availabilities }: RenderCalendarProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const safeAvailabilities = availabilities ?? [];
+  const [date, setDate] = useState(() => {
+    const dateParam = searchParams.get("date");
+
+    return dateParam ? parseDate(dateParam) : today(getLocalTimeZone());
+  });
+
+  const handleDateChange = (date: DateValue) => {
+    setDate(date as CalendarDate);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("date", date.toString());
+
+    router.push(url.toString());
+  };
 
   const availabilityMap: Partial<Record<DayOfWeek, boolean>> =
     Object.fromEntries(
@@ -43,10 +68,20 @@ export function RenderCalendar({ availabilities }: RenderCalendarProps) {
     return !isActive;
   };
 
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+
+    if (dateParam) {
+      setDate(parseDate(dateParam));
+    }
+  }, [searchParams]);
+
   return (
     <Calendar
       minValue={today(getLocalTimeZone())}
       isDateUnavailable={isDateUnavailable}
+      value={date}
+      onChange={handleDateChange}
     />
   );
 }

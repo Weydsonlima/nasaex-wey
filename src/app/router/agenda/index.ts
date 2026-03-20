@@ -12,6 +12,8 @@ import { createTimeSlot } from "./timeslots/create";
 import { updateTimeSlot } from "./timeslots/update";
 import { updateAgenda } from "./update";
 import { getPublicAgenda } from "./public/get";
+import { getPublicAgendaTimeSlots } from "./public/get-timeslots";
+import { createAppointment } from "./appointments/create";
 
 export const agendaRouter = {
   create: createAgenda,
@@ -33,5 +35,9 @@ export const agendaRouter = {
   },
   public: {
     get: getPublicAgenda,
+    getTimeSlots: getPublicAgendaTimeSlots,
+    appointment: {
+      create: createAppointment,
+    },
   },
 };

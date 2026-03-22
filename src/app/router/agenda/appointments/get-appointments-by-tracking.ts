@@ -19,9 +19,10 @@ export const getAppointmentsByTracking = base
       where: {
         agenda: {
           trackingId,
+          organizationId: context.org.id,
         },
       },
     });
 
-    return appointments;
+    return { appointments };
   });

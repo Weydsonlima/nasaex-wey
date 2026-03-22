@@ -167,6 +167,7 @@ model Tracking {
   whatsappInstance WhatsAppInstance?
   conversations  Conversation[]
   agendas        Agenda[]
+  appointments   Appointment[]
   aiSettings     AiSettings?
   trackingConsultants TrackingConsultant[]
 
@@ -837,20 +838,22 @@ enum AppointmentStatus {
 
 model Appointment {
   id          String            @id @default(cuid())
-  agendaId    String            @map("agenda_id")
-  leadId      String?           @map("lead_id")
-  userId      String?           @map("user_id") // responsável que vai atender
   title       String?
   notes       String?
   startsAt    DateTime          @map("starts_at")
   endsAt      DateTime          @map("ends_at")
   status      AppointmentStatus @default(PENDING)
+  agendaId    String            @map("agenda_id")
+  leadId      String?           @map("lead_id")
+  userId      String?           @map("user_id")
+  trackingId  String?           @map("tracking_id")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt      @map("updated_at")
 
   agenda Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
   lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tracking Tracking? @relation(fields: [trackingId], references: [id], onDelete: SetNull)
 
   @@index([agendaId])
   @@index([leadId])

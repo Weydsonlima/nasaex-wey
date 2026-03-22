@@ -205,3 +205,23 @@ export const useUpdateLeadOrder = () => {
     }),
   );
 };
+
+/// Appointments
+export const useQueryAppointmentsByTrackfing = ({
+  trackingId,
+}: {
+  trackingId: string;
+}) => {
+  const { data, isLoading } = useQuery(
+    orpc.agenda.appointments.getManyByTracking.queryOptions({
+      input: {
+        trackingId,
+      },
+    }),
+  );
+
+  return {
+    appointments: data?.appointments ?? [],
+    isLoading,
+  };
+};

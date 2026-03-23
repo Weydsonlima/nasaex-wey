@@ -12,6 +12,7 @@ import { iaRouter } from "./ia";
 import { insightsRouter } from "./insights";
 import { agendaRouter } from "./agenda";
 import { rodizioRouter } from "./rodizio";
+import { widgetsRouter } from "./widgets";
 
 export const router = {
   tracking: trackingRoutes,
@@ -28,4 +29,5 @@ export const router = {
   insights: insightsRouter,
   agenda: agendaRouter,
   rodizio: rodizioRouter,
+  widgets: widgetsRouter,
 };

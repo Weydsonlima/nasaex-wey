@@ -34,6 +34,7 @@ export const listTags = base
           description: true,
           icon: true,
           type: true,
+          organizationId: true,
         },
         where: {
           organizationId: context.org.id,

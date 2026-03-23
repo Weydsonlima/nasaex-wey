@@ -35,6 +35,7 @@ model User {
   insightShares InsightShares[]
   agendaResponsibles AgendaResponsible[]
   appointments Appointment[]
+  trackingConsultants TrackingConsultant[]
 
   @@unique([email])
   @@map("user")
@@ -167,7 +168,9 @@ model Tracking {
   whatsappInstance WhatsAppInstance?
   conversations  Conversation[]
   agendas        Agenda[]
+  appointments   Appointment[]
   aiSettings     AiSettings?
+  trackingConsultants TrackingConsultant[]
 
   @@map("tracking")
 }
@@ -211,6 +214,20 @@ model WinLossReason {
   @@map("win_loss_reasons")
 }
 
+model TrackingConsultant {
+  id         String   @id @default(cuid())
+  trackingId String   @map("tracking_id")
+  userId     String   @map("user_id")
+  maxFlow    Int      @default(0)   @map("max_flow")
+  isActive   Boolean  @default(true)
+
+  tracking Tracking @relation( fields: [trackingId], references: [id], onDelete: Cascade)  
+  user     User     @relation( fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackingId])
+  @@map("tracking_consultant")
+}
+
 model TrackingParticipant {
   id         String          @id @default(cuid())
   userId     String          @map("user_id")
@@ -219,7 +236,7 @@ model TrackingParticipant {
   createdAt  DateTime        @default(now()) @map("created_at")
   tracking   Tracking        @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  
   @@unique([userId, trackingId])
   @@map("tracking_participant")
 }
@@ -290,6 +307,12 @@ enum Temperature {
   VERY_HOT
 }
 
+enum StatusFlow {
+  ACTIVE
+  WAITING
+  FINISHED
+} 
+
 model Lead {
   id          String  @id @default(cuid())
   name        String
@@ -305,6 +328,7 @@ model Lead {
   source      LeadSource @default(DEFAULT)
   temperature Temperature @default(COLD)
   amount Decimal @db.Decimal(15, 2) @default(0)
+  statusFlow StatusFlow @default(ACTIVE) @map("status_flow")
 
   currentAction LeadAction @default(ACTIVE) @map("current_action")
   isActive      Boolean    @default(true) @map("is_active")
@@ -317,6 +341,7 @@ model Lead {
   status   Status   @relation(fields: [statusId], references: [id], onDelete: Cascade)
   tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   responsible User? @relation("LeadResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+
   conversation Conversation? 
 
   leadTags LeadTag[]
@@ -814,20 +839,22 @@ enum AppointmentStatus {
 
 model Appointment {
   id          String            @id @default(cuid())
-  agendaId    String            @map("agenda_id")
-  leadId      String?           @map("lead_id")
-  userId      String?           @map("user_id") // responsável que vai atender
   title       String?
   notes       String?
   startsAt    DateTime          @map("starts_at")
   endsAt      DateTime          @map("ends_at")
   status      AppointmentStatus @default(PENDING)
+  agendaId    String            @map("agenda_id")
+  leadId      String?           @map("lead_id")
+  userId      String?           @map("user_id")
+  trackingId  String?           @map("tracking_id")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt      @map("updated_at")
 
   agenda Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
   lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
   user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tracking Tracking? @relation(fields: [trackingId], references: [id], onDelete: SetNull)
 
   @@index([agendaId])
   @@index([leadId])

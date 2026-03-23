@@ -20,7 +20,7 @@ export const listWidgets = base
   .handler(async ({ input, context }) => {
     const { organizationIds } = input;
 
-    let organizationIdFinded = await prisma.widget.findMany({
+    let organizationIdFinded = await prisma.organization.findMany({
       where: {
         id: { in: organizationIds },
       },

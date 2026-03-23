@@ -3,23 +3,23 @@ import { orpc } from "@/lib/orpc";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface UseListWidgetsOptions {
-  organizationId: string[];
+  organizationIds: string[];
 }
 
 export const useQueryListWidgets = ({
-  organizationId,
+  organizationIds,
 }: UseListWidgetsOptions) => {
-  const { data, ...query } = useQuery(
+  const { data, isLoading } = useQuery(
     orpc.widgets.list.queryOptions({
       input: {
-        organizationIds: organizationId,
+        organizationIds,
       },
     }),
   );
 
   return {
     widgets: data ?? [],
-    ...query,
+    isLoading,
   };
 };
 
@@ -89,8 +89,14 @@ export const useMutationDeleteWidget = (organizationIds: string[]) => {
         queryClient.invalidateQueries({
           queryKey: orpc.widgets.list.queryKey({
             input: {
-              organizationIds:
-                organizationIds.length === 0 ? organizationIds : [],
+              organizationIds,
+            },
+          }),
+        });
+        queryClient.invalidateQueries({
+          queryKey: orpc.tags.listTagsWithoutWidget.queryKey({
+            input: {
+              organizationIds,
             },
           }),
         });

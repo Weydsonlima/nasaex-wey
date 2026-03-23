@@ -64,7 +64,6 @@ export const listTagsWithoutWidget = base
       });
 
       const tagIdsFromWidgets = widgets.map((w) => {
-        console.log(w);
         const config = w.config;
         if (config === null) {
           return;
@@ -73,8 +72,6 @@ export const listTagsWithoutWidget = base
 
         return configFormated.tagid;
       });
-
-      console.log(tagIdsFromWidgets);
 
       // Query ao banco com tratamento
       const tags = await prisma.tag.findMany({

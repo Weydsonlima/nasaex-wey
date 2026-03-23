@@ -56,6 +56,7 @@ export function AddWidgetPerson({
               },
             }),
           });
+          setOpen(false);
         },
         onError: () => {
           toast.error("Erro ao adicionar insight");
@@ -98,7 +99,11 @@ export function AddWidgetPerson({
                         {tag.name}
                       </DropdownMenuItem>
                     ))}
-                  {!tags && "Nenhuma tag disponível"}
+
+                  {!tags ||
+                    (tags.length === 0 && (
+                      <div className="p-4">Nenhuma tag disponível</div>
+                    ))}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>

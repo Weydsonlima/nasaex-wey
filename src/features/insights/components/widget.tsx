@@ -5,23 +5,29 @@ import {
   useQueryWidgetByTag,
 } from "../hooks/use-widget";
 import { AddWidgetPerson } from "./add-widget-person";
-import { Spinner } from "@/components/ui/spinner";
 import { TagIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getContrastColor } from "@/utils/get-contrast-color";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface WidgetListProps {
   organizationIds: string[];
 }
 
 export function WidgetList(data: WidgetListProps) {
-  const { widgets } = useQueryListWidgets({
-    organizationId: data.organizationIds,
+  const { widgets, isLoading } = useQueryListWidgets({
+    organizationIds: data.organizationIds,
   });
   const widgetsSorted = widgets.sort((a, b) => a.order - b.order);
   return (
     <Card className="w-full">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full min-h-40 px-4 ">
-        {widgetsSorted &&
+        {isLoading &&
+          Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={`skeletron-${index}`} className="w-full min-h-40" />
+          ))}
+        {!isLoading &&
+          widgetsSorted &&
           widgetsSorted.map((widget) => {
             const config =
               typeof widget.config === "string"
@@ -84,9 +90,10 @@ export function WidgetTag({
       <Card className="w-full h-full px-4 py-4 flex flex-col justify-between rounded-2xl shadow-sm hover:shadow-md transition-all">
         {/* Header */}
         <div className="flex w-full items-start justify-between gap-2">
-          <h1 className="text-lg font-semibold leading-tight max-w-[70%]">
-            {title}
-          </h1>
+          <div className="flex flex-col w-full">
+            <h1 className="text-lg font-semibold leading-tight">{title}</h1>
+            <h3 className="text-xs text-muted-foreground">Por tags</h3>
+          </div>
 
           <div className="flex items-center gap-x-2">
             {mutation.isPending ? (
@@ -102,7 +109,13 @@ export function WidgetTag({
               </Button>
             )}
 
-            <div className="bg-foreground/10 rounded-md p-2">
+            <div
+              style={{
+                backgroundColor: data?.color ?? "#000",
+                color: getContrastColor(data?.color ?? "#000"),
+              }}
+              className="bg-foreground/10 rounded-md p-2"
+            >
               <TagIcon className="size-4" />
             </div>
           </div>

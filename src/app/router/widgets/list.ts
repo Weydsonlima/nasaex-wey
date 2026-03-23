@@ -14,15 +14,47 @@ export const listWidgets = base
   })
   .input(
     z.object({
-      organizationId: z.array(z.string()),
+      organizationIds: z.array(z.string()),
     }),
   )
   .handler(async ({ input, context }) => {
-    const { organizationId } = input;
+    const { organizationIds } = input;
+
+    let organizationIdFinded = await prisma.widget.findMany({
+      where: {
+        id: { in: organizationIds },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!organizationIdFinded || organizationIdFinded.length === 0) {
+      const myOrganizations = await prisma.member.findMany({
+        where: {
+          userId: context.user.id,
+        },
+        select: { organizationId: true },
+      });
+
+      organizationIdFinded = await prisma.organization.findMany({
+        where: {
+          id: {
+            in: myOrganizations.map(
+              (organization) => organization.organizationId,
+            ),
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+    }
+
     const widgets = await prisma.widget.findMany({
       where: {
         organizationId: {
-          in: organizationId,
+          in: organizationIdFinded.map((organization) => organization.id),
         },
       },
     });

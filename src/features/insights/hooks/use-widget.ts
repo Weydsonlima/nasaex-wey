@@ -12,7 +12,7 @@ export const useQueryListWidgets = ({
   const { data, ...query } = useQuery(
     orpc.widgets.list.queryOptions({
       input: {
-        organizationId,
+        organizationIds: organizationId,
       },
     }),
   );
@@ -28,7 +28,10 @@ interface UseWidgetByTagOptions {
   organizationId: string;
 }
 
-export const useQueryWidgetByTag = ({ tagId, organizationId }: UseWidgetByTagOptions) => {
+export const useQueryWidgetByTag = ({
+  tagId,
+  organizationId,
+}: UseWidgetByTagOptions) => {
   const { data, ...query } = useQuery(
     orpc.widgets.byTag.queryOptions({
       input: {
@@ -53,7 +56,7 @@ export const useMutationCreateWidget = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries({
           queryKey: orpc.widgets.list.queryKey({
-            input: { organizationId: [data.organizationId] },
+            input: { organizationIds: [data.organizationId] },
           }),
         });
       },
@@ -69,7 +72,7 @@ export const useMutationUpdateWidget = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries({
           queryKey: orpc.widgets.list.queryKey({
-            input: { organizationId: [data.organizationId] },
+            input: { organizationIds: [data.organizationId] },
           }),
         });
       },
@@ -77,15 +80,18 @@ export const useMutationUpdateWidget = () => {
   );
 };
 
-export const useMutationDeleteWidget = () => {
+export const useMutationDeleteWidget = (organizationIds: string[]) => {
   const queryClient = useQueryClient();
 
   return useMutation(
     orpc.widgets.delete.mutationOptions({
-      onSuccess: (data) => {
+      onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: orpc.widgets.list.queryKey({
-            input: { organizationId: [data.organizationId] },
+            input: {
+              organizationIds:
+                organizationIds.length === 0 ? organizationIds : [],
+            },
           }),
         });
       },

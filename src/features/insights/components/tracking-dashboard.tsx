@@ -242,7 +242,7 @@ export function TrackingDashboard({
                 </ChartWrapper>
               ))}
           </div>
-          <WidgetList organizationId={organizationIds} />
+          <WidgetList organizationIds={organizationIds} />
         </TabsContent>
         <TabsContent
           value="atendiment"

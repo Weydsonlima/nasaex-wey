@@ -690,70 +690,187 @@ async function fetchBubbleLeads(page = 0): Promise<any[]> {
   return leads;
 }
 
-function normalizePhone(raw: unknown) {
-  if (!raw) return null;
-  const phone = String(raw).replace(/\D/g, "");
-  return phone.length > 0 ? phone : null;
+// async function main() {
+//   console.log("Iniciando atualização de leads via Bubble...");
+
+//   let page = 0;
+//   let hasMore = true;
+//   let updated = 0;
+
+//   while (hasMore) {
+//     const bubbleLeads = await fetchBubbleLeads(page);
+
+//     if (bubbleLeads.length === 0) {
+//       hasMore = false;
+//       break;
+//     }
+
+//     for (const bubbleLead of bubbleLeads) {
+//       const phone = normalizePhone(bubbleLead.phone);
+//       if (!phone) {
+//         console.warn(
+//           `Ignorando lead sem telefone válido: ${JSON.stringify(bubbleLead)}`,
+//         );
+//         continue;
+//       }
+
+//       const existingLead = await prisma.lead.findFirst({
+//         where: {
+//           phone,
+//           tracking: {
+//             organizationId: organizationBaseId,
+//           },
+//         },
+//       });
+
+//       if (!existingLead) {
+//         continue;
+//       }
+
+//       await prisma.lead.update({
+//         where: { id: existingLead.id },
+//         data: {
+//           description: bubbleLead.observacoes ?? "",
+//         },
+//       });
+
+//       updated++;
+//     }
+
+//     page += 1;
+
+//     if (page >= 500) {
+//       console.warn(
+//         "Limite de páginas alcançado (500), interrompendo iteração.",
+//       );
+//       hasMore = false;
+//     }
+//   }
+
+//   console.log(`Atualização concluída: ${updated} leads atualizados.`);
+// }
+
+const TRACKING_ID = "cmmz0saue0000iofdmztuwut2";
+const STATUS_ID1 = "cmmz0sbc80002iofd3rrciy93";
+const STATUS_ID2 = "cmmz0sbc80003iofdp1fhrxqw";
+const STATUS_ID3 = "cmmz0sbc80004iofdpi3zxiq1";
+const ORGANIZATION_ID = "Ao0EcD6nPDdtF0RhgRQDHtF2JkaPq0XC";
+
+/**
+ * Quantidades
+ */
+const TOTAL_LEADS = 100;
+const TOTAL_TAGS = 10;
+
+/**
+ * Gera telefone único
+ */
+function generatePhone(index: number) {
+  return `55${faker.string.numeric(10)}${index}`;
+}
+
+/**
+ * Embaralhar array
+ */
+function shuffleArray<T>(array: T[]) {
+  return array.sort(() => Math.random() - 0.5);
 }
 
 async function main() {
-  console.log("Iniciando atualização de leads via Bubble...");
+  console.log("🌱 Iniciando seed...");
 
-  let page = 0;
-  let hasMore = true;
-  let updated = 0;
+  /**
+   * 1 — Criar TAGS
+   */
+  console.log("Criando tags...");
 
-  while (hasMore) {
-    const bubbleLeads = await fetchBubbleLeads(page);
+  const tagsData = Array.from({ length: TOTAL_TAGS }).map(() => ({
+    name: "tag" + faker.person.fullName(),
+    slug: "tag" + faker.person.fullName(),
+    color: faker.color.rgb(),
+    organizationId: ORGANIZATION_ID,
+    trackingId: TRACKING_ID,
+  }));
 
-    if (bubbleLeads.length === 0) {
-      hasMore = false;
-      break;
-    }
+  await prisma.tag.createMany({
+    data: tagsData,
+  });
 
-    for (const bubbleLead of bubbleLeads) {
-      const phone = normalizePhone(bubbleLead.phone);
-      if (!phone) {
-        console.warn(
-          `Ignorando lead sem telefone válido: ${JSON.stringify(bubbleLead)}`,
-        );
-        continue;
-      }
+  const tags = await prisma.tag.findMany({
+    where: {
+      trackingId: TRACKING_ID,
+    },
+    select: {
+      id: true,
+    },
+  });
 
-      const existingLead = await prisma.lead.findFirst({
-        where: {
-          phone,
-          tracking: {
-            organizationId: organizationBaseId,
-          },
-        },
+  console.log(`✅ ${tags.length} tags criadas`);
+
+  /**
+   * 2 — Criar LEADS
+   */
+  console.log("Criando leads...");
+
+  const leadsData = Array.from({ length: TOTAL_LEADS }).map((_, i) => ({
+    name: faker.person.fullName(),
+    email: faker.internet.email(),
+    phone: generatePhone(i),
+    statusId: faker.helpers.arrayElement([STATUS_ID1, STATUS_ID2, STATUS_ID3]),
+    trackingId: TRACKING_ID,
+  }));
+
+  await prisma.lead.createMany({
+    data: leadsData,
+  });
+
+  const leads = await prisma.lead.findMany({
+    where: {
+      trackingId: TRACKING_ID,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  console.log(`✅ ${leads.length} leads criados`);
+
+  /**
+   * 3 — Embaralhar TAGS entre LEADS
+   */
+  console.log("Relacionando tags aos leads...");
+
+  const leadTagsData: {
+    leadId: string;
+    tagId: string;
+  }[] = [];
+
+  for (const lead of leads) {
+    const shuffledTags = shuffleArray([...tags]);
+
+    const numberOfTags = faker.number.int({
+      min: 1,
+      max: 3,
+    });
+
+    const selectedTags = shuffledTags.slice(0, numberOfTags);
+
+    for (const tag of selectedTags) {
+      leadTagsData.push({
+        leadId: lead.id,
+        tagId: tag.id,
       });
-
-      if (!existingLead) {
-        continue;
-      }
-
-      await prisma.lead.update({
-        where: { id: existingLead.id },
-        data: {
-          description: bubbleLead.observacoes ?? "",
-        },
-      });
-
-      updated++;
-    }
-
-    page += 1;
-
-    if (page >= 500) {
-      console.warn(
-        "Limite de páginas alcançado (500), interrompendo iteração.",
-      );
-      hasMore = false;
     }
   }
 
-  console.log(`Atualização concluída: ${updated} leads atualizados.`);
+  await prisma.leadTag.createMany({
+    data: leadTagsData,
+    skipDuplicates: true,
+  });
+
+  console.log("✅ Tags vinculadas aos leads");
+
+  console.log("🎉 Seed finalizado com sucesso");
 }
 
 main().catch((e) => {

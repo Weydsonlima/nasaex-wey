@@ -34,6 +34,24 @@ export function useQueryTags({ trackingId }: { trackingId?: string }) {
     isLoadingTags: isLoading,
   };
 }
+export function useQueryWithoutWidgetTags({
+  organizationIds,
+}: {
+  organizationIds: string[];
+}) {
+  const { data, isLoading } = useQuery(
+    orpc.tags.listTagsWithoutWidget.queryOptions({
+      input: {
+        organizationIds,
+      },
+    }),
+  );
+
+  return {
+    tags: data?.tags || [],
+    isLoadingTags: isLoading,
+  };
+}
 
 export function useDeleteTag() {
   const queryClient = useQueryClient();

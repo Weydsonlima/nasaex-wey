@@ -55,7 +55,7 @@ export function ListLeadByRelatoryModal({
             />
           </div>
 
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-h-75 pr-4">
             <div className="space-y-2 grid grid-rows-1 ">
               {!isLoading &&
                 filteredLeads?.map((customer) => (

@@ -18,9 +18,12 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSearchModal } from "@/hooks/modal/use-search-modal";
 import { DownloadCloud, MoreHorizontalIcon, Plus, Search } from "lucide-react";
+import { LeadImportDialog } from "./lead-import-dialog";
+import { useState } from "react";
 
 export default function HeadingContacts() {
   const searchLead = useSearchModal();
+  const [modalImportIsOpen, setImportIsModal] = useState(false);
 
   return (
     <>
@@ -41,7 +44,7 @@ export default function HeadingContacts() {
         </InputGroup>
 
         <div className="hidden sm:flex items-center gap-2">
-          <Button variant={"outline"}>
+          <Button variant={"outline"} onClick={() => setImportIsModal(true)}>
             <DownloadCloud className="size-4" />
             Importar
           </Button>
@@ -62,7 +65,7 @@ export default function HeadingContacts() {
           <DropdownMenuContent className="w-40" align="end">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImportIsModal(true)}>
                 <DownloadCloud className="size-4" />
                 Importar
               </DropdownMenuItem>
@@ -78,6 +81,10 @@ export default function HeadingContacts() {
       <SearchLeadModal
         open={searchLead.isOpen}
         onOpenChange={searchLead.setIsOpen}
+      />
+      <LeadImportDialog
+        onOpenChange={setImportIsModal}
+        open={modalImportIsOpen}
       />
     </>
   );

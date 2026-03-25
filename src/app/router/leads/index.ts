@@ -25,6 +25,7 @@ import { addTagsToLead } from "./add-tags";
 import { addHistoricLead } from "./add-historic-lead";
 import { listHistoric } from "./list-historic";
 import { removeTagsFromLead } from "./remove-tags-from-lead";
+import { importLeadsBatch } from "./import-lead";
 
 export const leadRoutes = {
   list: listLead,
@@ -54,4 +55,5 @@ export const leadRoutes = {
   removeTags: removeTagsFromLead,
   addHistoricLead: addHistoricLead,
   listHistoric: listHistoric,
+  importLead: importLeadsBatch,
 };

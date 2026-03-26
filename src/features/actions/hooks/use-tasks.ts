@@ -1,5 +1,5 @@
 import { orpc } from "@/lib/orpc";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
@@ -13,7 +13,45 @@ export const useCreateTask = () => {
             },
           }),
         );
+
+        queryClient.invalidateQueries(
+          orpc.action.listByColumn.queryOptions({
+            input: {
+              columnId: data.action.columnId ?? "",
+            },
+          }),
+        );
       },
     }),
   );
+};
+
+export const useListActionByColumn = (columnId: string) => {
+  const { data, isLoading } = useQuery(
+    orpc.action.listByColumn.queryOptions({
+      input: {
+        columnId,
+      },
+    }),
+  );
+
+  return {
+    actions: data?.action ?? [],
+    isLoading,
+  };
+};
+
+export const useListActionByWorkspace = (workspaceId: string) => {
+  const { data, isLoading } = useQuery(
+    orpc.action.listByWorkspace.queryOptions({
+      input: {
+        workspaceId,
+      },
+    }),
+  );
+
+  return {
+    actions: data?.action ?? [],
+    isLoading,
+  };
 };

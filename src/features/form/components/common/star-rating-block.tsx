@@ -9,7 +9,7 @@ import {
   FormCategoryType,
   HandleBlurFunc,
   ObjectBlockType,
-} from "@/@types/form-block.type";
+} from "@/features/form/types";
 import {
   Form,
   FormControl,
@@ -18,12 +18,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useBuilder } from "@/context/builder-provider";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
-import { defaultPrimaryColor } from "@/constant";
-import { Label } from "../ui/label";
+import { defaultPrimaryColor } from "@/features/form/constants";
+import { Label } from "@/components/ui/label";
 
 import "@smastrom/react-rating/style.css";
 import { useEffect, useState } from "react";
@@ -38,7 +38,7 @@ type attributesType = {
   maxStars: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 };
 
-type PropertiesValidateSchemaType = z.infer<typeof propertiesValidateSchema>;
+type PropertiesValidateSchemaType = z.input<typeof propertiesValidateSchema>;
 
 const propertiesValidateSchema = z.object({
   label: z.string().trim().min(2).max(255),
@@ -82,7 +82,7 @@ function StarRatingCanvasComponent({
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      <Label className="text-base !font-normal mb-1">
+      <Label className="text-base font-normal mb-1">
         {label}
         {required && <span className="text-red-500">*</span>}
       </Label>
@@ -94,7 +94,7 @@ function StarRatingCanvasComponent({
           radius="large"
           spaceBetween="large"
           readOnly={true}
-          className="!fill-primary"
+          className="fill-primary!"
           itemStyles={{
             itemShapes: StarDrawing,
             activeFillColor: defaultPrimaryColor,
@@ -150,7 +150,7 @@ function StarRatingFormComponent({
   return (
     <div className="flex flex-col gap-2 w-full mb-1">
       <Label
-        className={`text-base !font-normal mb-1 ${
+        className={`text-base font-normal mb-1 ${
           isError || isSubmitError ? "text-red-500" : ""
         }`}
       >
@@ -165,7 +165,7 @@ function StarRatingFormComponent({
           onChange={handleStarChange} // Update the rating when a star is selected
           items={maxStars}
           readOnly={false}
-          className="!fill-primary"
+          className="fill-primary"
           radius="large"
           spaceBetween="large"
           itemStyles={{
@@ -206,7 +206,7 @@ function StarRatingPropertiesComponent({
   blockInstance: FormBlockInstance;
 }) {
   const block = blockInstance as NewInstance;
-  const { updateChildBlock } = useBuilder();
+  const { updateChildBlock } = useBuilderStore();
 
   // Initialize the form with validation and default values
   const form = useForm<PropertiesValidateSchemaType>({
@@ -243,9 +243,9 @@ function StarRatingPropertiesComponent({
 
   return (
     <div className="w-full pb-4">
-      <div className="w-full flex flex-row items-center justify-between gap-1 bg-gray-100 h-auto p-1 px-2 mb-[10px]">
-        <span className="text-sm font-medium text-gray-600 tracking-wider">
-          Rating {positionIndex}
+      <div className="w-full flex flex-row items-center justify-between gap-1 bg-accent h-auto p-1 px-2 mb-[10px]">
+        <span className="text-sm font-medium text-muted-foreground tracking-wider">
+          Avaliação por estrelas {positionIndex}
         </span>
         <ChevronDown className="w-4 h-4" />
       </div>
@@ -293,7 +293,7 @@ function StarRatingPropertiesComponent({
               <FormItem className="text-end">
                 <div className="flex items-center justify-between w-full gap-2">
                   <FormLabel className="text-[13px] font-normal">
-                    Required
+                    Obrigatório
                   </FormLabel>
                   <FormControl>
                     <Switch

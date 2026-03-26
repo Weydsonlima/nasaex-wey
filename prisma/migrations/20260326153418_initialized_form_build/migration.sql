@@ -43,7 +43,7 @@ CREATE TABLE "form_responses" (
     "id" TEXT NOT NULL,
     "form_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "content" TEXT NOT NULL,
+    "jsonReponse" JSONB NOT NULL,
 
     CONSTRAINT "form_responses_pkey" PRIMARY KEY ("id")
 );

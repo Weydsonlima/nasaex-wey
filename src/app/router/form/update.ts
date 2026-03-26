@@ -13,21 +13,22 @@ export const updateForm = base
   .input(
     z.object({
       formId: z.string(),
+      trackingId: z.string().optional(),
       name: z.string().optional(),
       description: z.string().optional(),
       jsonBlock: z.string(),
     }),
   )
   .handler(async ({ input }) => {
-    const { formId, name, description, jsonBlock } = input;
+    const { formId, trackingId, name, description, jsonBlock } = input;
 
     const form = await prisma.form.update({
       where: { formId },
       data: {
         ...(name && { name }),
         ...(description && { description }),
-        jsonBlock,
-        content: jsonBlock,
+        jsonBlock: jsonBlock as any,
+        trackingId,
       },
     });
 

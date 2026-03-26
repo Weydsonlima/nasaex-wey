@@ -24,10 +24,10 @@ import {
   FormBlockType,
   FormCategoryType,
   ObjectBlockType,
-} from "@/@types/form-block.type";
-import { fontSizeClass, fontWeightClass } from "@/constant";
-import { Input } from "../ui/input";
-import { useBuilder } from "@/context/builder-provider";
+} from "@/features/form/types";
+import { fontSizeClass, fontWeightClass } from "@/features/form/constants";
+import { Input } from "@/components/ui/input";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 
 const blockCategory: FormCategoryType = "Field";
 const blockType: FormBlockType = "Heading";
@@ -49,7 +49,7 @@ type attributesType = {
   fontWeight: fontWeightType;
 };
 
-type propertiesValidateSchemaType = z.infer<typeof propertiesValidateSchema>;
+type propertiesValidateSchemaType = z.input<typeof propertiesValidateSchema>;
 
 const propertiesValidateSchema = z.object({
   label: z.string().trim().min(2).max(255),
@@ -101,7 +101,7 @@ function HeadingCanvasFormComponent({
       {React.createElement(
         `h${level}`, // Dynamically create heading tag based on 'level'
         {}, // No additional props for the heading element
-        label // Label for the heading
+        label, // Label for the heading
       )}
     </div>
   );
@@ -117,7 +117,7 @@ function HeadingPropertiesComponent({
   blockInstance: FormBlockInstance;
 }) {
   const block = blockInstance as NewInstance;
-  const { updateChildBlock } = useBuilder();
+  const { updateChildBlock } = useBuilderStore();
 
   const form = useForm<propertiesValidateSchemaType>({
     resolver: zodResolver(propertiesValidateSchema),
@@ -152,9 +152,9 @@ function HeadingPropertiesComponent({
 
   return (
     <div className="w-full pb-4">
-      <div className="w-full flex flex-row items-center justify-between gap-1 bg-gray-100 h-auto p-1 px-2 mb-[10px]">
-        <span className="text-sm font-medium text-gray-600 tracking-wider">
-          Heading {positionIndex}
+      <div className="w-full flex flex-row items-center justify-between gap-1 bg-accent h-auto p-1 px-2 mb-[10px]">
+        <span className="text-sm font-medium text-muted-foreground tracking-wider">
+          Titulo {positionIndex}
         </span>
         <ChevronDown className="w-4 h-4" />
       </div>
@@ -205,7 +205,7 @@ function HeadingPropertiesComponent({
                 w-full gap-2"
                 >
                   <FormLabel className="text-[13px] font-normal">
-                    Font Size
+                    Tamanho da fonte
                   </FormLabel>
                   <div className="w-full max-w-[187px]">
                     <FormControl>
@@ -223,12 +223,16 @@ function HeadingPropertiesComponent({
                           <SelectValue placeholder="Select Font Size" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="small">Small</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="large">Large</SelectItem>
-                          <SelectItem value="x-large">Xtra Large</SelectItem>
-                          <SelectItem value="2x-large">2Xtra Large</SelectItem>
-                          <SelectItem value="4x-large">4Xtra Large</SelectItem>
+                          <SelectItem value="small">Pequeno</SelectItem>
+                          <SelectItem value="medium">Mediano</SelectItem>
+                          <SelectItem value="large">Grande</SelectItem>
+                          <SelectItem value="x-large">extra Grande</SelectItem>
+                          <SelectItem value="2x-large">
+                            2x extra Grande
+                          </SelectItem>
+                          <SelectItem value="4x-large">
+                            4x extra Grande
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -247,7 +251,7 @@ function HeadingPropertiesComponent({
               <FormItem>
                 <div className="flex items-baseline justify-between w-full gap-2">
                   <FormLabel className="text-[13px] font-normal">
-                    Weight
+                    Peso da fonte
                   </FormLabel>
                   <div className="w-full max-w-[187px]">
                     <FormControl>
@@ -266,9 +270,9 @@ function HeadingPropertiesComponent({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="bold">Bold</SelectItem>
-                          <SelectItem value="bolder">Bolder</SelectItem>
-                          <SelectItem value="lighter">Lighter</SelectItem>
+                          <SelectItem value="bold">Negrito</SelectItem>
+                          <SelectItem value="bolder">Mais negrito</SelectItem>
+                          <SelectItem value="lighter">Menos negrito</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -287,7 +291,7 @@ function HeadingPropertiesComponent({
               <FormItem>
                 <div className="flex items-baseline justify-between w-full gap-2">
                   <FormLabel className="text-[13px] font-normal">
-                    Level
+                    Nivel
                   </FormLabel>
                   <div className="w-full max-w-[187px]">
                     <FormControl>

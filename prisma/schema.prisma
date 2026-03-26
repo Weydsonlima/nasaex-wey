@@ -659,7 +659,7 @@ model FormResponses {
   id String @id @default(cuid())
   formId String @map("form_id")
   createdAt DateTime @default(now()) @map("created_at")
-  content String
+  jsonReponse Json @default("[]")
   
   form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
 

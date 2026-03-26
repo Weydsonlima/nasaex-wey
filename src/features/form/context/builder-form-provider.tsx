@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { FormBlockInstance, FormWithSettings } from "../types";
 import { v4 as uuidv4 } from "uuid";
+import { client } from "@/lib/orpc";
 
 type BuilderState = {
   loading: boolean;
@@ -13,7 +14,11 @@ type BuilderState = {
 
 type BuilderActions = {
   setFormData: (formData: FormWithSettings | null) => void;
-  setBlockLayouts: (blockLayouts: FormBlockInstance[]) => void;
+  setBlockLayouts: (
+    blockLayouts:
+      | FormBlockInstance[]
+      | ((prev: FormBlockInstance[]) => FormBlockInstance[]),
+  ) => void;
 
   fetchFormById: (formId: string) => Promise<void>;
 
@@ -56,7 +61,11 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
   // ─── Setters simples ─────────────────────────────────────────────────────────
   setFormData: (formData) => set({ formData }),
 
-  setBlockLayouts: (blockLayouts) => set({ blockLayouts }),
+  setBlockLayouts: (updater) =>
+    set((state) => ({
+      blockLayouts:
+        typeof updater === "function" ? updater(state.blockLayouts) : updater,
+    })),
 
   // ─── Fetch ───────────────────────────────────────────────────────────────────
   fetchFormById: async (formId) => {
@@ -64,25 +73,17 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
       set({ loading: true });
       if (!formId) return;
 
-      const response = await fetch(`/api/fetchFormById?formId=${formId}`, {
-        method: "GET",
-      });
+      const { form } = await client.form.get({ id: formId });
 
-      if (!response.ok) {
+      if (!form) {
         throw new Error("Failed to fetch form");
       }
 
-      const { data } = await response.json();
-      const { form } = data;
+      set({ formData: form as any });
 
-      if (form) {
-        console.log(form, "form fetchFormById");
-        set({ formData: form });
-
-        if (form.jsonBlocks) {
-          const parsedBlocks: FormBlockInstance[] = JSON.parse(form.jsonBlocks);
-          set({ blockLayouts: parsedBlocks });
-        }
+      if (form.jsonBlock) {
+        const parsedBlocks: FormBlockInstance[] = JSON.parse(form.jsonBlock);
+        set({ blockLayouts: parsedBlocks });
       }
     } catch (error) {
       console.error("Error fetching form:", error);
@@ -149,7 +150,6 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
       );
 
       if (activeIndex === -1 || overIndex === -1) {
-        console.warn("Active or Over block not found.");
         return state;
       }
 

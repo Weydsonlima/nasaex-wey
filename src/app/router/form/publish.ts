@@ -20,7 +20,7 @@ export const PublishForm = base
     const { formId, published } = input;
 
     const form = await prisma.form.update({
-      where: { formId },
+      where: { id: formId },
       data: { published },
     });
 

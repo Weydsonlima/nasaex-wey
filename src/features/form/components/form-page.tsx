@@ -1,5 +1,5 @@
 import { Separator } from "@/components/ui/separator";
-import CreateForm from "./create-form";
+import { CreateForm } from "./create-form";
 import { StatsListWrap } from "./status-list-wrap";
 import { FormList } from "./form-list";
 

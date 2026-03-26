@@ -6,15 +6,16 @@ import {
   HandleBlurFunc,
   ObjectBlockType,
 } from "@/features/form/types";
-import ChildCanvasComponentWrapper from "@/components/ChildCanvasComponentWrapper";
-import ChildFormComponentWrapper from "@/components/ChildFormComponentWrapper";
-import ChildPropertiesComponentWrapper from "@/components/ChildPropertiesComponentWrapper";
+import { ChildCanvasComponentWrapper } from "@/features/form/components/common/utils/child-canvas-component-wrapper";
+import { ChildFormComponentWrapper } from "@/features/form/components/common/utils/child-form-component-wrapper";
+import { ChildPropertiesComponentWrapper } from "@/features/form/components/common/utils/child-properties-component-wrapper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { allBlockLayouts } from "@/constant";
-import { useBuilder } from "@/context/builder-provider";
+import { allBlockLayouts } from "@/features/form/constants";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 import { FormBlocks } from "@/features/form/lib/form-blocks";
 import { cn } from "@/lib/utils";
+import { v4 as uuidv4 } from "uuid";
 import {
   Active,
   DragEndEvent,
@@ -57,11 +58,11 @@ function RowLayoutCanvasComponent({
 }) {
   const {
     selectedBlockLayout,
-    handleSeletedLayout,
+    handleSelectedLayout,
     removeBlockLayout,
     duplicateBlockLayout,
     updateBlockLayout,
-  } = useBuilder();
+  } = useBuilderStore();
 
   const [activeBlock, setActiveBlock] = useState<Active | null>(null);
 
@@ -111,9 +112,7 @@ function RowLayoutCanvasComponent({
       ) {
         const blockType = active.data?.current?.blockType;
         const newBlock =
-          FormBlocks[blockType as FormBlockType].createInstance(
-            generateUniqueId(),
-          );
+          FormBlocks[blockType as FormBlockType].createInstance(uuidv4());
 
         const updatedChildrenBlock = [...childBlocks, newBlock];
         updateBlockLayout(blockInstance.id, updatedChildrenBlock);
@@ -135,16 +134,16 @@ function RowLayoutCanvasComponent({
       <Card
         ref={droppable.setNodeRef}
         className={cn(
-          `!w-full bg-white relative border
+          `w-full! bg-accent-foreground/10 relative border
           shadow-sm
             min-h-[120px]
             max-w-[768px]
-                rounded-md !p-0
+                rounded-md p-0!
                 `,
-          blockInstance.isLocked && "!rounded-t-none",
+          blockInstance.isLocked && "rounded-t-none!",
         )}
         onClick={() => {
-          handleSeletedLayout(blockInstance);
+          handleSelectedLayout(blockInstance);
         }}
       >
         <CardContent className="px-2 pb-2">
@@ -213,7 +212,7 @@ function RowLayoutCanvasComponent({
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="!bg-transparent"
+                        className="bg-transparent!"
                         onClick={(e) => removeChildBlock(e, childBlock.id)}
                       >
                         <X />
@@ -279,13 +278,13 @@ function RowLayoutFormComponent({
 
       <Card
         className={cn(
-          `!w-full bg-white relative border
+          `w-full! bg-foreground relative border
           shadow-sm
             min-h-[120px]
             max-w-[768px]
-                rounded-md !p-0
+                rounded-md p-0!
                 `,
-          blockInstance.isLocked && "!rounded-t-none",
+          blockInstance.isLocked && "rounded-t-none!",
         )}
       >
         <CardContent className="px-2 pb-2">
@@ -358,8 +357,8 @@ function PlaceHolder() {
       className="flex flex-col items-center
         justify-center border border-dotted
         border-primary
-        bg-primary/10
-        hover:bg-primary/5
+        bg-accent/10
+        hover:bg-accent/5
         w-full h-28
         text-primary font-medium
         text-base
@@ -381,7 +380,7 @@ function Border() {
   return (
     <div
       className="w-full rounded-t-md
-  min-h-[8px] bg-primary
+  min-h-[8px] bg-accent-foreground/10
     "
     />
   );

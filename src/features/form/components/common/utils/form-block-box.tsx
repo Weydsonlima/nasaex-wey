@@ -1,13 +1,13 @@
 "use client";
-import BlockBtnElement from "@/components/BlockBtnElement";
+import { BlockBtnElement } from "./block-btn-element";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 import { FormBlocks } from "@/features/form/lib/form-blocks";
-import { useState } from "react";
-import AIAssistanceBtn from "./AIAssistanceBtn";
+import React, { useState } from "react";
+import { AiAssistanceBtn } from "./ai-assistance-btn";
 
-const FormBlockBox = () => {
+export function FormBlockBox() {
   const { formData } = useBuilderStore();
   const isPublished = formData?.published;
 
@@ -34,7 +34,7 @@ const FormBlockBox = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <AIAssistanceBtn />
+        <AiAssistanceBtn />
       </div>
       <div
         className="flex flex-col 
@@ -45,7 +45,7 @@ const FormBlockBox = () => {
           <div className="mb-2">
             <h5
               className="text-[13px]
-           text-gray-500 font-medium"
+            font-medium"
             >
               Layouts
             </h5>
@@ -62,11 +62,11 @@ const FormBlockBox = () => {
           </div>
         )}
 
-        <Separator color="" className="bg-gray-200!" />
+        <Separator />
         <div>
           <h5
             className="text-[13px]
-           text-gray-500 font-medium"
+            font-medium"
           >
             Fields
           </h5>
@@ -84,6 +84,4 @@ const FormBlockBox = () => {
       </div>
     </div>
   );
-};
-
-export default FormBlockBox;
+}

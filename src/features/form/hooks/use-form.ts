@@ -25,6 +25,27 @@ export const useQueryListForms = ({
   };
 };
 
+interface UseFormByIdOptions {
+  formId: string;
+}
+
+export const useQueryFormById = ({ formId }: UseFormByIdOptions) => {
+  const { data, isLoading } = useQuery(
+    orpc.form.get.queryOptions({
+      input: {
+        id: formId,
+      },
+      enabled: !!formId,
+    }),
+  );
+
+  return {
+    form: data?.form,
+    message: data?.message,
+    isLoading,
+  };
+};
+
 interface UseFormResponsesOptions {
   formId: string;
 }

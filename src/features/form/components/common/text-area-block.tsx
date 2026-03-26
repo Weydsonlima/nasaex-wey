@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -8,6 +9,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   FormBlockInstance,
   FormBlockType,
@@ -15,78 +17,86 @@ import {
   HandleBlurFunc,
   ObjectBlockType,
 } from "@/features/form/types";
-import { z } from "zod";
-import { ChevronDown, TextCursorInput } from "lucide-react";
+import { ChevronDown, LetterTextIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { useEffect, useState } from "react";
 import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Switch } from "@/components/ui/switch";
 
 const blockCategory: FormCategoryType = "Field";
-const blockType: FormBlockType = "TextField";
+const blockType: FormBlockType = "TextArea";
 
 type attributesType = {
   label: string;
   helperText: string;
   required: boolean;
   placeHolder: string;
+  rows: number;
 };
 
-type propertiesValidateSchemaType = z.infer<typeof propertiesValidateSchema>;
+type PropertiesValidateSchemaType = z.input<typeof propertiesValidateSchema>;
 
 const propertiesValidateSchema = z.object({
   placeHolder: z.string().trim().optional(),
   label: z.string().trim().min(2).max(255),
-  required: z.boolean().default(false).optional(),
+  required: z.boolean().default(false),
   helperText: z.string().trim().max(255).optional(),
+  rows: z.number().min(1).max(20).default(3),
 });
 
-export const TextFieldBlock: ObjectBlockType = {
+export const TextAreaBlock: ObjectBlockType = {
   blockType,
   blockCategory,
   createInstance: (id: string) => ({
     id,
     blockType,
     attributes: {
-      label: "Text field",
+      label: "Textarea",
       helperText: "",
       required: false,
-      placeHolder: "Enter text",
+      placeHolder: "Enter text here.",
+      rows: 3, // Default rows
     },
   }),
   blockBtnElement: {
-    icon: TextCursorInput,
-    label: "Text field",
+    icon: LetterTextIcon, // Replace with your custom icon
+    label: "Textarea",
   },
-  canvasComponent: TextFieldCanvasComponent,
-  formComponent: TextFieldFormComponent,
-  propertiesComponent: TextFieldPropertiesComponent,
+  canvasComponent: TextAreaCanvasComponent,
+  formComponent: TextAreaFormComponent,
+  propertiesComponent: TextAreaPropertiesComponent,
 };
 
 type NewInstance = FormBlockInstance & {
   attributes: attributesType;
 };
 
-function TextFieldCanvasComponent({
+function TextAreaCanvasComponent({
   blockInstance,
 }: {
   blockInstance: FormBlockInstance;
 }) {
   const block = blockInstance as NewInstance;
-  const { helperText, label, placeHolder, required } = block.attributes;
+  const { label, placeHolder, required, helperText, rows } = block.attributes; // Destructure attributes
+
   return (
     <div className="flex flex-col gap-2 w-full">
-      <Label className="text-base font-normal! mb-2">
+      <Label
+        className="text-base font-normal
+       mb-2"
+      >
         {label}
         {required && <span className="text-red-500">*</span>}
       </Label>
-      <Input
-        readOnly
-        className="pointer-events-none!
-        cursor-default h-10"
+      <Textarea
         placeholder={placeHolder}
+        rows={rows || 3} // Default row value if not provided
+        cols={50} // Default column value if not provided
+        readOnly
+        className="resize-none min-h-[50px]!
+        pointer-events-none cursor-default"
       />
       {helperText && (
         <p
@@ -100,7 +110,7 @@ function TextFieldCanvasComponent({
   );
 }
 
-function TextFieldFormComponent({
+function TextAreaFormComponent({
   blockInstance,
   handleBlur,
   isError: isSubmitError,
@@ -112,7 +122,7 @@ function TextFieldFormComponent({
   errorMessage?: string;
 }) {
   const block = blockInstance as NewInstance;
-  const { helperText, label, placeHolder, required } = block.attributes;
+  const { label, placeHolder, required, helperText, rows } = block.attributes; // Destructure attributes
 
   const [value, setValue] = useState("");
   const [isError, setIsError] = useState(false);
@@ -133,7 +143,13 @@ function TextFieldFormComponent({
         {label}
         {required && <span className="text-red-500">*</span>}
       </Label>
-      <Input
+      <Textarea
+        placeholder={placeHolder}
+        rows={rows || 3} // Default row value if not provided
+        cols={50} // Default column value if not provided
+        className={`resize-none min-h-[50px]! ${
+          isError || isSubmitError ? "border-red-500!" : ""
+        }`}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onBlur={(event) => {
@@ -144,8 +160,6 @@ function TextFieldFormComponent({
             handleBlur(block.id, inputValue);
           }
         }}
-        className={`h-10 ${isError || isSubmitError ? "border-red-500!" : ""}`}
-        placeholder={placeHolder}
       />
       {helperText && (
         <p className="text-muted-foreground text-[0.8rem]">{helperText}</p>
@@ -166,7 +180,7 @@ function TextFieldFormComponent({
   );
 }
 
-function TextFieldPropertiesComponent({
+function TextAreaPropertiesComponent({
   positionIndex,
   parentId,
   blockInstance,
@@ -176,18 +190,19 @@ function TextFieldPropertiesComponent({
   blockInstance: FormBlockInstance;
 }) {
   const block = blockInstance as NewInstance;
-
   const { updateChildBlock } = useBuilderStore();
 
-  const form = useForm<propertiesValidateSchemaType>({
+  // Use the form hook to manage the form state and validation
+  const form = useForm<PropertiesValidateSchemaType>({
     resolver: zodResolver(propertiesValidateSchema),
-    mode: "onBlur",
     defaultValues: {
       label: block.attributes.label,
       helperText: block.attributes.helperText,
       required: block.attributes.required,
       placeHolder: block.attributes.placeHolder,
+      rows: block.attributes.rows,
     },
+    mode: "onBlur",
   });
 
   useEffect(() => {
@@ -196,10 +211,11 @@ function TextFieldPropertiesComponent({
       helperText: block.attributes.helperText,
       required: block.attributes.required,
       placeHolder: block.attributes.placeHolder,
+      rows: block.attributes.rows,
     });
   }, [block.attributes, form]);
 
-  function setChanges(values: propertiesValidateSchemaType) {
+  function setChanges(values: PropertiesValidateSchemaType) {
     if (!parentId) return null;
     updateChildBlock(parentId, block.id, {
       ...block,
@@ -209,14 +225,16 @@ function TextFieldPropertiesComponent({
       },
     });
   }
+
   return (
     <div className="w-full  pb-4">
-      <div className="w-full flex flex-row items-center justify-between gap-1 bg-gray-100 h-auto p-1 px-2 mb-[10px]">
-        <span className="text-sm font-medium text-gray-600 tracking-wider">
-          TextField {positionIndex}
+      <div className="w-full flex flex-row items-center justify-between gap-1 bg-accent h-auto p-1 px-2 mb-[10px]">
+        <span className="text-sm font-medium text-muted-foreground tracking-wider">
+          Textarea {positionIndex}
         </span>
         <ChevronDown className="w-4 h-4" />
       </div>
+
       <Form {...form}>
         <form
           onSubmit={(e) => e.preventDefault()}
@@ -228,20 +246,23 @@ function TextFieldPropertiesComponent({
             render={({ field }) => (
               <FormItem className="text-end">
                 <div className="flex items-baseline justify-between w-full gap-2">
-                  <FormLabel className="text-[13px]  font-normal">
+                  <FormLabel className="text-[13px] font-normal">
                     Label
                   </FormLabel>
-                  <div className=" w-full max-w-[187px]">
+                  <div className="w-full max-w-[187px]">
                     <FormControl>
                       <Input
                         {...field}
                         className="max-w-[187px]"
                         onChange={(e) => {
-                          field.onChange(e); // Update form state
+                          field.onChange(e);
                           setChanges({
                             ...form.getValues(),
                             label: e.target.value,
                           });
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
                         }}
                       />
                     </FormControl>
@@ -257,17 +278,17 @@ function TextFieldPropertiesComponent({
             control={form.control}
             name="helperText"
             render={({ field }) => (
-              <FormItem className="">
+              <FormItem>
                 <div className="flex items-baseline justify-between w-full gap-2">
-                  <FormLabel className="text-[13px]  font-normal">
+                  <FormLabel className="text-[13px] font-normal">
                     Note
                   </FormLabel>
-                  <div className=" w-full max-w-[187px]">
+                  <div className="w-full max-w-[187px]">
                     <FormControl>
                       <Input
                         {...field}
                         onChange={(e) => {
-                          field.onChange(e); // Update form state
+                          field.onChange(e);
                           setChanges({
                             ...form.getValues(),
                             helperText: e.target.value,
@@ -275,15 +296,11 @@ function TextFieldPropertiesComponent({
                         }}
                       />
                     </FormControl>
-                    <FormDescription
-                      className="text-[11px] 
-                    mt-2 pl-1"
-                    >
+                    <FormDescription className="text-[11px] mt-2 pl-1">
                       Provide a short note to guide users
                     </FormDescription>
                   </div>
                 </div>
-
                 <FormMessage />
               </FormItem>
             )}
@@ -295,7 +312,7 @@ function TextFieldPropertiesComponent({
             render={({ field }) => (
               <FormItem className="text-end">
                 <div className="flex items-baseline justify-between w-full gap-2">
-                  <FormLabel className="text-[13px]  font-normal">
+                  <FormLabel className="text-[13px] font-normal">
                     Placeholder
                   </FormLabel>
                   <div className="w-full max-w-[187px]">
@@ -303,10 +320,41 @@ function TextFieldPropertiesComponent({
                       <Input
                         {...field}
                         onChange={(e) => {
-                          field.onChange(e); // Update form state
+                          field.onChange(e);
                           setChanges({
                             ...form.getValues(),
                             placeHolder: e.target.value,
+                          });
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription></FormDescription>
+                  </div>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="rows"
+            render={({ field }) => (
+              <FormItem className="text-end">
+                <div className="flex items-baseline justify-between w-full gap-2">
+                  <FormLabel className="text-[13px] font-normal">
+                    Rows
+                  </FormLabel>
+                  <div className="w-full max-w-[187px]">
+                    <FormControl>
+                      <Input
+                        type="number"
+                        defaultValue={3}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setChanges({
+                            ...form.getValues(),
+                            rows: Number(e.target.value),
                           });
                         }}
                       />
@@ -332,7 +380,7 @@ function TextFieldPropertiesComponent({
                     <Switch
                       checked={field.value}
                       onCheckedChange={(value) => {
-                        field.onChange(value); // Update form state
+                        field.onChange(value);
                         setChanges({
                           ...form.getValues(),
                           required: value,

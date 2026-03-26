@@ -1,7 +1,7 @@
 "use client";
 import { SquarePenIcon } from "lucide-react";
 import { useQueryListForms } from "../hooks/use-form";
-import FormItem from "./form-item";
+import { FormItem } from "./form-item";
 import {
   Empty,
   EmptyContent,
@@ -10,7 +10,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import CreateForm from "./create-form";
+import { CreateForm } from "./create-form";
 
 export function FormList() {
   const { forms, isLoading } = useQueryListForms();

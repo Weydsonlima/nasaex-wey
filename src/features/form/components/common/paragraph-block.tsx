@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,11 +21,14 @@ import {
   FormBlockType,
   FormCategoryType,
   ObjectBlockType,
-} from "@/@types/form-block.type";
-import { fontSizeClass, fontWeightClass } from "@/constant";
+} from "@/features/form/types";
+import {
+  fontSizeClass,
+  fontWeightClass,
+} from "@/features/form/constants/index";
 import { z } from "zod";
-import { useBuilder } from "@/context/builder-provider";
-import { Textarea } from "../ui/textarea";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
+import { Textarea } from "@/components/ui/textarea";
 
 const blockCategory: FormCategoryType = "Field";
 const blockType: FormBlockType = "Paragraph";
@@ -42,7 +44,7 @@ type attributesType = {
   fontWeight: fontWeightType;
 };
 
-type ParagraphPropertiesSchema = z.infer<typeof paragraphValidateSchema>;
+type ParagraphPropertiesSchema = z.input<typeof paragraphValidateSchema>;
 const paragraphValidateSchema = z.object({
   text: z.string().trim().min(1).max(1000),
   fontSize: z.enum(["small", "medium", "large"]).default("small"),
@@ -104,7 +106,7 @@ function ParagraphPropertiesComponent({
   parentId?: string;
   blockInstance: FormBlockInstance;
 }) {
-  const { updateChildBlock } = useBuilder();
+  const { updateChildBlock } = useBuilderStore();
   const block = blockInstance as NewInstance;
 
   const form = useForm<ParagraphPropertiesSchema>({
@@ -129,10 +131,13 @@ function ParagraphPropertiesComponent({
   };
 
   return (
-    <div className="w-full  pb-4">
-      <div className="w-full flex flex-row items-center justify-between gap-1 bg-gray-100 h-auto p-1 px-2 mb-[10px]">
-        <span className="text-sm font-medium text-gray-600 tracking-wider">
-          Paragraph {positionIndex}
+    <div className="w-full pb-4">
+      <div
+        className="w-full flex flex-row items-center justify-between gap-1 bg-accent
+       h-auto p-1 px-2 mb-[10px]"
+      >
+        <span className="text-sm font-medium text-accent tracking-wider">
+          Parágrafo {positionIndex}
         </span>
         <ChevronDown className="w-4 h-4" />
       </div>
@@ -150,13 +155,12 @@ function ParagraphPropertiesComponent({
               <FormItem>
                 <div className="flex items-baseline justify-between w-full gap-2">
                   <FormLabel className="text-[13px] font-normal">
-                    Content
+                    Conteúdo
                   </FormLabel>
                   <div className="w-full max-w-[400px]">
                     <FormControl>
                       <Textarea
                         {...field}
-                        className="scrollbar"
                         onChange={(e) => {
                           field.onChange(e);
                           setChanges({
@@ -183,7 +187,7 @@ function ParagraphPropertiesComponent({
               <FormItem>
                 <div className="flex items-baseline justify-between w-full gap-2">
                   <FormLabel className="text-[13px] font-normal">
-                    Font Size
+                    Tamanho da fonte
                   </FormLabel>
                   <div className="w-full max-w-[187px]">
                     <FormControl>
@@ -198,12 +202,12 @@ function ParagraphPropertiesComponent({
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select Font Size" />
+                          <SelectValue placeholder="Selecione o tamanho da fonte" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="small">Small</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="large">Large</SelectItem>
+                          <SelectItem value="small">Pequeno</SelectItem>
+                          <SelectItem value="medium">Mediano</SelectItem>
+                          <SelectItem value="large">Grande</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -222,7 +226,7 @@ function ParagraphPropertiesComponent({
               <FormItem>
                 <div className="flex items-baseline justify-between w-full gap-2">
                   <FormLabel className="text-[13px] font-normal">
-                    Weight
+                    Peso da fonte
                   </FormLabel>
                   <div className="w-full max-w-[187px]">
                     <FormControl>
@@ -237,10 +241,10 @@ function ParagraphPropertiesComponent({
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select Font Weight" />
+                          <SelectValue placeholder="Selecione o peso da fonte" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="light">Lighter</SelectItem>
+                          <SelectItem value="light">Leve</SelectItem>
                           <SelectItem value="normal">Normal</SelectItem>
                         </SelectContent>
                       </Select>

@@ -4,11 +4,11 @@ import {
   FormCategoryType,
   HandleBlurFunc,
   ObjectBlockType,
-} from "@/@types/form-block.type";
+} from "@/features/form/types";
 import { ChevronDown, CircleIcon, X } from "lucide-react";
-import { Label } from "../ui/label";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { useBuilder } from "@/context/builder-provider";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,11 +20,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../ui/form";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
-import { generateUniqueId } from "@/lib/helper";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { v4 as uuidv4 } from "uuid";
 
 const blockCategory: FormCategoryType = "Field";
 const blockType: FormBlockType = "RadioSelect";
@@ -35,7 +35,7 @@ type attributesType = {
   required: boolean;
 };
 
-type propertiesValidateSchemaType = z.infer<typeof propertiesValidateSchema>;
+type propertiesValidateSchemaType = z.input<typeof propertiesValidateSchema>;
 
 const propertiesValidateSchema = z.object({
   label: z.string().trim().min(2).max(255),
@@ -88,7 +88,7 @@ function RadioSelectCanvasComponent({
     >
       <Label
         className="
-     text-base !font-normal mb-2
+     text-base font-normal! mb-2
      "
       >
         {label}
@@ -99,13 +99,13 @@ function RadioSelectCanvasComponent({
         disabled={true}
         className="space-y-3
         disabled:cursor-default 
-        !pointer-events-none
-        !cursor-default"
+        pointer-events-none
+        cursor-default"
       >
         {options?.map((option: string, index: number) => (
           <div key={index} className="flex items-center space-x-2">
             <RadioGroupItem disabled value={option} id={option} />
-            <Label htmlFor={option} className="!font-normal">
+            <Label htmlFor={option} className="font-normal!">
               {option}
             </Label>
           </div>
@@ -147,7 +147,7 @@ function RadioSelectFormComponent({
     >
       <Label
         className={`
-     text-base !font-normal mb-2
+     text-base font-normal! mb-2
        ${isError || isSubmitError ? "text-red-500" : ""}`}
       >
         {label}
@@ -167,20 +167,17 @@ function RadioSelectFormComponent({
         }}
       >
         {options?.map((option: string, index: number) => {
-          const uniqueId = `option-${generateUniqueId()}`;
+          const uniqueId = `option-${uuidv4()}`;
           return (
             <div key={index} className="flex items-center space-x-2">
               <RadioGroupItem
                 value={option}
                 id={uniqueId}
-                className={`!cursor-pointer ${
-                  isError || isSubmitError ? "!border-red-500" : ""
+                className={`cursor-pointer ${
+                  isError || isSubmitError ? "border-red-500" : ""
                 }`}
               />
-              <Label
-                htmlFor={uniqueId}
-                className="!font-normal !cursor-pointer"
-              >
+              <Label htmlFor={uniqueId} className="font-normal! cursor-pointer">
                 {option}
               </Label>
             </div>
@@ -213,7 +210,7 @@ function RadioSelectPropertiesComponent({
   blockInstance: FormBlockInstance;
 }) {
   const block = blockInstance as NewInstance;
-  const { updateChildBlock } = useBuilder();
+  const { updateChildBlock } = useBuilderStore();
 
   // Define form schema and validation
   const form = useForm<propertiesValidateSchemaType>({
@@ -252,13 +249,13 @@ function RadioSelectPropertiesComponent({
     <div className="w-full pb-4">
       <div
         className="w-full flex items-center
-     justify-between gap-1 bg-gray-100 h-auto
+     justify-between gap-1 bg-accent h-auto
      p-1 px-2 mb-[10px]
     "
       >
         <span
           className="
-          text-sm font-medium text-gray-600
+          text-sm font-medium text-muted-foreground
           tracking-wider
         "
         >
@@ -345,13 +342,13 @@ function RadioSelectPropertiesComponent({
                           variant="ghost"
                           size="icon"
                           className="
-                            !p-0 absolute -right-1 -top-1
-                            !bg-black rounded-full
+                            p-0 absolute -right-1 -top-1
+                            bg-foreground rounded-full
                             w-4 h-4
                           "
                           onClick={() => {
                             const updatedOptions = field.value?.filter(
-                              (_, i) => i !== index
+                              (_, i) => i !== index,
                             );
                             field.onChange(updatedOptions);
                             setChanges({
@@ -360,7 +357,7 @@ function RadioSelectPropertiesComponent({
                             });
                           }}
                         >
-                          <X color="white" className="!w-2.5 !h-2.5" />
+                          <X className="w-2.5 h-2.5 text-background" />
                         </Button>
                       </div>
                     ))}

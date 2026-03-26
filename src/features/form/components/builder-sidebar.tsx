@@ -16,24 +16,24 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { FileTextIcon, Home } from "lucide-react";
-import FormBlockBox from "./_common/FormBlockBox";
-import FormSettings from "./_common/FormSettings";
-import { useBuilder } from "@/context/builder-provider";
+import { FormBlockBox } from "@/features/form/components/common/form-block-box";
+import { FormSettings } from "@/features/form/components/common/form-settings";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 
-const BuilderSidebar = ({
+export function BuilderSidebar({
   rest,
 }: {
   rest?: React.ComponentProps<typeof Sidebar>;
-}) => {
-  const { formData } = useBuilder();
+}) {
+  const { formData } = useBuilderStore();
 
   const [tab, setTab] = useState<"blocks" | "settings">("blocks");
 
   return (
-    <Sidebar className="border-r left-12 pt-16" {...rest}>
-      <SidebarHeader className="bg-white px-0">
+    <Sidebar className="border-r left-12" {...rest}>
+      <SidebarHeader className="bg-accent px-0">
         <header
-          className="border-b border-gray-200
+          className="border-b border-border
               w-full pt-1 pb-2 flex shrink-0 items-center gap-2
               "
         >
@@ -61,12 +61,12 @@ const BuilderSidebar = ({
       </SidebarHeader>
       <SidebarContent
         className="pt-2 
-      px-5 bg-white"
+      px-5 bg-accent"
       >
         <div className="w-full">
           <div
             className="w-full flex flex-row
-           gap-1 h-[39px] rounded-full bg-gray-100 p-1"
+           gap-1 h-[39px] rounded-full bg-accent p-1"
           >
             <button
               className={cn(
@@ -76,7 +76,7 @@ const BuilderSidebar = ({
                 font-medium text-sm
                               `,
                 {
-                  "bg-white": tab === "blocks",
+                  "bg-accent-foreground/5": tab === "blocks",
                 },
               )}
               onClick={() => setTab("blocks")}
@@ -91,7 +91,7 @@ const BuilderSidebar = ({
                 font-medium text-sm
                               `,
                 {
-                  "bg-white": tab === "settings",
+                  "bg-accent-foreground/5": tab === "settings",
                 },
               )}
               onClick={() => setTab("settings")}
@@ -107,6 +107,4 @@ const BuilderSidebar = ({
       </SidebarContent>
     </Sidebar>
   );
-};
-
-export default BuilderSidebar;
+}

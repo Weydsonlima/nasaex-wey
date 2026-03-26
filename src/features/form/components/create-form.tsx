@@ -60,7 +60,7 @@ export function CreateForm() {
         onSuccess: (data) => {
           setIsOpen(false);
           toast("Formulário criado com sucesso");
-          router.push(`/dashboard/form/builder/${data.form?.formId}`);
+          router.push(`/form/builder/${data.form?.id}`);
         },
         onError: () => {
           toast("Algo deu errado!");
@@ -141,5 +141,3 @@ export function CreateForm() {
     </Dialog>
   );
 }
-
-export default CreateForm;

@@ -1,4 +1,5 @@
 import { createForm } from "./create";
+import { fetchFormById } from "./get";
 import { getManyResponses } from "./get-many-responses";
 import { getPublic } from "./public/get";
 import { fetchForms } from "./list";
@@ -9,6 +10,7 @@ import { insightForm } from "./status";
 import { deleteForm } from "./delete";
 
 export const formRouter = {
+  get: fetchFormById,
   create: createForm,
   list: fetchForms,
   update: updateForm,

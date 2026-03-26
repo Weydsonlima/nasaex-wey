@@ -19,7 +19,7 @@ const StatsCards = (props: { data: any; loading: boolean }) => {
           lg:grid-cols-2
            xl:grid-cols-4"
     >
-      <Card className="bg-foreground/3">
+      <Card className="bg-accent/10">
         <CardHeader className="pb-2">
           <CardDescription>Total Forms</CardDescription>
           <CardTitle className="text-4xl">
@@ -38,7 +38,7 @@ const StatsCards = (props: { data: any; loading: boolean }) => {
       </Card>
 
       {/* {Responses} */}
-      <Card className="bg-foreground/3">
+      <Card className="bg-accent/10">
         <CardHeader className="pb-2">
           <CardDescription>Total Responses</CardDescription>
           <CardTitle className="text-4xl">
@@ -57,7 +57,7 @@ const StatsCards = (props: { data: any; loading: boolean }) => {
       </Card>
 
       {/* {Conversion Rate} */}
-      <Card className="bg-foreground/3">
+      <Card className="bg-accent/10">
         <CardHeader className="pb-2">
           <CardDescription>Conversion Rate</CardDescription>
           <CardTitle className="text-4xl">
@@ -76,7 +76,7 @@ const StatsCards = (props: { data: any; loading: boolean }) => {
       </Card>
 
       {/* {Engagement Rate} */}
-      <Card className="bg-foreground/3">
+      <Card className="bg-accent/10">
         <CardHeader className="pb-2">
           <CardDescription>Engagement Rate</CardDescription>
           <CardTitle className="text-4xl">

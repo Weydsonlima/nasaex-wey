@@ -1,0 +1,49 @@
+"use client";
+import { useBuilderStore } from "@/features/form/context/builder-form-provider";
+import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
+import { toast } from "sonner";
+
+export function FloatingShareButton(props: { isSidebarOpen: boolean }) {
+  const { isSidebarOpen } = props;
+  const { formData } = useBuilderStore();
+
+  const copyLinkToClipboard = () => {
+    const shareableLink = `${process.env.NEXT_PUBLIC_APP_URL}/public/submit-form/${formData?.id}`;
+    navigator.clipboard
+      .writeText(shareableLink)
+      .then(() => {
+        toast("Link Copied!");
+      })
+      .catch(() => {
+        toast("Failed to copy the link. Please try again.");
+      });
+  };
+
+  if (!formData?.published) return;
+
+  return (
+    <div
+      className="fixed bottom-5 z-50 
+      transition-transform  bg-accent
+      duration-500 ease-in-out"
+      style={{
+        left: isSidebarOpen ? "calc(41% + 150px)" : "41%",
+        transform: "translateX(-50%)",
+      }}
+    >
+      <Button
+        onClick={copyLinkToClipboard}
+        variant="outline"
+        size="lg"
+        className="rounded-full 
+         transition-all duration-300 
+         hover:scale-105"
+        aria-label="Copy Shareable Link"
+      >
+        <Copy className="w-5 h-5" />
+        Share Link
+      </Button>
+    </div>
+  );
+}

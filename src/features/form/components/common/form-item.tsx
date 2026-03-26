@@ -1,5 +1,5 @@
 "use client";
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ActivityIcon,
@@ -35,7 +35,7 @@ export const FormItem = (props: PropsType) => {
   const router = useRouter();
 
   const onClick = useCallback(() => {
-    router.push(`/form/builder/${formId}`);
+    router.push(`/dashboard/form/builder/${formId}`);
   }, []);
   return (
     <div onClick={onClick} role="button" className="w-full h-auto">
@@ -43,7 +43,8 @@ export const FormItem = (props: PropsType) => {
         className="w-full relative flex 
       items-center justify-center
       overflow-hidden h-[150px] rounded-t-xl border border-gray-300
-      bg-linear-to-b from-primary/10 to-primary/10"
+      bg-linear-to-b from-primary/10 to-primary/10
+      "
       >
         <div
           className=" w-36 absolute bottom-0 
@@ -136,3 +137,5 @@ export const FormItem = (props: PropsType) => {
     </div>
   );
 };
+
+export default FormItem;

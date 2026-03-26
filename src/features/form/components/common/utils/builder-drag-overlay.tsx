@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Active, DragOverlay, useDndMonitor } from "@dnd-kit/core";
 import { FormBlockType } from "@/features/form/types";
 import { BlockBtnDragOverlay } from "./block-btn-drag-overlay";

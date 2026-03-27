@@ -39,7 +39,7 @@ export const createForm = base
           {
             blockType: "Heading",
             attributes: {
-              label: name || "Untitled form",
+              label: name || "Formulário sem título",
               level: 1,
               fontSize: "4x-large",
               fontWeight: "normal",
@@ -49,7 +49,7 @@ export const createForm = base
             blockType: "Paragraph",
             attributes: {
               label: "Paragraph",
-              text: description || "Add a description here.",
+              text: description || "Adicione uma descrição aqui.",
               fontSize: "small",
               fontWeight: "normal",
             },
@@ -58,13 +58,6 @@ export const createForm = base
       },
     ]);
 
-    const formSettings = await prisma.formSettings.create({
-      data: {
-        primaryColor: defaultPrimaryColor,
-        backgroundColor: defaultBackgroundColor,
-      },
-    });
-
     const form = await prisma.form.create({
       data: {
         name,
@@ -72,15 +65,20 @@ export const createForm = base
         userId: context.user.id,
         organizationId,
         ...(trackingId && { trackingId }),
-        settingsId: formSettings.id,
         jsonBlock,
         content: jsonBlock,
         shareUrl: uuidv4(),
+        settings: {
+          create: {
+            primaryColor: defaultPrimaryColor,
+            backgroundColor: defaultBackgroundColor,
+          },
+        },
       },
     });
 
     return {
-      message: "Form created successfully",
+      message: "Formulário criado com sucesso",
       form,
     };
   });

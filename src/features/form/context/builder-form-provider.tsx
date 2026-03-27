@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { FormBlockInstance, FormWithSettings } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { client } from "@/lib/orpc";
+import { FormSettings } from "@/generated/prisma/client";
 
 type BuilderState = {
   loading: boolean;
@@ -47,6 +48,8 @@ type BuilderActions = {
     childblockId: string,
     updatedBlock: FormBlockInstance,
   ) => void;
+
+  updateSettings: (updates: Partial<FormSettings>) => void;
 };
 
 export type BuilderStore = BuilderState & BuilderActions;
@@ -60,6 +63,21 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
 
   // ─── Setters simples ─────────────────────────────────────────────────────────
   setFormData: (formData) => set({ formData }),
+
+  updateSettings: (updates) => {
+    set((state) => {
+      if (!state.formData || !state.formData.settings) return state;
+      return {
+        formData: {
+          ...state.formData,
+          settings: {
+            ...state.formData.settings,
+            ...updates,
+          },
+        },
+      };
+    });
+  },
 
   setBlockLayouts: (updater) =>
     set((state) => ({

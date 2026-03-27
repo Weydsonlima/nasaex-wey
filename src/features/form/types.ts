@@ -58,4 +58,4 @@ export type FormBlocksType = {
   [key in FormBlockType]: ObjectBlockType;
 };
 
-export type FormWithSettings = Form & { settings: FormSettings };
+export type FormWithSettings = Form & { settings: FormSettings | null };

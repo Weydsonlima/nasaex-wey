@@ -18,6 +18,74 @@ export const submitResponse = base
     try {
       const { id, response } = input;
 
+      const form = await prisma.form.findUnique({
+        where: {
+          id,
+          published: true,
+        },
+        select: {
+          settings: {
+            select: {
+              trackingId: true,
+              statusId: true,
+            },
+          },
+        },
+      });
+
+      if (!form) {
+        throw errors.NOT_FOUND();
+      }
+
+      // Parseia os dados do response para extrair info do lead
+      let parsedResponse: Record<string, string> = {};
+      try {
+        parsedResponse = JSON.parse(response);
+      } catch {
+        // Se não for JSON válido, segue sem criar lead
+      }
+
+      const userName = parsedResponse.user_name || "Sem nome";
+      const userEmail = parsedResponse.user_email || null;
+      const userPhone = parsedResponse.user_phone || null;
+
+      let leadId: string | null = null;
+
+      // Se o form tem tracking e status configurados, cria o lead
+      const { trackingId, statusId } = form.settings ?? {};
+
+      if (trackingId && statusId) {
+        // Se tem telefone, tenta encontrar lead existente no mesmo tracking
+        let existingLead = null;
+        if (userPhone) {
+          existingLead = await prisma.lead.findUnique({
+            where: {
+              phone_trackingId: {
+                phone: userPhone,
+                trackingId,
+              },
+            },
+          });
+        }
+
+        if (existingLead) {
+          leadId = existingLead.id;
+        } else {
+          const newLead = await prisma.lead.create({
+            data: {
+              name: userName,
+              email: userEmail,
+              phone: userPhone,
+              trackingId,
+              statusId,
+              source: "FORM",
+            },
+          });
+          leadId = newLead.id;
+        }
+      }
+
+      // Salva a resposta do formulário e incrementa o contador
       await prisma.form.update({
         where: {
           id,
@@ -26,7 +94,8 @@ export const submitResponse = base
         data: {
           formSubmissions: {
             create: {
-              jsonReponse: response,
+              jsonResponse: response,
+              ...(leadId && { leadId }),
             },
           },
           responses: {
@@ -44,3 +113,4 @@ export const submitResponse = base
       throw errors.INTERNAL_SERVER_ERROR();
     }
   });
+

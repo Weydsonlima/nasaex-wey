@@ -36,6 +36,23 @@ export function SaveFormBtn() {
         name,
         description,
         jsonBlock: jsonBlocks,
+        settings: formData?.settings
+          ? {
+              primaryColor: formData.settings.primaryColor,
+              backgroundColor: formData.settings.backgroundColor,
+              backgroundImage: formData.settings.backgroundImage,
+              trackingId: formData.settings.trackingId,
+              statusId: formData.settings.statusId,
+              showName: formData.settings.showName,
+              showEmail: formData.settings.showEmail,
+              showPhone: formData.settings.showPhone,
+              needLogin: formData.settings.needLogin,
+              finishMessage: formData.settings.finishMessage,
+              redirectUrl: formData.settings.redirectUrl,
+              idPixel: formData.settings.idPixel,
+              idTagManager: formData.settings.idTagManager,
+            }
+          : undefined,
       },
       {
         onSuccess: (response) => {

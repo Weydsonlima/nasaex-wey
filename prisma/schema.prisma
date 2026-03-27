@@ -169,7 +169,7 @@ model Tracking {
   winLossReasons WinLossReason[]
   actions        Action[]
   workflows      Workflow[]
-  forms          Form[]
+  forms          FormSettings[]
   whatsappInstance WhatsAppInstance?
   conversations  Conversation[]
   agendas        Agenda[]
@@ -265,6 +265,7 @@ model Status {
   // Relacionamentos
   tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   leads    Lead[]
+  FormSettings FormSettings[]
 
   @@index([trackingId, order])
   @@map("status")
@@ -354,6 +355,7 @@ model Lead {
   files    LeadFile[]
   actions  Action[]
   appointments Appointment[]
+  formResponses FormResponses[]
 
   @@index([trackingId])
   @@index([statusId, order])
@@ -614,7 +616,6 @@ model Connection {
 model Form {
   id String @id @default(cuid())
   userId String @map("user_id")
-  trackingId String? @map("tracking_id")
   organizationId String
   name String
   description String?
@@ -623,19 +624,17 @@ model Form {
   content String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt  @map("updated_at")
-  settingsId String
+  settingsId String? @unique
 
   views Int @default(0)
   responses Int @default(0)
 
   createdBy     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tracking Tracking? @relation(fields: [trackingId], references: [id], onDelete: Cascade)
-
   formSubmissions FormResponses[]
   shareUrl String @unique @map("share_url")
 
   organization Organization @relation(fields: [organizationId], references: [id])
-  settings FormSettings @relation(fields: [settingsId], references: [id])
+  settings FormSettings?
 
   @@map("forms")
 }
@@ -644,21 +643,36 @@ model FormSettings {
   id String @id @default(cuid())
   primaryColor String
   backgroundColor String
+  backgroundImage String? @map("background_image")
   createdAt DateTime @default(now())
   updateAt DateTime @default(now()) @updatedAt
+  trackingId String? @map("tracking_id")
+  statusId String? @map("status_id")
+  formId String @unique
+  redirectUrl String? @map("redirect_url")
+  idPixel String? @map("id_pixel")
+  idTagManager String? @map("id_tag_manager")
+  needLogin Boolean @default(true) @map("need_login")
+  showName Boolean @default(true) @map("show_name")
+  showEmail Boolean @default(true) @map("show_email")
+  showPhone Boolean @default(true) @map("show_phone")
+  finishMessage String @default("Obrigado por seu cadastro!") @map("finish_message")
 
-  forms Form[]
+  tracking Tracking? @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+  status Status? @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
 
   @@map("form_settings")
 }
-
-
 
 model FormResponses {
   id String @id @default(cuid())
   formId String @map("form_id")
   createdAt DateTime @default(now()) @map("created_at")
-  jsonReponse Json @default("[]")
+  jsonResponse Json @default("[]")
+  leadId String? @map("lead_id")
+  lead Lead? @relation(fields: [leadId], references: [id])
+
   
   form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
 

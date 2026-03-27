@@ -161,3 +161,109 @@ export const useQueryAction = (actionId: string) => {
     isLoading,
   };
 };
+
+export const useUpdateAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.update.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({
+            input: { actionId: data.action.id },
+          }),
+        );
+        queryClient.invalidateQueries({
+          queryKey: ["action.listByColumn", data.action.columnId],
+        });
+        queryClient.invalidateQueries(
+          orpc.action.listByWorkspace.queryOptions({
+            input: { workspaceId: data.action.workspaceId },
+          }),
+        );
+      },
+    }),
+  );
+};
+
+export const useDeleteAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.delete.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({
+          queryKey: ["action.listByColumn", data.action.columnId],
+        });
+        queryClient.invalidateQueries(
+          orpc.action.listByWorkspace.queryOptions({
+            input: { workspaceId: data.action.workspaceId },
+          }),
+        );
+      },
+    }),
+  );
+};
+
+export const useCreateSubAction = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.createSubAction.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useUpdateSubAction = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.updateSubAction.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useDeleteSubAction = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.deleteSubAction.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useAddResponsible = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.addResponsible.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useRemoveResponsible = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.removeResponsible.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};

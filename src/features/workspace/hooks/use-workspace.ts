@@ -1,6 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -33,4 +34,32 @@ export const useSuspenseColumnsByWorkspace = (workspaceId: string) => {
       input: { workspaceId },
     }),
   );
+};
+
+export const useColumnsByWorkspace = (workspaceId: string) => {
+  const { data, isLoading } = useQuery(
+    orpc.workspace.getColumnsByWorkspace.queryOptions({
+      input: { workspaceId },
+      enabled: !!workspaceId,
+    }),
+  );
+
+  return {
+    columns: data?.columns ?? [],
+    isLoading,
+  };
+};
+
+export const useWorkspaceMembers = (workspaceId: string) => {
+  const { data, isLoading } = useQuery(
+    orpc.workspace.getMembers.queryOptions({
+      input: { workspaceId },
+      enabled: !!workspaceId,
+    }),
+  );
+
+  return {
+    members: data?.members ?? [],
+    isLoading,
+  };
 };

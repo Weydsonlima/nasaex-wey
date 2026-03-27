@@ -3,6 +3,13 @@ import { getAction } from "./get";
 import { listActionByColumn } from "./list-action-by-column";
 import { listActionByWorkspace } from "./list-action-by-workspace";
 import { reorderAction } from "./reorder";
+import { updateAction } from "./update";
+import { deleteAction } from "./delete";
+import { createSubAction } from "./create-sub-action";
+import { updateSubAction } from "./update-sub-action";
+import { deleteSubAction } from "./delete-sub-action";
+import { addResponsible } from "./add-responsible";
+import { removeResponsible } from "./remove-responsible";
 
 export const actionRoutes = {
   create: createAction,
@@ -10,4 +17,11 @@ export const actionRoutes = {
   listByWorkspace: listActionByWorkspace,
   reorder: reorderAction,
   get: getAction,
+  update: updateAction,
+  delete: deleteAction,
+  createSubAction,
+  updateSubAction,
+  deleteSubAction,
+  addResponsible,
+  removeResponsible,
 };

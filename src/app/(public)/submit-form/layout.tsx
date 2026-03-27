@@ -3,5 +3,5 @@ export default async function PublicLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <main className="w-full min-h-screen ">{children}</main>;
+  return <main className="w-full h-screen">{children}</main>;
 }

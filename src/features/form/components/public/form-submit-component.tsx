@@ -29,9 +29,13 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
 
   // ─── Settings ──────────────────────────────────────────────
   const showName = settings?.showName ?? true;
+
   const showEmail = settings?.showEmail ?? true;
   const showPhone = settings?.showPhone ?? true;
   const needLogin = settings?.needLogin ?? true;
+
+  const showLeadFields = needLogin && (showName || showEmail || showPhone);
+  const [step, setStep] = useState<number>(showLeadFields ? 1 : 2);
   const finishMessage = settings?.finishMessage ?? "Obrigado por seu cadastro!";
   const primaryColor = settings?.primaryColor ?? undefined;
   const backgroundColor = settings?.backgroundColor ?? undefined;
@@ -91,8 +95,8 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
     phone: "",
   });
 
-  // Validate all fields
-  const validateFields = () => {
+  // Validação: Etapa 1
+  const validateLeadFields = () => {
     const errors: { [key: string]: string } = {};
 
     if (needLogin) {
@@ -104,6 +108,13 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
         errors["lead_phone"] = "Telefone é obrigatório";
     }
 
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Validação: Etapa 2
+  const validateFormBlocks = () => {
+    const errors: { [key: string]: string } = {};
     blocks.forEach((block) => {
       if (!block.childblocks) return;
       block.childblocks?.forEach((childblock) => {
@@ -132,7 +143,7 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
   };
 
   const handleSubmit = async () => {
-    if (!validateFields()) {
+    if (!validateFormBlocks()) {
       toast("Campos obrigatórios não preenchidos");
       return;
     }
@@ -166,8 +177,6 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
       },
     );
   };
-
-  const showLeadFields = needLogin && (showName || showEmail || showPhone);
 
   return (
     <div
@@ -225,114 +234,163 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
             ) : (
               blocks.length > 0 && (
                 <div className="flex flex-col w-full gap-4">
-                  {showLeadFields && (
-                    <Card
-                      className="w-full border-none bg-foreground/10 px-4"
-                      style={{ color: textColor || undefined }}
-                    >
-                      <CardContent className="p-0 flex flex-col gap-4">
-                        {showName && (
-                          <Field>
-                            <FieldLabel htmlFor="lead_name">
-                              Nome completo
-                            </FieldLabel>
-                            <Input
-                              id="lead_name"
-                              placeholder="Seu nome"
-                              value={leadInfo.name}
-                              onChange={(e) =>
-                                setLeadInfo({
-                                  ...leadInfo,
-                                  name: e.target.value,
-                                })
-                              }
-                            />
-                            {formErrors["lead_name"] && (
-                              <FieldError>{formErrors["lead_name"]}</FieldError>
-                            )}
-                          </Field>
-                        )}
-                        {showEmail && (
-                          <Field>
-                            <FieldLabel htmlFor="lead_email">E-mail</FieldLabel>
-                            <Input
-                              id="lead_email"
-                              placeholder="seu@email.com"
-                              type="email"
-                              value={leadInfo.email}
-                              onChange={(e) =>
-                                setLeadInfo({
-                                  ...leadInfo,
-                                  email: e.target.value,
-                                })
-                              }
-                            />
-                            {formErrors["lead_email"] && (
-                              <FieldError>
-                                {formErrors["lead_email"]}
-                              </FieldError>
-                            )}
-                          </Field>
-                        )}
-                        {showPhone && (
-                          <Field>
-                            <FieldLabel htmlFor="lead_phone">
-                              Telefone
-                            </FieldLabel>
-                            <Input
-                              id="lead_phone"
-                              placeholder="(00) 00000-0000"
-                              value={leadInfo.phone}
-                              onChange={(e) =>
-                                setLeadInfo({
-                                  ...leadInfo,
-                                  phone: e.target.value,
-                                })
-                              }
-                            />
-                            {formErrors["lead_phone"] && (
-                              <FieldError>
-                                {formErrors["lead_phone"]}
-                              </FieldError>
-                            )}
-                          </Field>
-                        )}
-                      </CardContent>
-                    </Card>
+                  {step === 1 && showLeadFields && (
+                    <>
+                      <Card
+                        className="w-full border-none bg-foreground/10 px-4"
+                        style={{ color: textColor || undefined }}
+                      >
+                        <CardContent className="p-0 flex flex-col gap-4">
+                          <h2 className="text-3xl font-semibold mb-4">
+                            Preencha os campos abaixo
+                          </h2>
+                          {showName && (
+                            <Field>
+                              <FieldLabel htmlFor="lead_name">
+                                Nome completo
+                              </FieldLabel>
+                              <Input
+                                id="lead_name"
+                                placeholder="Seu nome"
+                                value={leadInfo.name}
+                                onChange={(e) =>
+                                  setLeadInfo({
+                                    ...leadInfo,
+                                    name: e.target.value,
+                                  })
+                                }
+                              />
+                              {formErrors["lead_name"] && (
+                                <FieldError>
+                                  {formErrors["lead_name"]}
+                                </FieldError>
+                              )}
+                            </Field>
+                          )}
+                          {showEmail && (
+                            <Field>
+                              <FieldLabel htmlFor="lead_email">
+                                E-mail
+                              </FieldLabel>
+                              <Input
+                                id="lead_email"
+                                placeholder="seu@email.com"
+                                type="email"
+                                value={leadInfo.email}
+                                onChange={(e) =>
+                                  setLeadInfo({
+                                    ...leadInfo,
+                                    email: e.target.value,
+                                  })
+                                }
+                              />
+                              {formErrors["lead_email"] && (
+                                <FieldError>
+                                  {formErrors["lead_email"]}
+                                </FieldError>
+                              )}
+                            </Field>
+                          )}
+                          {showPhone && (
+                            <Field>
+                              <FieldLabel htmlFor="lead_phone">
+                                Telefone
+                              </FieldLabel>
+                              <Input
+                                id="lead_phone"
+                                placeholder="(00) 00000-0000"
+                                value={leadInfo.phone}
+                                onChange={(e) =>
+                                  setLeadInfo({
+                                    ...leadInfo,
+                                    phone: e.target.value,
+                                  })
+                                }
+                              />
+                              {formErrors["lead_phone"] && (
+                                <FieldError>
+                                  {formErrors["lead_phone"]}
+                                </FieldError>
+                              )}
+                            </Field>
+                          )}
+                        </CardContent>
+                      </Card>
+                      <div className="w-full">
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            if (validateLeadFields()) {
+                              setStep(2);
+                            } else {
+                              toast("Campos obrigatórios não preenchidos");
+                            }
+                          }}
+                          style={{
+                            backgroundColor: primaryColor || undefined,
+                            borderColor: primaryColor || undefined,
+                            color: primaryColor
+                              ? getContrastColor(primaryColor)
+                              : undefined,
+                          }}
+                        >
+                          Continuar
+                        </Button>
+                      </div>
+                    </>
                   )}
 
-                  {blocks.map((block) => {
-                    const FormBlockComponent =
-                      FormBlocks[block.blockType].formComponent;
+                  {step === 2 && (
+                    <>
+                      {blocks.map((block) => {
+                        const FormBlockComponent =
+                          FormBlocks[block.blockType].formComponent;
 
-                    return (
-                      <FormBlockComponent
-                        key={block.id}
-                        blockInstance={block}
-                        handleBlur={handleBlur}
-                        formErrors={formErrors}
-                        settings={settings}
-                      />
-                    );
-                  })}
-                  <div className="w-full">
-                    <Button
-                      disabled={isLoading}
-                      onClick={handleSubmit}
-                      style={{
-                        backgroundColor: primaryColor || undefined,
-                        borderColor: primaryColor || undefined,
-                        color: primaryColor
-                          ? getContrastColor(primaryColor)
-                          : undefined,
-                      }}
-                    >
-                      {isLoading && (
-                        <Spinner className="w-4 h-4 animate-spin" />
-                      )}
-                      Enviar
-                    </Button>
-                  </div>
+                        return (
+                          <FormBlockComponent
+                            key={block.id}
+                            blockInstance={block}
+                            handleBlur={handleBlur}
+                            formErrors={formErrors}
+                            settings={settings}
+                          />
+                        );
+                      })}
+                      <div className="w-full flex justify-between gap-4">
+                        {showLeadFields && (
+                          <Button
+                            variant="outline"
+                            className="bg-transparent border-primary/20"
+                            onClick={() => setStep(1)}
+                            style={{
+                              color: textColor || undefined,
+                              borderWidth: "1px",
+                              borderColor: primaryColor || undefined,
+                            }}
+                          >
+                            Voltar
+                          </Button>
+                        )}
+                        <Button
+                          className={showLeadFields ? "flex-1" : "w-full"}
+                          disabled={isLoading}
+                          onClick={handleSubmit}
+                          style={{
+                            backgroundColor: primaryColor || undefined,
+                            borderColor: primaryColor || undefined,
+                            color: primaryColor
+                              ? getContrastColor(primaryColor)
+                              : undefined,
+                          }}
+                        >
+                          {isLoading && (
+                            <Spinner className="w-4 h-4 mr-2 animate-spin" />
+                          )}
+                          Enviar
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )
             )}

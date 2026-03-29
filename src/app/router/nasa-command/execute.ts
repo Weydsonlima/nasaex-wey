@@ -461,6 +461,15 @@ export const execute = base
           select: { id: true, name: true },
         });
 
+        // Adiciona o usuário atual como OWNER para aparecer na lista de trackings
+        await prisma.trackingParticipant.create({
+          data: {
+            trackingId: tracking.id,
+            userId: context.user.id,
+            role: "OWNER",
+          },
+        });
+
         // Cria etapas padrão em try-catch separado para não bloquear o retorno
         const defaultStatuses = ["Prospecção", "Contato", "Proposta", "Fechado"];
         try {

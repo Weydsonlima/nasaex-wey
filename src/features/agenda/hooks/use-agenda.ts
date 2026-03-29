@@ -173,6 +173,16 @@ export const useDeleteTimeSlot = () => {
 
 // Appointments
 
+export const useQueryAppointmentsByOrg = () => {
+  const { data, isLoading } = useQuery(
+    orpc.agenda.appointments.getManyByOrg.queryOptions({}),
+  );
+  return {
+    appointments: data?.appointments ?? [],
+    isLoading,
+  };
+};
+
 export const useQueryAgendasByTracking = (trackingId: string) => {
   return useQuery(
     orpc.agenda.getByTracking.queryOptions({ input: { trackingId } }),
@@ -190,6 +200,9 @@ export const useAdminCreateAppointment = () => {
           orpc.agenda.appointments.getManyByTracking.queryOptions({
             input: { trackingId: data.appointment.trackingId ?? "" },
           }),
+        );
+        queryClient.invalidateQueries(
+          orpc.agenda.appointments.getManyByOrg.queryOptions({}),
         );
       },
       onError: (error) => {
@@ -236,6 +249,9 @@ export const useRescheduleAppointment = () => {
           orpc.agenda.appointments.getManyByTracking.queryOptions({
             input: { trackingId: data.appointment.trackingId ?? "" },
           }),
+        );
+        queryClient.invalidateQueries(
+          orpc.agenda.appointments.getManyByOrg.queryOptions({}),
         );
       },
       onError: (error) => {
@@ -343,10 +359,11 @@ export const useCancelAppointment = () => {
         toast.success("Agendamento cancelado com sucesso");
         queryClient.invalidateQueries(
           orpc.agenda.appointments.getManyByTracking.queryOptions({
-            input: {
-              trackingId: "",
-            },
+            input: { trackingId: "" },
           }),
+        );
+        queryClient.invalidateQueries(
+          orpc.agenda.appointments.getManyByOrg.queryOptions({}),
         );
       },
     }),

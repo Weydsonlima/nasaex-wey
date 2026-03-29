@@ -24,6 +24,7 @@ import { KPIAtendimentCards } from "./kpi/atendiment-cards";
 import { cn } from "@/lib/utils";
 
 import { WidgetList } from "./widget";
+import { ChannelInsights } from "./channel-insights";
 
 interface TrackingDashboardProps {
   initialData?: DashboardReport;
@@ -139,6 +140,7 @@ export function TrackingDashboard({
           <TabsList>
             <TabsTrigger value="general">Geral</TabsTrigger>
             <TabsTrigger value="atendiment">Atendimento</TabsTrigger>
+            <TabsTrigger value="channels">📊 Canais</TabsTrigger>
           </TabsList>
         </div>
 
@@ -250,6 +252,10 @@ export function TrackingDashboard({
         >
           <h2 className="mb-4 text-lg font-semibold">Atendimento</h2>
           <KPIAtendimentCards summary={data.summary} />
+        </TabsContent>
+
+        <TabsContent value="channels" className="flex-1 overflow-y-auto pt-6">
+          <ChannelInsights />
         </TabsContent>
       </div>
 

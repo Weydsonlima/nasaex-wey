@@ -41,11 +41,12 @@ import {
   useQueryAgendasByTracking,
   useAdminCreateAppointment,
 } from "@/features/agenda/hooks/use-agenda";
+import { useQueryTrackings } from "@/features/trackings/hooks/use-trackings";
 import { DayOfWeek } from "@/generated/prisma/enums";
 import { countries } from "@/types/some";
 import { normalizePhone, phoneMask } from "@/utils/format-phone";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, CalendarIcon, ClockIcon, CheckIcon } from "lucide-react";
+import { ChevronDownIcon, CalendarIcon, ClockIcon, CheckIcon, LayoutListIcon } from "lucide-react";
 import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,7 +54,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 interface Props {
   open: boolean;
   onClose: () => void;
-  trackingId: string;
+  /** Quando omitido, exibe step 0 para seleção de tracking */
+  trackingId?: string;
   initialDate?: Date;
 }
 
@@ -78,7 +80,12 @@ const dayMap: DayOfWeek[] = [
 ];
 
 export function CreateAppointmentModal({ open, onClose, trackingId, initialDate }: Props) {
-  const { data: agendasData, isLoading: isLoadingAgendas } = useQueryAgendasByTracking(trackingId);
+  // Step 0: tracking picker (only when trackingId is not pre-set)
+  const needsTrackingPick = !trackingId;
+  const { trackings, isLoading: isLoadingTrackings } = useQueryTrackings();
+  const [resolvedTrackingId, setResolvedTrackingId] = useState<string>(trackingId ?? "");
+
+  const { data: agendasData, isLoading: isLoadingAgendas } = useQueryAgendasByTracking(resolvedTrackingId);
   const agendas = agendasData?.agendas ?? [];
 
   const [selectedAgendaId, setSelectedAgendaId] = useState<string>("");
@@ -98,10 +105,12 @@ export function CreateAppointmentModal({ open, onClose, trackingId, initialDate 
   useEffect(() => {
     if (open) {
       setSelectedTime("");
+      setSelectedAgendaId("");
+      setResolvedTrackingId(trackingId ?? "");
       form.reset({ name: "", phone: "", code: "55", email: "", notes: "" });
       if (initialDate) setSelectedDate(parseDate(dayjs(initialDate).format("YYYY-MM-DD")));
     }
-  }, [open, initialDate]);
+  }, [open, initialDate, trackingId]);
 
   useEffect(() => {
     if (agendas.length === 1) setSelectedAgendaId(agendas[0].id);
@@ -157,10 +166,52 @@ export function CreateAppointmentModal({ open, onClose, trackingId, initialDate 
 
         <div className="px-6 py-5 flex flex-col gap-6">
 
+          {/* ── Step 0: Tracking (only when no trackingId provided) ── */}
+          {needsTrackingPick && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">0</span>
+                <span className="text-sm font-semibold">Selecione o tracking</span>
+              </div>
+              {isLoadingTrackings ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Spinner className="size-4" /> Carregando trackings...
+                </div>
+              ) : (
+                <Select
+                  value={resolvedTrackingId}
+                  onValueChange={(v) => {
+                    setResolvedTrackingId(v);
+                    setSelectedAgendaId("");
+                    setSelectedTime("");
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:max-w-xs">
+                    <SelectValue placeholder="Escolha um tracking..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trackings.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <LayoutListIcon className="size-3.5 text-muted-foreground" />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                    {trackings.length === 0 && (
+                      <p className="p-2 text-sm text-muted-foreground">Nenhum tracking encontrado</p>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
           {/* ── Step 1: Agenda ── */}
+          {(!needsTrackingPick || !!resolvedTrackingId) && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">{needsTrackingPick ? "1" : "1"}</span>
               <span className="text-sm font-semibold">Selecione a agenda</span>
             </div>
             {isLoadingAgendas ? (
@@ -186,6 +237,7 @@ export function CreateAppointmentModal({ open, onClose, trackingId, initialDate 
               </Select>
             )}
           </div>
+          )}
 
           {/* ── Step 2: Date + Time ── */}
           {showCalendar && (

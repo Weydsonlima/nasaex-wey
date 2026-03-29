@@ -1,25 +1,24 @@
 {
-  "servers": [
+  "version": "0.0.1",
+  "configurations": [
     {
-      "name": "Next.js Dev",
-      "command": "npm run dev",
+      "name": "Next.js Dev Server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
       "port": 3001,
-      "url": "http://localhost:3001",
-      "description": "Main Next.js application (App Router)"
+      "autoPort": true
     },
     {
-      "name": "Inngest Dev",
-      "command": "npm run inngest:dev",
-      "port": 8288,
-      "url": "http://localhost:8288",
-      "description": "Inngest background jobs dashboard"
+      "name": "Inngest Dev Server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "inngest:dev"],
+      "port": 8288
     },
     {
       "name": "Prisma Studio",
-      "command": "npm run db:studio",
-      "port": 5555,
-      "url": "http://localhost:5555",
-      "description": "Prisma Studio — database browser"
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "db:studio"],
+      "port": 5555
     }
   ]
 }

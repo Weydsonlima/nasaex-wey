@@ -13,6 +13,12 @@ import { insightsRouter } from "./insights";
 import { agendaRouter } from "./agenda";
 import { rodizioRouter } from "./rodizio";
 import { widgetsRouter } from "./widgets";
+import { platformIntegrationsRouter } from "./integrations-platform";
+import { channelInsightsRouter } from "./channel-insights";
+import { forgeRouter } from "./forge";
+import { starsRouter } from "./stars";
+import { nboxRouter } from "./nbox";
+import { nasaPostRouter } from "./nasa-post";
 
 export const router = {
   tracking: trackingRoutes,
@@ -30,4 +36,10 @@ export const router = {
   agenda: agendaRouter,
   rodizio: rodizioRouter,
   widgets: widgetsRouter,
+  platformIntegrations: platformIntegrationsRouter,
+  channelInsights: channelInsightsRouter,
+  forge: forgeRouter,
+  stars: starsRouter,
+  nbox: nboxRouter,
+  nasaPost: nasaPostRouter,
 };

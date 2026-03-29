@@ -9,16 +9,25 @@ export const upsertDateAvailability = base
   .use(requireOrgMiddleware)
   .input(z.object({ agendaId: z.string().min(1), date: z.string().min(1) }))
   .handler(async ({ input }) => {
-    const dateAvailability = await prisma.agendaDateAvailability.upsert({
+    // Check if record already exists first (avoids upsert compound-key issues)
+    const existing = await prisma.agendaDateAvailability.findUnique({
       where: { agendaId_date: { agendaId: input.agendaId, date: input.date } },
-      create: {
+      include: { timeSlots: { orderBy: { order: "asc" } } },
+    });
+
+    if (existing) {
+      return { dateAvailability: existing };
+    }
+
+    // Create new with a default time range
+    const dateAvailability = await prisma.agendaDateAvailability.create({
+      data: {
         agendaId: input.agendaId,
         date: input.date,
         timeSlots: {
           create: [{ startTime: "08:00", endTime: "18:00", order: 0 }],
         },
       },
-      update: {},
       include: { timeSlots: { orderBy: { order: "asc" } } },
     });
 

@@ -19,6 +19,7 @@ import { getAppointmentsByTracking } from "./appointments/get-appointments-by-tr
 import { getAppointment } from "./appointments/get";
 import { cancelAppointment } from "./appointments/cancel";
 import { rescheduleAppointment } from "./appointments/reschedule";
+import { getAppointmentsByOrg } from "./appointments/get-appointments-by-org";
 import { toggleDateOverride } from "./date-overrides/toggle";
 import { getManyDateOverrides } from "./date-overrides/get-many";
 import { getAgendasByTracking } from "./get-by-tracking";
@@ -59,6 +60,7 @@ export const agendaRouter = {
     get: getAppointment,
     cancel: cancelAppointment,
     getManyByTracking: getAppointmentsByTracking,
+    getManyByOrg: getAppointmentsByOrg,
     createAdmin: createAdminAppointment,
     reschedule: rescheduleAppointment,
   },

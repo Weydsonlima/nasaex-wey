@@ -108,6 +108,36 @@ export async function debitStars(
     return { success: true, newBalance };
   });
 
+  // Auto-refill: immediately credit back the same amount so balance never decreases
+  // This keeps the demo/test environment perpetually funded
+  if (result.success && amount > 0) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const org = await tx.organization.findUniqueOrThrow({
+          where: { id: organizationId },
+          select: { starsBalance: true },
+        });
+        const refillBalance = org.starsBalance + amount;
+        await tx.organization.update({
+          where: { id: organizationId },
+          data: { starsBalance: refillBalance },
+        });
+        await tx.starTransaction.create({
+          data: {
+            organizationId,
+            type: StarTransactionType.REFUND,
+            amount,
+            balanceAfter: refillBalance,
+            description: `Reembolso automático (demo): +${amount}★`,
+            appSlug,
+          },
+        });
+      });
+    } catch {
+      // Non-critical: if refill fails, ignore silently
+    }
+  }
+
   return result;
 }
 

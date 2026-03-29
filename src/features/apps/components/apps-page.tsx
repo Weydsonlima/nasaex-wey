@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ExternalLink, Users, Package, Link2, Clock, Rocket, Flame } from "lucide-react";
+import { StarsWidget } from "@/features/stars";
 
 // ─── App Status ───────────────────────────────────────────────────────────────
 
@@ -635,6 +636,9 @@ export function AppsPage() {
         </div>
 
         <div className="relative px-6 py-10 max-w-5xl mx-auto">
+          <div className="flex items-center justify-end mb-4">
+            <StarsWidget />
+          </div>
           <div className="flex items-center gap-2 mb-1">
             <div className="flex gap-1">
               {["#7C3AED", "#a855f7", "#c084fc"].map((c, i) => (

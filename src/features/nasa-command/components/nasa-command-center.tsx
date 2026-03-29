@@ -14,7 +14,6 @@ import {
   Copy,
   ExternalLink,
   Loader2,
-  Star,
   Bot,
   Sparkles,
   Zap,
@@ -29,10 +28,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { toast } from "sonner";
+import { StarsWidget } from "@/features/stars";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -270,36 +269,6 @@ function buildHighlightedHTML(text: string): string {
       }
       return `<mark class="bg-transparent text-blue-400 font-medium">${match}</mark>`;
     }
-  );
-}
-
-// ─── Stars Balance Badge ──────────────────────────────────────────────────────
-
-function StarsBadge() {
-  const { data } = useQuery(orpc.stars.getBalance.queryOptions());
-
-  const balance = data?.balance ?? 0;
-  const planName = data?.planName ?? "FREE";
-  const planMonthly = data?.planMonthlyStars ?? 999999;
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1.5 bg-zinc-800/80 border border-zinc-700/50 rounded-full px-3 py-1.5">
-        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-        <span className="text-sm font-semibold text-white">
-          {balance.toLocaleString("pt-BR")}
-        </span>
-        <span className="text-zinc-500 text-xs">/</span>
-        <span className="text-zinc-400 text-xs">
-          {planMonthly >= 999999
-            ? "999.999"
-            : planMonthly.toLocaleString("pt-BR")}
-        </span>
-      </div>
-      <Badge className="bg-gradient-to-r from-violet-600 to-purple-700 text-white border-0 text-xs font-bold tracking-wider px-2.5 py-1 rounded-full uppercase">
-        {planName}
-      </Badge>
-    </div>
   );
 }
 
@@ -570,10 +539,10 @@ function ResultOverlay({ result, onClose }: ResultOverlayProps) {
 function RecentApps() {
   return (
     <div className="w-full">
-      <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+      <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 text-center">
         Recentemente
       </h3>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 justify-center">
         {recentApps.map((app) => (
           <a
             key={app.id}
@@ -1035,23 +1004,40 @@ function CommandInput({
 
 // ─── Welcome Screen ───────────────────────────────────────────────────────────
 
-function WelcomeScreen({ onSelect }: { onSelect: (e: string) => void }) {
+interface WelcomeScreenProps {
+  onSelect: (e: string) => void;
+  commandInputProps: CommandInputProps;
+}
+
+function WelcomeScreen({ onSelect, commandInputProps }: WelcomeScreenProps) {
   return (
-    <div className="flex flex-col items-center justify-center flex-1 px-4 py-12 select-none">
-      {/* Real SVG logo */}
-      <NasaLogo className="w-[320px] md:w-[420px] h-auto mb-6 opacity-95" />
-      <p className="text-[11px] font-bold tracking-[0.35em] text-zinc-500 uppercase mb-8">
-        Command Center
-      </p>
-      {/* Rotating hint */}
-      <div className="mb-10">
-        <RotatingExample />
-      </div>
-      {/* Recent apps */}
-      <RecentApps />
-      {/* Library */}
-      <div className="mt-8 w-full max-w-2xl">
-        <ExampleLibrary onSelect={onSelect} />
+    <div className="flex flex-col items-center w-full min-h-full px-4 py-10 sm:py-14 select-none">
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-6">
+
+        {/* 1. Marca / Logo */}
+        <div className="flex flex-col items-center gap-2">
+          <NasaLogo className="w-[180px] sm:w-[240px] h-auto opacity-95" />
+          <p className="text-[10px] font-bold tracking-[0.35em] text-zinc-500 uppercase">
+            Command Center
+          </p>
+          <RotatingExample />
+        </div>
+
+        {/* 2. Campo de comando */}
+        <div className="w-full">
+          <CommandInput {...commandInputProps} />
+        </div>
+
+        {/* 3. Apps recentes */}
+        <div className="w-full">
+          <RecentApps />
+        </div>
+
+        {/* 4. Biblioteca de exemplos */}
+        <div className="w-full">
+          <ExampleLibrary onSelect={onSelect} />
+        </div>
+
       </div>
     </div>
   );
@@ -1127,24 +1113,38 @@ export function NasaCommandCenter() {
 
   const hasMessages = messages.length > 0;
 
+  const commandInputProps: CommandInputProps = {
+    command,
+    setCommand,
+    loading,
+    onSubmit: handleSubmit,
+    model,
+    setModel,
+    dropdown,
+    setDropdown,
+    dropdownSearch,
+    setDropdownSearch,
+  };
+
   return (
     <div className="h-full flex flex-col bg-zinc-950">
-      {/* Stars badge — fixed top right */}
-      <div className="absolute top-4 right-4 z-20">
-        <StarsBadge />
+
+      {/* ── Top bar: always visible ── */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/60 bg-zinc-950/95 backdrop-blur shrink-0">
+        {hasMessages ? (
+          <NasaLogo className="w-[100px] sm:w-[130px] h-auto opacity-70" />
+        ) : (
+          <div /> /* spacer in welcome mode so StarsWidget stays right */
+        )}
+        <StarsWidget />
       </div>
 
-      {/* Scrollable content area */}
+      {/* ── Scrollable content ── */}
       <div className="flex-1 overflow-y-auto">
         {!hasMessages ? (
-          <WelcomeScreen onSelect={fillExample} />
+          <WelcomeScreen onSelect={fillExample} commandInputProps={commandInputProps} />
         ) : (
-          <div className="max-w-3xl mx-auto px-4 pt-16 pb-4 space-y-2">
-            {/* Small logo header when in chat mode */}
-            <div className="flex justify-center mb-8">
-              <NasaLogo className="w-[180px] h-auto opacity-70" />
-            </div>
-
+          <div className="max-w-3xl mx-auto px-3 sm:px-4 pt-4 pb-4 space-y-2">
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.role === "user" && msg.command && (
@@ -1166,23 +1166,14 @@ export function NasaCommandCenter() {
         )}
       </div>
 
-      {/* Fixed bottom input */}
-      <div className="border-t border-zinc-800/60 bg-zinc-950/90 backdrop-blur px-4 py-3">
-        <div className="max-w-3xl mx-auto">
-          <CommandInput
-            command={command}
-            setCommand={setCommand}
-            loading={loading}
-            onSubmit={handleSubmit}
-            model={model}
-            setModel={setModel}
-            dropdown={dropdown}
-            setDropdown={setDropdown}
-            dropdownSearch={dropdownSearch}
-            setDropdownSearch={setDropdownSearch}
-          />
+      {/* ── Fixed bottom input — only in chat mode ── */}
+      {hasMessages && (
+        <div className="border-t border-zinc-800/60 bg-zinc-950/90 backdrop-blur px-3 sm:px-4 py-3 shrink-0">
+          <div className="max-w-3xl mx-auto">
+            <CommandInput {...commandInputProps} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

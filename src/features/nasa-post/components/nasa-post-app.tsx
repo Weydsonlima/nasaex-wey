@@ -95,6 +95,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { NasaPostStatus, NasaPostType } from "@/generated/prisma/enums";
+import { StarsWidget } from "@/features/stars";
+
+// Lazy wrapper to avoid SSR issues
+function StarsWidgetNasaPost() { return <StarsWidget />; }
 import { useConstructUrl } from "@/hooks/use-construct-url";
 import dayjs from "dayjs";
 import "dayjs/locale/pt-br";
@@ -1857,6 +1861,7 @@ export function NasaPostApp() {
         <div className="flex-1" />
 
         {/* Actions */}
+        <StarsWidgetNasaPost />
         <Button size="sm" variant="outline" onClick={() => setBrandOpen(true)}>
           <SettingsIcon className="size-3.5" />
           Marca

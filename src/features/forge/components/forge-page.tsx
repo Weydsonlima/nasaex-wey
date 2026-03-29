@@ -15,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { StarsWidget } from "@/features/stars";
 
 export function ForgePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -32,15 +33,18 @@ export function ForgePage() {
             <p className="text-xs text-muted-foreground">Propostas comerciais & contratos</p>
           </div>
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-8"
-          onClick={() => setSettingsOpen(true)}
-          title="Configurações do FORGE"
-        >
-          <Settings className="size-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <StarsWidget />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={() => setSettingsOpen(true)}
+            title="Configurações do FORGE"
+          >
+            <Settings className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

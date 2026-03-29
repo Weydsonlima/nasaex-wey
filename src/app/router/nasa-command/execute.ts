@@ -81,11 +81,15 @@ function extractTitle(command: string): string {
 }
 
 function extractTrackingName(command: string): string {
-  // Look for quoted name or "chamado X"
-  const quotedMatch = command.match(/"([^"]+)"/);
-  if (quotedMatch) return quotedMatch[1];
-  const chamadoMatch = command.match(/chamado\s+["']?([^"'#/\n]+?)["']?(?:\s+no\b|\s+com\b|\s+$)/i);
+  // 1. Straight quotes "Name" or curly quotes "Name"
+  const quotedMatch = command.match(/[\u201C"«]([^\u201D"»\n]+)[\u201D"»]/);
+  if (quotedMatch) return quotedMatch[1].trim();
+  // 2. chamado <name> (no/com/end)
+  const chamadoMatch = command.match(/chamado\s+(.+?)(?:\s+(?:no|com|em)\s+#|\s*$)/i);
   if (chamadoMatch) return chamadoMatch[1].trim();
+  // 3. /Add_tracking <name>
+  const addMatch = command.match(/\/Add_tracking\s+(.+?)(?:\s+(?:no|com)\s+#|\s*$)/i);
+  if (addMatch) return addMatch[1].trim();
   return "Novo Tracking";
 }
 
@@ -124,11 +128,15 @@ export const execute = base
               ? "nbox"
               : cmd.includes("#contatos")
                 ? "contatos"
-                : null;
+                // Detecta intenção de tracking sem o # (ex: "Crie um tracking chamado X")
+                : /\b(tracking|pipeline|funil|add_tracking)\b/.test(cmd) &&
+                    /\b(crie|criar|novo|nova|adicione|add)\b/.test(cmd)
+                  ? "tracking"
+                  : null;
 
     // ── Detect action type ────────────────────────────────────────────────────
     const isCreate =
-      /\b(crie|cria|criar|gere|gera|gerar|fa[çc]a|fazer|agende|agendar|marque|marcar|adicione|nova|novo)\b/.test(
+      /\b(crie|cria|criar|gere|gera|gerar|fa[çc]a|fazer|agende|agendar|marque|marcar|adicione|adicionar|nova|novo|add)\b/.test(
         cmd,
       );
     const isList = /\b(liste|listar|mostrar|mostre|quais|quem|ver)\b/.test(cmd);
@@ -229,7 +237,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute forge proposal]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -269,7 +277,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute forge contract]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -293,7 +301,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute forge list]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -339,7 +347,7 @@ export const execute = base
         const e = err as { code?: string; message?: string };
         if (e?.code === "BAD_REQUEST") throw err;
         console.error("[nasa-command/execute agenda appointment]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -386,7 +394,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute agenda query]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -430,12 +438,18 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute nasa-post]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
     // ── TRACKING — Create tracking ────────────────────────────────────────────
-    if (app === "tracking" && isCreate && cmd.includes("tracking")) {
+    // Condição: app é tracking E é uma criação E NÃO é criação de lead
+    if (
+      app === "tracking" &&
+      isCreate &&
+      !cmd.includes("lead") &&
+      !cmd.includes("/novo_lead")
+    ) {
       try {
         const trackingName = extractTrackingName(command);
         const tracking = await prisma.tracking.create({
@@ -447,25 +461,31 @@ export const execute = base
           select: { id: true, name: true },
         });
 
+        // Cria etapas padrão em try-catch separado para não bloquear o retorno
         const defaultStatuses = ["Prospecção", "Contato", "Proposta", "Fechado"];
-        await Promise.all(
-          defaultStatuses.map((name, i) =>
-            prisma.status.create({
-              data: { name, trackingId: tracking.id, order: i },
-            }),
-          ),
-        );
+        try {
+          await Promise.all(
+            defaultStatuses.map((statusName, i) =>
+              prisma.status.create({
+                data: { name: statusName, trackingId: tracking.id, order: i },
+              }),
+            ),
+          );
+        } catch (statusErr) {
+          console.error("[nasa-command/execute create tracking statuses]", statusErr);
+          // Não bloqueia: tracking foi criado, etapas podem ser adicionadas depois
+        }
 
         return {
           type: "created" as const,
-          title: "Tracking criado!",
-          description: `Tracking "${tracking.name}" criado com 4 etapas padrão: Prospecção, Contato, Proposta, Fechado.`,
+          title: `Tracking "${tracking.name}" criado!`,
+          description: `Pipeline criado com as etapas: Prospecção, Contato, Proposta, Fechado. Acesse o app para personalizar.`,
           url: `/tracking`,
           appName: "Tracking",
         };
       } catch (err) {
         console.error("[nasa-command/execute create tracking]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro ao criar tracking. Tente novamente." });
       }
     }
 
@@ -512,7 +532,7 @@ export const execute = base
         const e = err as { code?: string };
         if (e?.code === "BAD_REQUEST") throw err;
         console.error("[nasa-command/execute create lead]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -531,7 +551,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute count leads]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -550,7 +570,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute count leads generic]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 
@@ -647,7 +667,7 @@ export const execute = base
         };
       } catch (err) {
         console.error("[nasa-command/execute pesquisar]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
+        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
       }
     }
 

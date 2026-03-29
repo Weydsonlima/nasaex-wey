@@ -6,6 +6,7 @@ import { integrations } from "@/data/integrations";
 import { Badge } from "@/components/ui/badge";
 import { Puzzle, Zap, CheckCircle2 } from "lucide-react";
 import { useMarketplace } from "@/features/integrations/context/marketplace-context";
+import { PlatformIntegrationsSection } from "../integrations-page";
 
 // ─── Animated stars canvas ───────────────────────────────────────────────────
 
@@ -136,7 +137,12 @@ export function IntegrationsMarketplace() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Platform integrations (META Ads, Instagram DM, TikTok, etc.) */}
+      <div className="border rounded-2xl p-6 bg-card">
+        <PlatformIntegrationsSection />
+      </div>
+
+      {/* Marketplace Grid */}
       <IntegrationGrid />
     </div>
   );

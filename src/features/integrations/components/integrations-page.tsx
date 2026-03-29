@@ -642,3 +642,89 @@ export function IntegrationsPage() {
     </div>
   );
 }
+
+// ─── Embedded section (used inside the marketplace) ───────────────────────────
+
+export function PlatformIntegrationsSection() {
+  const { data, isLoading } = useQueryPlatformIntegrations();
+  const upsert = useUpsertPlatformIntegration();
+  const remove = useDeletePlatformIntegration();
+  const [configuring, setConfiguring] = useState<PlatformDef | null>(null);
+  const [disconnecting, setDisconnecting] = useState<IntegrationPlatform | null>(null);
+
+  const connectedMap = new Map(
+    (data?.integrations ?? []).map((i) => [i.platform, i.config as Record<string, string>]),
+  );
+
+  const handleSave = (config: Record<string, string>) => {
+    if (!configuring || configuring.platform === "WHATSAPP") return;
+    upsert.mutate(
+      { platform: configuring.platform as IntegrationPlatform, config, isActive: true },
+      { onSuccess: () => setConfiguring(null) },
+    );
+  };
+
+  const categories = Object.entries(CATEGORY_META).sort((a, b) => a[1].order - b[1].order).map(([k]) => k);
+
+  if (isLoading) return null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-base font-bold tracking-tight">📡 Canais & Plataformas</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Conecte Meta Ads, Instagram, TikTok e outros para puxar métricas em Insights → Canais.
+        </p>
+      </div>
+
+      {categories.map((cat) => {
+        const defs = PLATFORM_DEFS.filter((d) => d.category === cat);
+        if (!defs.length) return null;
+        return (
+          <section key={cat}>
+            <h3 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+              {CATEGORY_META[cat].label}
+              <ChevronRight className="size-3.5" />
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {defs.map((def) => (
+                <IntegrationCard key={def.platform} def={def}
+                  isConnected={def.platform === "WHATSAPP" ? true : connectedMap.has(def.platform as IntegrationPlatform)}
+                  onConfigure={() => setConfiguring(def)}
+                  onDisconnect={() => def.platform !== "WHATSAPP" && setDisconnecting(def.platform as IntegrationPlatform)}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+
+      {configuring && configuring.platform !== "WHATSAPP" && (
+        <ConfigDialog def={configuring}
+          existing={connectedMap.get(configuring.platform as IntegrationPlatform) ?? {}}
+          open onClose={() => setConfiguring(null)}
+          onSave={handleSave} isSaving={upsert.isPending}
+        />
+      )}
+
+      <AlertDialog open={!!disconnecting} onOpenChange={(o) => !o && setDisconnecting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconectar integração</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja desconectar esta integração? Os dados já coletados serão mantidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (disconnecting) remove.mutate({ platform: disconnecting }, { onSuccess: () => setDisconnecting(null) }); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Desconectar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

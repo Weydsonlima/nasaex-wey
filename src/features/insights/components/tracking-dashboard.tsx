@@ -32,6 +32,8 @@ import { ForgeSection, SpacetimeSection, NasaPostSection, IntegrationsSection } 
 import { useQueryAppsInsights } from "@/features/insights/hooks/use-dashboard";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
+import { CustomizableChart } from "./customizable-chart";
+import { InsightReport } from "./insight-report";
 
 interface TrackingDashboardProps {
   initialData?: DashboardReport;
@@ -178,6 +180,80 @@ export function TrackingDashboard({
 
         {/* ── VISÃO GERAL CRUZADA ──────────────────────────────────────────── */}
         <TabsContent value="general" className="flex-1 overflow-y-auto pt-6 space-y-8">
+          {/* Customizable Chart — full width between tabs and CrossDataOverview */}
+          <CustomizableChart
+            selectedModules={selectedModules}
+            tracking={data?.summary ? {
+              totalLeads: data.summary.totalLeads,
+              wonLeads: data.summary.wonLeads,
+              activeLeads: data.summary.activeLeads,
+            } : undefined}
+            chat={appsInsights?.chat ? {
+              totalConversations: appsInsights.chat.totalConversations,
+              totalMessages: appsInsights.chat.totalMessages,
+              attendedConversations: appsInsights.chat.attendedConversations,
+              unattendedConversations: appsInsights.chat.unattendedConversations,
+            } : undefined}
+            forge={appsInsights?.forge ? {
+              totalProposals: appsInsights.forge.totalProposals,
+              rascunho: appsInsights.forge.rascunho,
+              enviadas: appsInsights.forge.enviadas,
+              visualizadas: appsInsights.forge.visualizadas,
+              pagas: appsInsights.forge.pagas,
+              expiradas: appsInsights.forge.expiradas,
+              canceladas: appsInsights.forge.canceladas,
+              revenueTotal: appsInsights.forge.revenueTotal,
+              revenuePipeline: appsInsights.forge.revenuePipeline,
+            } : undefined}
+            spacetime={appsInsights?.spacetime ? {
+              total: appsInsights.spacetime.total,
+              pending: appsInsights.spacetime.pending,
+              confirmed: appsInsights.spacetime.confirmed,
+              done: appsInsights.spacetime.done,
+              cancelled: appsInsights.spacetime.cancelled,
+              noShow: appsInsights.spacetime.noShow,
+            } : undefined}
+            nasaPost={appsInsights?.nasaPost ? {
+              total: appsInsights.nasaPost.total,
+              draft: appsInsights.nasaPost.draft,
+              published: appsInsights.nasaPost.published,
+              scheduled: appsInsights.nasaPost.scheduled,
+            } : undefined}
+            metaAds={metaInsights?.connected && metaInsights.data ? {
+              spend: metaInsights.data.spend,
+              roas: metaInsights.data.roas,
+              leads: metaInsights.data.leads,
+              clicks: metaInsights.data.clicks,
+              impressions: metaInsights.data.impressions,
+            } : undefined}
+          />
+
+          {/* AI Report + PDF Download */}
+          <InsightReport
+            selectedModules={selectedModules}
+            period={{ startDate: appsInput.startDate, endDate: appsInput.endDate }}
+            orgName={organizatins[0]?.name ?? "Minha Empresa"}
+            tracking={data?.summary ? {
+              totalLeads: data.summary.totalLeads,
+              wonLeads: data.summary.wonLeads,
+              activeLeads: data.summary.activeLeads,
+              conversionRate: data.summary.conversionRate,
+            } : undefined}
+            chat={appsInsights?.chat}
+            forge={appsInsights?.forge}
+            spacetime={appsInsights?.spacetime}
+            nasaPost={appsInsights?.nasaPost}
+            metaAds={metaInsights?.connected && metaInsights.data ? {
+              spend: metaInsights.data.spend,
+              roas: metaInsights.data.roas,
+              leads: metaInsights.data.leads,
+              clicks: metaInsights.data.clicks,
+              impressions: metaInsights.data.impressions,
+              ctr: metaInsights.data.ctr,
+              cpl: metaInsights.data.cpl,
+            } : undefined}
+          />
+
           <CrossDataOverview
             selectedModules={selectedModules}
             tracking={data?.summary ? {

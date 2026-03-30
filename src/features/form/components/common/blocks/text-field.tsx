@@ -73,14 +73,24 @@ type NewInstance = FormBlockInstance & {
 
 function TextFieldCanvasComponent({
   blockInstance,
+  settings,
 }: {
   blockInstance: FormBlockInstance;
+  settings?: any;
 }) {
   const block = blockInstance as NewInstance;
   const { helperText, label, placeHolder, required } = block.attributes;
+
+  const textColor = settings?.backgroundColor
+    ? getContrastColor(settings.backgroundColor)
+    : undefined;
+
   return (
     <div className="flex flex-col gap-2 w-full">
-      <Label className="text-base font-normal! mb-2">
+      <Label
+        className="text-base font-normal! mb-2"
+        style={{ color: textColor || undefined }}
+      >
         {label}
         {required && <span className="text-red-500">*</span>}
       </Label>
@@ -92,8 +102,10 @@ function TextFieldCanvasComponent({
       />
       {helperText && (
         <p
-          className="text-muted-foreground 
-        text-[0.8rem]"
+          className={
+            textColor ? "text-[0.8rem]" : "text-[0.8rem] text-muted-foreground"
+          }
+          style={textColor ? { color: textColor, opacity: 0.8 } : undefined}
         >
           {helperText}
         </p>

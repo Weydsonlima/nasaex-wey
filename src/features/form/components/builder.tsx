@@ -1,4 +1,3 @@
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { BuilderSidebar } from "./builder-sidebar";
 import { BuilderCanvas } from "./builder-canvas";
 import { BuilderBlockProperties } from "@/features/form/components/builder-block-properties";
@@ -8,9 +7,8 @@ export function Builder(props: { isSidebarOpen: boolean }) {
   return (
     <>
       <BuilderSidebar />
-      <div className="p-0 flex-1">
-        <div className="w-full h-full bg-accent">
-          <SidebarTrigger className="absolute top-0 z-50 " />
+      <div className="flex-1">
+        <div className="w-full h-full">
           <BuilderCanvas />
           <FloatingShareButton isSidebarOpen={props.isSidebarOpen} />
         </div>

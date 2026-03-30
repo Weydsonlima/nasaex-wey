@@ -1,10 +1,8 @@
 "use client";
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader, Save } from "lucide-react";
+import { LoaderIcon, SaveIcon } from "lucide-react";
 import { useBuilderStore } from "@/features/form/context/builder-form-provider";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { useMutationUpdateForm } from "@/features/form/hooks/use-form";
 
 export function SaveFormBtn() {
@@ -75,16 +73,13 @@ export function SaveFormBtn() {
     <Button
       variant="outline"
       size="sm"
-      disabled={mutation.isPending || formData?.published}
-      className={cn(
-        formData?.published && "cursor-default pointer-events-none",
-      )}
+      disabled={mutation.isPending}
       onClick={saveFormData}
     >
       {mutation.isPending ? (
-        <Loader className="w-4 h-4 animate-spin" />
+        <LoaderIcon className="w-4 h-4 animate-spin" />
       ) : (
-        <Save />
+        <SaveIcon />
       )}
       Salvar
     </Button>

@@ -135,6 +135,7 @@ model Organization {
   nboxItems        NBoxItem[]
   nasaPostBrandConfig NasaPostBrandConfig?
   nasaPosts           NasaPost[]
+  form        Form[]
 
   @@unique([slug])
   @@map("organization")
@@ -388,6 +389,7 @@ model Lead {
   actions  Action[]
   appointments Appointment[]
   forgeProposals ForgeProposal[]
+  formResponses FormResponses[]
 
   @@index([trackingId])
   @@index([statusId, order])

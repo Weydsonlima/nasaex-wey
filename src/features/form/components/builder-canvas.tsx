@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export function BuilderCanvas() {
   const {
+    formData,
     blockLayouts,
     addBlockLayout,
     repositionBlockLayout,
@@ -108,10 +109,19 @@ export function BuilderCanvas() {
   });
   return (
     <div
-      className="relative w-full
-  h-[calc(100vh-65px)] px-5 md:px-0 pt-4 pb-[120px] overflow-auto
-  transition-all duration-300 scrollbar bg-accent/90
+      className="relative w-full h-full
+  px-5 md:px-0 pt-4 pb-[120px] overflow-auto
+  transition-all duration-300 scrollbar
   "
+      style={{
+        backgroundColor: formData?.settings?.backgroundColor || "",
+        backgroundImage: formData?.settings?.backgroundImage
+          ? `url(${formData.settings.backgroundImage})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
     >
       <div
         className="w-full 
@@ -123,7 +133,7 @@ export function BuilderCanvas() {
           ref={droppable.setNodeRef}
           className={cn(
             `
-         w-full relative bg-accent px-2 rounded-md
+         w-full relative px-2 rounded-md
          flex flex-col min-h-svh items-center
          justify-start pt-1 pb-14
         `,
@@ -132,21 +142,21 @@ export function BuilderCanvas() {
               "ring-4 ring-primary/20 ring-inset",
           )}
         >
-          <div
-            className="w-full mb-3
-        bg-accent bg-[url(/images/form-bg.jpg)]
-        bg-center bg-cover bg-no-repeat border border-border shadow-sm h-[135px]
-        max-w-[768px] rounded-md px-1
-        "
-          />
-
           {blockLayouts.length > 0 && (
-            <div className="flex flex-col w-full gap-4">
+            <div
+              className={cn(
+                "flex flex-col w-full gap-4 p-4 rounded-md shadow-lg",
+                formData?.settings?.backgroundImage
+                  ? "bg-white/10 backdrop-blur-md border border-white/20"
+                  : "",
+              )}
+            >
               {blockLayouts.map((blockLayout) => (
                 <CanvasBlockLayoutWrapper
                   key={blockLayout.id}
                   activeBlock={activeBlock}
                   blockLayout={blockLayout}
+                  settings={formData?.settings}
                 />
               ))}
             </div>
@@ -160,9 +170,11 @@ export function BuilderCanvas() {
 function CanvasBlockLayoutWrapper({
   blockLayout,
   activeBlock,
+  settings,
 }: {
   blockLayout: FormBlockInstance;
   activeBlock: Active | null;
+  settings?: any;
 }) {
   const CanvasBlockLayout = FormBlocks[blockLayout.blockType].canvasComponent;
 
@@ -190,18 +202,10 @@ function CanvasBlockLayoutWrapper({
         !blockLayout.isLocked && (
           <div
             ref={topCorner.setNodeRef}
-            className="
-        absolute top-0 w-full h-1/2
-        pointer-events-none
-        "
+            className="absolute top-0 w-full h-1/2 pointer-events-none"
           >
             {topCorner.isOver && (
-              <div
-                className="
-           absolute w-full -top-[3px] h-[6px]
-           bg-primary rounded-t-md
-          "
-              />
+              <div className="absolute w-full -top-[3px] h-[6px] bg-foreground rounded-t-md" />
             )}
           </div>
         )}
@@ -228,7 +232,7 @@ function CanvasBlockLayoutWrapper({
         )}
 
       <div className="relative">
-        <CanvasBlockLayout blockInstance={blockLayout} />
+        <CanvasBlockLayout blockInstance={blockLayout} settings={settings} />
       </div>
     </div>
   );

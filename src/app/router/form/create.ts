@@ -34,7 +34,7 @@ export const createForm = base
       {
         blockType: "RowLayout",
         attributes: {},
-        isLocked: true,
+        isLocked: false,
         childblocks: [
           {
             blockType: "Heading",

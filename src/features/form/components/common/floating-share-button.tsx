@@ -25,7 +25,7 @@ export function FloatingShareButton(props: { isSidebarOpen: boolean }) {
   return (
     <div
       className="fixed bottom-5 z-50 
-      transition-transform bg-accent
+      transition-transform 
       duration-500 ease-in-out"
       style={{
         left: isSidebarOpen ? "calc(41% + 150px)" : "41%",
@@ -34,14 +34,14 @@ export function FloatingShareButton(props: { isSidebarOpen: boolean }) {
     >
       <Button
         onClick={copyLinkToClipboard}
-        variant="outline"
+        variant="secondary"
         size="lg"
         className="rounded-full 
          transition-all duration-300 
          hover:scale-105"
         aria-label="Copy Shareable Link"
       >
-        <Copy className="w-5 h-5" />
+        <Copy className="size-5" />
         Share Link
       </Button>
     </div>

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { FormSettings } from "@/generated/prisma/client";
 import { getContrastColor } from "@/utils/get-contrast-color";
+import { cn } from "@/lib/utils";
 
 type FormSubmitProps = {
   id: string;
@@ -183,6 +184,13 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
       className="scrollbar w-full h-full overflow-y-auto pt-3 transition-all duration-300"
       style={{
         backgroundColor: backgroundColor || undefined,
+        backgroundImage: backgroundImage
+          ? `url(${backgroundImage})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+        backgroundRepeat: "no-repeat",
         color: textColor || undefined,
       }}
     >
@@ -191,23 +199,17 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
           className="w-full relative bg-transparent px-2
             flex flex-col items-center justify-start pt-1 pb-14"
         >
-          {/* ─── Banner ──────────────────────────────────── */}
-          <div
-            className="w-full mb-3 bg-foreground/10
-             bg-center bg-cover border shadow-sm
-             h-[135px] max-w-[768px] rounded-md px-1"
-            style={{
-              backgroundImage: backgroundImage
-                ? `url(${backgroundImage})`
-                : "url(/form-bg.jpg)",
-            }}
-          />
+          {/* Remove redundant banner when background is global */}
 
           <div className="w-full h-auto">
             {isSubmitted ? (
               <Card
-                className="w-full bg-foreground/10 border
-               shadow-sm min-h-[120px] rounded-md p-0"
+                className={cn(
+                  "w-full border shadow-sm min-h-[120px] rounded-md p-0",
+                  backgroundImage
+                    ? "bg-white/20 backdrop-blur-md"
+                    : "bg-foreground/10",
+                )}
                 style={{ color: textColor || undefined }}
               >
                 <CardContent className="px-2 pb-2">
@@ -237,7 +239,12 @@ export function FormSubmitComponent({ id, blocks, settings }: FormSubmitProps) {
                   {step === 1 && showLeadFields && (
                     <>
                       <Card
-                        className="w-full border-none bg-foreground/10 px-4"
+                        className={cn(
+                          "w-full border-none px-4",
+                          backgroundImage
+                            ? "bg-white/20 backdrop-blur-md"
+                            : "bg-foreground/10",
+                        )}
                         style={{ color: textColor || undefined }}
                       >
                         <CardContent className="p-0 flex flex-col gap-4">

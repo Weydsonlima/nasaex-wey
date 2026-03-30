@@ -25,6 +25,24 @@ export const getManyResponses = base
           orderBy: {
             createdAt: "desc",
           },
+          select: {
+            id: true,
+            createdAt: true,
+            jsonResponse: true,
+            formId: true,
+            form: {
+              select: {
+                settings: {
+                  select: {
+                    needLogin: true,
+                    showEmail: true,
+                    showName: true,
+                    showPhone: true,
+                  },
+                },
+              },
+            },
+          },
         },
       },
     });

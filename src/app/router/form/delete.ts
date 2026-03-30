@@ -1,10 +1,6 @@
-import { v4 as uuidv4 } from "uuid";
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
-import {
-  defaultBackgroundColor,
-  defaultPrimaryColor,
-} from "@/features/form/constants";
+
 import prisma from "@/lib/prisma";
 import z from "zod";
 
@@ -34,7 +30,7 @@ export const deleteForm = base
         throw errors.NOT_FOUND({ message: "Form not found" });
       }
 
-      const formSettings = await prisma.formSettings.delete({
+      await prisma.form.delete({
         where: {
           id,
         },

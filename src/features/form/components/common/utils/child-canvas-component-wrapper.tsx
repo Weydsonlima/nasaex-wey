@@ -4,11 +4,13 @@ import React from "react";
 
 export function ChildCanvasComponentWrapper({
   blockInstance,
+  settings,
 }: {
   blockInstance: FormBlockInstance;
+  settings?: any;
 }) {
   const CanvasComponent = FormBlocks[blockInstance.blockType]?.canvasComponent;
   if (!CanvasComponent) return null;
 
-  return <CanvasComponent blockInstance={blockInstance} />;
+  return <CanvasComponent blockInstance={blockInstance} settings={settings} />;
 }

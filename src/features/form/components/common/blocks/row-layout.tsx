@@ -55,8 +55,10 @@ export const RowLayoutBlock: ObjectBlockType = {
 
 function RowLayoutCanvasComponent({
   blockInstance,
+  settings,
 }: {
   blockInstance: FormBlockInstance;
+  settings?: any;
 }) {
   const {
     selectedBlockLayout,
@@ -71,6 +73,10 @@ function RowLayoutCanvasComponent({
   const childBlocks = blockInstance.childblocks || [];
 
   const isSelected = selectedBlockLayout?.id === blockInstance.id;
+
+  const textColor = settings?.backgroundColor
+    ? getContrastColor(settings.backgroundColor)
+    : undefined;
 
   const droppable = useDroppable({
     id: blockInstance.id,
@@ -168,7 +174,11 @@ function RowLayoutCanvasComponent({
           cursor-move justify-center
           "
             >
-              <GripHorizontal size="20px" className="text-muted-foreground" />
+              <GripHorizontal
+                size="20px"
+                className="text-muted-foreground"
+                style={{ color: textColor || undefined }}
+              />
             </div>
           )}
 
@@ -179,14 +189,10 @@ function RowLayoutCanvasComponent({
               droppable.isOver && (
                 <div
                   className="relative border border-dotted 
-                border-primary bg-primary/10 w-full h-28"
+                border-foreground bg-foreground/10 w-full h-28"
                 >
-                  <div
-                    className="absolute left-1/2 top-0 -translate-x-1/2
-                     text-xs bg-primary text-white 
-        text-center w-28 p-1 rounded-b-full shadow-md"
-                  >
-                    Arraste aqui
+                  <div className="absolute left-1/2 top-0 -translate-x-1/2 text-xs bg-foreground text-muted-foreground hover:bg-foreground hover:text-white text-center w-28 p-1 rounded-b-full shadow-md">
+                    Arraste o bloco aqui
                   </div>
                 </div>
               )}
@@ -208,7 +214,10 @@ function RowLayoutCanvasComponent({
                 justify-center gap-1
                 "
                   >
-                    <ChildCanvasComponentWrapper blockInstance={childBlock} />
+                    <ChildCanvasComponentWrapper
+                      blockInstance={childBlock}
+                      settings={settings}
+                    />
 
                     {isSelected && !blockInstance.isLocked && (
                       <Button
@@ -276,7 +285,9 @@ function RowLayoutFormComponent({
 }) {
   const childblocks = blockInstance.childblocks || [];
 
-  const textColor = settings?.backgroundColor ? getContrastColor(settings.backgroundColor) : undefined;
+  const textColor = settings?.backgroundColor
+    ? getContrastColor(settings.backgroundColor)
+    : undefined;
 
   return (
     <div className="max-w-full">
@@ -361,21 +372,10 @@ function RowLayoutPropertiesComponent({
 
 function PlaceHolder() {
   return (
-    <div
-      className="flex flex-col items-center
-        justify-center border border-dotted
-        border-primary
-        bg-accent/10
-        hover:bg-accent/5
-        w-full h-28
-        text-primary font-medium
-        text-base
-        gap-1
-        "
-    >
+    <div className="flex flex-col items-center justify-center border border-dotted border-muted-foreground rounded-md bg-accent/10 hover:bg-accent/5 w-full h-28 text-foreground font-medium text-base gap-1s">
       <p
         className="
-          text-center text-primary/80
+          text-center text-foreground/80
           "
       >
         Arraste e solte um bloco aqui para começar

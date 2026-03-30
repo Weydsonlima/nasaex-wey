@@ -7,5 +7,9 @@ export default async function Page({
 }) {
   const { formId } = await params;
 
-  return <RespondsPage formId={formId} />;
+  return (
+    <div className="mx-auto md:px-10">
+      <RespondsPage formId={formId} />
+    </div>
+  );
 }

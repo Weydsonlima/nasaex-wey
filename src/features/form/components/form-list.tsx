@@ -11,14 +11,30 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { CreateForm } from "./create-form";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Form } from "@/generated/prisma/client";
 
 export function FormList() {
   const { forms, isLoading } = useQueryListForms();
   return (
     <>
+      {isLoading && (
+        <div
+          className="grid gap-4 grid-cols-2
+        md:grid-cols-5
+           lg:grid-cols-3
+           xl:grid-cols-5"
+        >
+          <Skeleton className="w-full h-40" />
+          <Skeleton className="w-full h-40" />
+          <Skeleton className="w-full h-40" />
+          <Skeleton className="w-full h-40" />
+          <Skeleton className="w-full h-40" />
+        </div>
+      )}
       {forms && (
         <div
-          className="grid gap-4  grid-cols-2
+          className="grid gap-4 grid-cols-2
         md:grid-cols-5
            lg:grid-cols-3
            xl:grid-cols-5

@@ -6,7 +6,7 @@ import { FormList } from "./form-list";
 export function FormPage() {
   return (
     <div className="w-full">
-      <div className="w-full mx-auto  md:px-10 pt-1">
+      <div className="w-full ">
         {/* {FORM STATS} */}
         <section className="stats-section w-full">
           <div className="w-full flex items-center justify-between py-5">
@@ -18,26 +18,11 @@ export function FormPage() {
         <div className="mt-10">
           <Separator />
         </div>
-        {/* {ALL FORM} */}
-
         <section className="w-full pt-7 pb-10">
-          <div
-            className="w-full flex 
-          items-center mb-4"
-          >
-            <h5
-              className="text-xl
-             font-semibold
-             tracking-tight
-             "
-            >
-              All Forms
-            </h5>
+          <div className="w-full flex items-center mb-4">
+            <h5 className="text-xl font-semibold tracking-tight">All Forms</h5>
           </div>
           <FormList />
-          {/* <div className="flex items-center justify-center">
-            No form created
-          </div> */}
         </section>
       </div>
     </div>

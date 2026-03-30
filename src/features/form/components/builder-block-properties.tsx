@@ -25,13 +25,8 @@ export function BuilderBlockProperties() {
           className="flex flex-col w-full items-center
         h-auto min-h-full"
         >
-          <div
-            className="w-full flex 
-            flex-row items-center
-            dark:bg-accent pb-2 pt-3 sticky border-b
-            border top-0 gap-2 px-2"
-          >
-            <PreviewDialog />
+          <div className="w-full flex flex-row justify-end items-center dark:bg-accent pb-2 pt-3 sticky border-b border top-0 gap-2 px-2">
+            {/* <PreviewDialog /> */}
             <SaveFormBtn />
             <PublishFormBtn />
           </div>

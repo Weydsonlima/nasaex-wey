@@ -19,6 +19,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Uploader } from "@/components/file-uploader/uploader";
+import { useConstructUrl } from "@/hooks/use-construct-url";
 
 export function FormSettings() {
   const { formData, updateSettings } = useBuilderStore();
@@ -34,9 +36,24 @@ export function FormSettings() {
     (t) => t.id === settings.trackingId,
   )?.name;
 
-  const statusName = status?.find(
-    (s) => s.id === settings.statusId,
-  )?.name;
+  const statusName = status?.find((s) => s.id === settings.statusId)?.name;
+
+  const handleUploadBackground = (key: string) => {
+    if (!key) {
+      updateSettings({ backgroundImage: null });
+      return;
+    }
+
+    const fullUrl = `https://${process.env.NEXT_PUBLIC_S3_BUCKET_CONSTRUCTOR_URL}/${key}`;
+    updateSettings({ backgroundImage: fullUrl });
+  };
+
+  // Helper to extract key from full URL if needed (for Uploader value)
+  const extractKeyFromUrl = (url: string | null) => {
+    if (!url) return "";
+    const parts = url.split("/");
+    return parts[parts.length - 1];
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,10 +92,7 @@ export function FormSettings() {
           <Field>
             <FieldLabel>Status</FieldLabel>
             <DropdownMenu>
-              <DropdownMenuTrigger
-                disabled={!settings.trackingId}
-                asChild
-              >
+              <DropdownMenuTrigger disabled={!settings.trackingId} asChild>
                 <Button variant="outline" className="w-full justify-start">
                   {statusName || "Selecionar"}
                 </Button>
@@ -196,6 +210,16 @@ export function FormSettings() {
               />
             </div>
           </Field>
+          <Field>
+            <FieldLabel>Imagem de fundo</FieldLabel>
+            <div className="flex items-center gap-2 w-full">
+              <Uploader
+                value={extractKeyFromUrl(settings.backgroundImage)}
+                onConfirm={handleUploadBackground}
+                fileTypeAccepted="image"
+              />
+            </div>
+          </Field>
         </div>
       </section>
 
@@ -210,9 +234,7 @@ export function FormSettings() {
           <FieldLabel>Mensagem de finalização</FieldLabel>
           <Textarea
             value={settings.finishMessage}
-            onChange={(e) =>
-              updateSettings({ finishMessage: e.target.value })
-            }
+            onChange={(e) => updateSettings({ finishMessage: e.target.value })}
             placeholder="Obrigado por seu cadastro!"
             rows={3}
           />

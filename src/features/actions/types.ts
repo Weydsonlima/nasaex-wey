@@ -35,5 +35,14 @@ export interface Action {
     id: string;
     title: string;
     isDone: boolean;
+    description: string | null;
+    finishDate: Date | null;
+    responsibles: {
+      user: {
+        id: string;
+        name: string;
+        image: string | null;
+      };
+    }[];
   }[];
 }

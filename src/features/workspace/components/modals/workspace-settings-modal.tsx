@@ -55,7 +55,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
@@ -66,6 +65,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useQueryState } from "nuqs";
+import { Uploader } from "@/components/file-uploader/uploader";
 
 interface Props {
   workspaceId: string;
@@ -89,7 +89,7 @@ export function WorkspaceSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl p-0 flex flex-col gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[80%] max-h-[90vh] h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold">
@@ -99,7 +99,11 @@ export function WorkspaceSettingsModal({
         </DialogHeader>
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Tabs value={view} onValueChange={setView}>
+          <Tabs
+            value={view}
+            onValueChange={setView}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
             <TabsList className="mx-8 mt-4">
               <TabsTrigger value="general">
                 <Settings className="size-4 mr-2" />
@@ -160,6 +164,9 @@ function GeneralTab({ workspace }: { workspace: any }) {
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || "");
   const [color, setColor] = useState(workspace.color || "#1447e6");
+  const [coverImage, setCoverImage] = useState<string | null>(
+    workspace.coverImage || null,
+  );
 
   const handleSave = () => {
     updateWorkspace.mutate({
@@ -167,11 +174,12 @@ function GeneralTab({ workspace }: { workspace: any }) {
       name,
       description,
       color,
+      coverImage,
     });
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="w-full space-y-6 ">
       <div>
         <h3 className="text-lg font-medium">Informações do Workspace</h3>
         <p className="text-sm text-muted-foreground">
@@ -215,6 +223,17 @@ function GeneralTab({ workspace }: { workspace: any }) {
               className="font-mono text-sm uppercase max-w-[120px]"
             />
           </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Imagem de Capa</Label>
+          <p className="text-xs text-muted-foreground">
+            A imagem será exibida como fundo do workspace com baixa opacidade.
+          </p>
+          <Uploader
+            value={coverImage ?? ""}
+            onConfirm={(val) => setCoverImage(val || null)}
+          />
         </div>
       </div>
 

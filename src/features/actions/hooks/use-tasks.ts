@@ -325,3 +325,50 @@ export const useQueryActionsAnalytics = () => {
 export const useListRecentActions = (limit = 10) => {
   return useQuery(orpc.action.listRecent.queryOptions({ input: { limit } }));
 };
+
+export const useAddSubActionResponsible = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.addSubActionResponsible.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useRemoveSubActionResponsible = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.removeSubActionResponsible.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const usePromoteSubAction = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.promoteSubAction.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+        queryClient.invalidateQueries({
+          queryKey: ["action.listByColumn"],
+        });
+        queryClient.invalidateQueries(
+          orpc.action.listByWorkspace.queryOptions({
+            input: { workspaceId: data.action.workspaceId },
+          }),
+        );
+      },
+    }),
+  );
+};

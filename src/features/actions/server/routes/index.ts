@@ -10,6 +10,9 @@ import { updateSubAction } from "./update-sub-action";
 import { deleteSubAction } from "./delete-sub-action";
 import { addResponsible } from "./add-responsible";
 import { removeResponsible } from "./remove-responsible";
+import { addSubActionResponsible } from "./add-sub-action-responsible";
+import { removeSubActionResponsible } from "./remove-sub-action-responsible";
+import { promoteSubAction } from "./promote-sub-action";
 
 import { getAnalytics } from "./get-analytics";
 import { listRecentActions } from "./list-recent";
@@ -29,4 +32,7 @@ export const actionRoutes = {
   deleteSubAction,
   addResponsible,
   removeResponsible,
+  addSubActionResponsible,
+  removeSubActionResponsible,
+  promoteSubAction,
 };

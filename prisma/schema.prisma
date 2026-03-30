@@ -452,8 +452,9 @@ model Workspace {
   name      String
   description String?
   color          String?  @default("#1447e6")
-  icon        String?
-  isArchived Boolean @default(false)  @map("is_archived")
+  icon           String?
+  coverImage     String?
+  isArchived     Boolean @default(false)  @map("is_archived")
   order          Int      @default(0)
   
   organizationId String   @map("organization_id")

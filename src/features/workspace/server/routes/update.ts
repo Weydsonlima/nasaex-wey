@@ -14,6 +14,7 @@ export const updateWorkspace = base
       description: z.string().optional(),
       icon: z.string().optional(),
       color: z.string().optional(),
+      coverImage: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ input }) => {
@@ -24,6 +25,7 @@ export const updateWorkspace = base
         description: input.description,
         icon: input.icon,
         color: input.color,
+        coverImage: input.coverImage,
       },
     });
 

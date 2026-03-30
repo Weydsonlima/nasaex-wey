@@ -12,6 +12,7 @@ export const updateSubAction = base
       subActionId: z.string(),
       title: z.string().min(1).optional(),
       isDone: z.boolean().optional(),
+      description: z.string().nullable().optional(),
       finishDate: z.date().nullable().optional(),
     }),
   )

@@ -1,8 +1,4 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   useQueryAction,
   useUpdateAction,
@@ -12,6 +8,9 @@ import {
   useDeleteSubAction,
   useAddResponsible,
   useRemoveResponsible,
+  useAddSubActionResponsible,
+  useRemoveSubActionResponsible,
+  usePromoteSubAction,
 } from "../hooks/use-tasks";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -42,6 +41,9 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
   const deleteSubAction = useDeleteSubAction(actionId);
   const addResponsible = useAddResponsible(actionId);
   const removeResponsible = useRemoveResponsible(actionId);
+  const addSubActionResponsible = useAddSubActionResponsible(actionId);
+  const removeSubActionResponsible = useRemoveSubActionResponsible(actionId);
+  const promoteSubAction = usePromoteSubAction(actionId);
 
   const { columns } = useColumnsByWorkspace(action?.workspaceId ?? "");
   const { members } = useWorkspaceMembers(action?.workspaceId ?? "");
@@ -75,6 +77,46 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
     deleteSubAction.mutate(
       { subActionId },
       { onError: () => toast.error("Erro ao deletar sub-ação") },
+    );
+  };
+
+  const handleUpdateSubAction = (
+    subActionId: string,
+    data: { description?: string | null; finishDate?: Date | null },
+  ) => {
+    updateSubAction.mutate(
+      { subActionId, ...data },
+      { onError: () => toast.error("Erro ao atualizar sub-ação") },
+    );
+  };
+
+  const handleAddSubActionResponsible = (
+    subActionId: string,
+    userId: string,
+  ) => {
+    addSubActionResponsible.mutate(
+      { subActionId, userId },
+      { onError: () => toast.error("Erro ao adicionar responsável") },
+    );
+  };
+
+  const handleRemoveSubActionResponsible = (
+    subActionId: string,
+    userId: string,
+  ) => {
+    removeSubActionResponsible.mutate(
+      { subActionId, userId },
+      { onError: () => toast.error("Erro ao remover responsável") },
+    );
+  };
+
+  const handlePromoteSubAction = (subActionId: string) => {
+    promoteSubAction.mutate(
+      { subActionId },
+      {
+        onSuccess: () => toast.success("Sub-ação transformada em ação"),
+        onError: () => toast.error("Erro ao promover sub-ação"),
+      },
     );
   };
 
@@ -126,16 +168,25 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
 
                 <ActionDescription
                   description={action?.description}
-                  onDescriptionChange={(description) => handleUpdateAction({ description })}
+                  onDescriptionChange={(description) =>
+                    handleUpdateAction({ description })
+                  }
                 />
 
                 <ActionSubActions
                   subActions={action?.subActions}
+                  members={members}
+                  action={action}
                   onCreate={handleAddSubAction}
                   onToggle={handleToggleSubAction}
                   onDelete={handleDeleteSubAction}
+                  onUpdate={handleUpdateSubAction}
+                  onAddResponsible={handleAddSubActionResponsible}
+                  onRemoveResponsible={handleRemoveSubActionResponsible}
+                  onPromote={handlePromoteSubAction}
                   isCreating={createSubAction.isPending}
                   isDeleting={deleteSubAction.isPending}
+                  isUpdating={updateSubAction.isPending}
                 />
               </>
             )}

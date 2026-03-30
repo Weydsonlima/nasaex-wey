@@ -23,7 +23,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useQueryAppointment } from "../../hooks/use-appointments";
-import { useCancelAppointment, useRescheduleAppointment } from "@/features/agenda/hooks/use-agenda";
+import {
+  useCancelAppointment,
+  useRescheduleAppointment,
+} from "@/features/agenda/hooks/use-agenda";
 import { useQueryPublicAgendaTimeSlots } from "@/features/agenda/hooks/use-public-agenda";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -65,32 +68,32 @@ import {
 /* ─────────────────────────────────────────────── */
 
 const statusMap: Record<string, string> = {
-  PENDING:   "Pendente",
+  PENDING: "Pendente",
   CONFIRMED: "Confirmado",
   CANCELLED: "Cancelado",
-  NO_SHOW:   "Não Compareceu",
-  DONE:      "Finalizado",
+  NO_SHOW: "Não Compareceu",
+  DONE: "Finalizado",
 };
 
 const statusColorMap: Record<string, string> = {
-  PENDING:   "bg-yellow-100 text-yellow-800 border-yellow-200",
+  PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
   CONFIRMED: "bg-green-100  text-green-800  border-green-200",
   CANCELLED: "bg-red-100    text-red-800    border-red-200",
-  NO_SHOW:   "bg-red-100    text-red-800    border-red-200",
-  DONE:      "bg-blue-100   text-blue-800   border-blue-200",
+  NO_SHOW: "bg-red-100    text-red-800    border-red-200",
+  DONE: "bg-blue-100   text-blue-800   border-blue-200",
 };
 
 const temperatureMap: Record<string, string> = {
-  COLD:     "Frio",
-  WARM:     "Morno",
-  HOT:      "Quente",
+  COLD: "Frio",
+  WARM: "Morno",
+  HOT: "Quente",
   VERY_HOT: "Muito Quente",
 };
 
 const temperatureColorMap: Record<string, string> = {
-  COLD:     "text-blue-500",
-  WARM:     "text-yellow-500",
-  HOT:      "text-orange-500",
+  COLD: "text-blue-500",
+  WARM: "text-yellow-500",
+  HOT: "text-orange-500",
   VERY_HOT: "text-red-500",
 };
 
@@ -109,7 +112,7 @@ export const ViewAppointment = ({
 }: ViewAppointmentProps) => {
   const { appointment, isLoading } = useQueryAppointment({ appointmentId });
 
-  const [cancelOpen, setCancelOpen]     = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
 
   const cancelMutation = useCancelAppointment();
@@ -152,7 +155,10 @@ export const ViewAppointment = ({
                   </h2>
                   <Badge
                     variant="outline"
-                    className={cn("whitespace-nowrap text-xs", statusColorMap[appointment.status ?? ""] ?? "")}
+                    className={cn(
+                      "whitespace-nowrap text-xs",
+                      statusColorMap[appointment.status ?? ""] ?? "",
+                    )}
                   >
                     {statusMap[appointment.status ?? ""] ?? appointment.status}
                   </Badge>
@@ -165,7 +171,8 @@ export const ViewAppointment = ({
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Clock className="size-4" />
-                    {dayjs(appointment.startsAt).format("HH:mm")} – {dayjs(appointment.endsAt).format("HH:mm")}
+                    {dayjs(appointment.startsAt).format("HH:mm")} –{" "}
+                    {dayjs(appointment.endsAt).format("HH:mm")}
                   </span>
                 </div>
               </div>
@@ -205,8 +212,15 @@ export const ViewAppointment = ({
                   <div className="bg-muted/30 p-4 rounded-lg border space-y-3">
                     <div className="flex items-center gap-2">
                       <User className="size-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{appointment.lead.name}</span>
-                      <Button size="icon-xs" variant="ghost" asChild className="ml-auto">
+                      <span className="font-medium text-sm">
+                        {appointment.lead.name}
+                      </span>
+                      <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        asChild
+                        className="ml-auto"
+                      >
                         <Link href={`/contatos/${appointment.leadId}`}>
                           <ArrowUpRight className="size-3.5" />
                         </Link>
@@ -215,25 +229,41 @@ export const ViewAppointment = ({
                     {appointment.lead.email && (
                       <div className="flex items-center gap-2">
                         <Mail className="size-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground/80">{appointment.lead.email}</span>
+                        <span className="text-sm text-foreground/80">
+                          {appointment.lead.email}
+                        </span>
                       </div>
                     )}
                     {appointment.lead.phone && (
                       <div className="flex items-center gap-2">
                         <Phone className="size-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground/80">{appointment.lead.phone}</span>
+                        <span className="text-sm text-foreground/80">
+                          {appointment.lead.phone}
+                        </span>
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t mt-1">
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Temperatura</span>
-                        <div className={cn("flex items-center gap-1.5 text-sm font-medium", temperatureColorMap[appointment.lead.temperature] ?? "text-muted-foreground")}>
+                        <span className="text-xs text-muted-foreground">
+                          Temperatura
+                        </span>
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5 text-sm font-medium",
+                            temperatureColorMap[appointment.lead.temperature] ??
+                              "text-muted-foreground",
+                          )}
+                        >
                           <Thermometer className="size-3.5" />
-                          {temperatureMap[appointment.lead.temperature] ?? appointment.lead.temperature ?? "-"}
+                          {temperatureMap[appointment.lead.temperature] ??
+                            appointment.lead.temperature ??
+                            "-"}
                         </div>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Origem</span>
+                        <span className="text-xs text-muted-foreground">
+                          Origem
+                        </span>
                         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground/70">
                           <Target className="size-3.5 text-muted-foreground" />
                           {appointment.lead.source ?? "-"}
@@ -248,15 +278,25 @@ export const ViewAppointment = ({
 
               {/* ── Context ── */}
               <div className="space-y-2 px-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contexto</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Contexto
+                </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-xs text-muted-foreground">Tracking</span>
-                    <p className="text-sm font-medium">{appointment.tracking?.name ?? "-"}</p>
+                    <span className="text-xs text-muted-foreground">
+                      Tracking
+                    </span>
+                    <p className="text-sm font-medium">
+                      {appointment.tracking?.name ?? "-"}
+                    </p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">Agenda</span>
-                    <p className="text-sm font-medium">{appointment.agenda?.name ?? "-"}</p>
+                    <span className="text-xs text-muted-foreground">
+                      Agenda
+                    </span>
+                    <p className="text-sm font-medium">
+                      {appointment.agenda?.name ?? "-"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -296,7 +336,9 @@ export const ViewAppointment = ({
               Esta ação não pode ser desfeita. O agendamento de{" "}
               <strong>{appointment?.lead?.name ?? "cliente"}</strong> em{" "}
               <strong>
-                {appointment ? dayjs(appointment.startsAt).format("DD/MM/YYYY [às] HH:mm") : ""}
+                {appointment
+                  ? dayjs(appointment.startsAt).format("DD/MM/YYYY [às] HH:mm")
+                  : ""}
               </strong>{" "}
               será marcado como cancelado.
             </AlertDialogDescription>
@@ -368,16 +410,20 @@ function RescheduleDialog({
 
   const dateStr = selectedDate.toString();
 
-  const { timeSlots, isLoading: isLoadingSlots } = useQueryPublicAgendaTimeSlots(
-    orgSlug && agendaSlug
-      ? { orgSlug, agendaSlug, date: dateStr }
-      : { orgSlug: "", agendaSlug: "", date: dateStr },
-  );
+  const { timeSlots, isLoading: isLoadingSlots } =
+    useQueryPublicAgendaTimeSlots(
+      orgSlug && agendaSlug
+        ? { orgSlug, agendaSlug, date: dateStr }
+        : { orgSlug: "", agendaSlug: "", date: dateStr },
+    );
 
   const handleSave = () => {
     if (!selectedTime) return;
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const newStart = new Date(`${dateStr}T${selectedTime}:00`);
+    const newStart =
+      typeof (dayjs as any).tz === "function"
+        ? (dayjs as any).tz(`${dateStr} ${selectedTime}`, timeZone).toDate()
+        : new Date(`${dateStr}T${selectedTime}:00`);
     // keep duration = 60min fallback
     const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000);
 
@@ -385,7 +431,7 @@ function RescheduleDialog({
       {
         appointmentId,
         startsAt: newStart.toISOString(),
-        endsAt:   newEnd.toISOString(),
+        endsAt: newEnd.toISOString(),
       },
       { onSuccess },
     );
@@ -393,14 +439,14 @@ function RescheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-[640px] p-0">
+      <DialogContent className="w-full md:max-w-[640px] p-0">
         <DialogHeader className="px-6 pt-5 pb-4 border-b">
           <DialogTitle>Reagendar Agendamento</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-row">
           {/* Calendar */}
-          <div className="flex-shrink-0 w-[290px] p-5 border-r flex flex-col">
+          <div className=" p-5 border-r flex flex-col">
             <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-3">
               <CalendarIcon className="size-3.5" /> Selecione a nova data
             </p>
@@ -418,7 +464,9 @@ function RescheduleDialog({
           <div className="flex-1 p-5 flex flex-col min-w-0">
             <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-3">
               <Clock className="size-3.5" />
-              {dayjs(selectedDate.toDate(getLocalTimeZone())).format("DD/MM/YYYY")}
+              {dayjs(selectedDate.toDate(getLocalTimeZone())).format(
+                "DD/MM/YYYY",
+              )}
             </p>
 
             {isLoadingSlots ? (
@@ -439,30 +487,48 @@ function RescheduleDialog({
                         : "border-border bg-card hover:border-primary hover:bg-primary/5",
                     )}
                   >
-                    <Clock className={cn("size-4 flex-shrink-0", selectedTime === slot.startTime ? "text-primary-foreground" : "text-muted-foreground")} />
+                    <Clock
+                      className={cn(
+                        "size-4 flex-shrink-0",
+                        selectedTime === slot.startTime
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    />
                     <span className="flex-1">{slot.startTime}</span>
-                    {selectedTime === slot.startTime && <CheckIcon className="size-4 flex-shrink-0" />}
+                    {selectedTime === slot.startTime && (
+                      <CheckIcon className="size-4 flex-shrink-0" />
+                    )}
                   </button>
                 ))}
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
                 <Clock className="size-7 text-muted-foreground/30 mb-2" />
-                <p className="text-sm text-muted-foreground">Sem horários disponíveis.</p>
-                <p className="text-xs text-muted-foreground/60 mt-0.5">Escolha outra data.</p>
+                <p className="text-sm text-muted-foreground">
+                  Sem horários disponíveis.
+                </p>
+                <p className="text-xs text-muted-foreground/60 mt-0.5">
+                  Escolha outra data.
+                </p>
               </div>
             )}
 
             {selectedTime && (
               <p className="mt-3 text-xs text-primary font-medium flex items-center gap-1.5">
-                <CheckIcon className="size-3.5" /> Selecionado: <strong>{selectedTime}</strong>
+                <CheckIcon className="size-3.5" /> Selecionado:{" "}
+                <strong>{selectedTime}</strong>
               </p>
             )}
           </div>
         </div>
 
         <div className="flex gap-3 justify-end px-6 py-4 border-t">
-          <Button variant="outline" onClick={onClose} disabled={reschedule.isPending}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={reschedule.isPending}
+          >
             Cancelar
           </Button>
           <Button
@@ -480,7 +546,11 @@ function RescheduleDialog({
 }
 
 /* ─── DeleteAppointmentDialog (legacy) ─────────────────────────── */
-export function DeleteAppointmentDialog({ children }: { children: React.ReactNode }) {
+export function DeleteAppointmentDialog({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

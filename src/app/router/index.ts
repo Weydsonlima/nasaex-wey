@@ -17,6 +17,13 @@ import { workspaceRoutes } from "@/features/workspace/server/routes";
 import { actionRoutes } from "@/features/actions/server/routes";
 
 import { columnRoutes } from "./column";
+import { platformIntegrationsRouter } from "./integrations-platform";
+import { channelInsightsRouter } from "./channel-insights";
+import { forgeRouter } from "./forge";
+import { starsRouter } from "./stars";
+import { nboxRouter } from "./nbox";
+import { nasaPostRouter } from "./nasa-post";
+import { nasaCommandRouter } from "./nasa-command";
 
 export const router = {
   tracking: trackingRoutes,
@@ -37,4 +44,11 @@ export const router = {
   widgets: widgetsRouter,
   workspace: workspaceRoutes,
   action: actionRoutes,
+  platformIntegrations: platformIntegrationsRouter,
+  channelInsights: channelInsightsRouter,
+  forge: forgeRouter,
+  stars: starsRouter,
+  nbox: nboxRouter,
+  nasaPost: nasaPostRouter,
+  nasaCommand: nasaCommandRouter,
 };

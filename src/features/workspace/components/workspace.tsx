@@ -16,7 +16,7 @@ export function WorkspaceBoard({ workspaceId }: Props) {
     <div className="h-full w-full relative overflow-x-auto scroll-cols-tracking">
       {data?.workspace?.coverImage && (
         <div
-          className="absolute inset-0 z-0 pointer-events-none opacity-[0.08] dark:opacity-20 bg-cover bg-center"
+          className="absolute inset-0 z-0 pointer-events-none opacity-[0.08] dark:opacity-[0.12] bg-cover bg-center"
           style={{
             backgroundImage: `url(${coverImageUrl})`,
           }}

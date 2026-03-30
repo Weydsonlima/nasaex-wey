@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { ArrowUpRight, PlusIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   SidebarGroup,
@@ -21,9 +21,20 @@ export function WorkspacesItems() {
       <SidebarGroup>
         <SidebarGroupLabel className="justify-between">
           Projetos
-          <Button size="icon-xs" variant="ghost" onClick={() => setOpne(true)}>
-            <PlusIcon />
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button size="icon-xs" variant="ghost" asChild>
+              <Link href={"/workspaces"}>
+                <ArrowUpRight />
+              </Link>
+            </Button>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => setOpne(true)}
+            >
+              <PlusIcon />
+            </Button>
+          </div>
         </SidebarGroupLabel>
 
         <SidebarMenu>

@@ -137,7 +137,10 @@ model Organization {
   nboxItems        NBoxItem[]
   nasaPostBrandConfig NasaPostBrandConfig?
   nasaPosts           NasaPost[]
+  orgPermissions   OrgPermission[]
+  activityLogs     OrgActivityLog[]
   workspaces  Workspace[]
+  form        Form[]
 
   @@unique([slug])
   @@map("organization")
@@ -199,7 +202,7 @@ model Tracking {
   winLossReasons WinLossReason[]
   actions        Action[]
   workflows      Workflow[]
-  forms          Form[]
+  forms          FormSettings[]
   whatsappInstance WhatsAppInstance?
   conversations  Conversation[]
   agendas        Agenda[]
@@ -296,6 +299,7 @@ model Status {
   // Relacionamentos
   tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   leads    Lead[]
+  FormSettings FormSettings[]
 
   @@index([trackingId, order])
   @@map("status")
@@ -391,6 +395,7 @@ model Lead {
   actions  Action[]
   appointments Appointment[]
   forgeProposals ForgeProposal[]
+  formResponses FormResponses[]
 
   @@index([trackingId])
   @@index([statusId, order])
@@ -737,36 +742,67 @@ model Connection {
 model Form {
   id String @id @default(cuid())
   userId String @map("user_id")
-  trackingId String @map("tracking_id")
+  organizationId String
   name String
   description String?
+  jsonBlock String @default("[]")
   published Boolean @default(false)
   content String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt  @map("updated_at")
+  settingsId String? @unique
 
-  visits Int @default(0)
-  submissions Int @default(0)
+  views Int @default(0)
+  responses Int @default(0)
 
   createdBy     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
-
-  formSubmissions FormSubmission[]
-
+  formSubmissions FormResponses[]
   shareUrl String @unique @map("share_url")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  settings FormSettings?
 
   @@map("forms")
 }
 
-model FormSubmission {
+model FormSettings {
+  id String @id @default(cuid())
+  primaryColor String
+  backgroundColor String
+  backgroundImage String? @map("background_image")
+  createdAt DateTime @default(now())
+  updateAt DateTime @default(now()) @updatedAt
+  trackingId String? @map("tracking_id")
+  statusId String? @map("status_id")
+  formId String @unique
+  redirectUrl String? @map("redirect_url")
+  idPixel String? @map("id_pixel")
+  idTagManager String? @map("id_tag_manager")
+  needLogin Boolean @default(true) @map("need_login")
+  showName Boolean @default(true) @map("show_name")
+  showEmail Boolean @default(true) @map("show_email")
+  showPhone Boolean @default(true) @map("show_phone")
+  finishMessage String @default("Obrigado por seu cadastro!") @map("finish_message")
+
+  tracking Tracking? @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+  status Status? @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("form_settings")
+}
+
+model FormResponses {
   id String @id @default(cuid())
   formId String @map("form_id")
   createdAt DateTime @default(now()) @map("created_at")
-  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
-  
-  content String
+  jsonResponse Json @default("[]")
+  leadId String? @map("lead_id")
+  lead Lead? @relation(fields: [leadId], references: [id])
 
-  @@map("form_submissions")
+  
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@map("form_responses")
 }
 
 // ─────────────────────────────────────────────
@@ -1592,4 +1628,41 @@ model NasaPostSlide {
 
   @@index([postId, order])
   @@map("nasa_post_slides")
+}
+// ─── Permissions & Activity ───────────────────────────────────────────────────
+
+model OrgPermission {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String       // owner(master), admin, member(single), moderador
+  appKey         String       @map("app_key")
+  canView        Boolean      @default(true)  @map("can_view")
+  canCreate      Boolean      @default(true)  @map("can_create")
+  canEdit        Boolean      @default(false) @map("can_edit")
+  canDelete      Boolean      @default(false) @map("can_delete")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt      @map("updated_at")
+
+  @@unique([organizationId, role, appKey])
+  @@index([organizationId])
+  @@map("org_permission")
+}
+
+model OrgActivityLog {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  userName       String       @map("user_name")
+  userEmail      String       @map("user_email")
+  action         String
+  resource       String?
+  resourceId     String?      @map("resource_id")
+  metadata       Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@map("org_activity_log")
 }

@@ -5,22 +5,28 @@
 
 */
 -- CreateEnum
-CREATE TYPE "WorkspaceMemberRole" AS ENUM ('OWNER', 'MEMBER', 'VIEWER');
+DO $$ BEGIN
+  CREATE TYPE "WorkspaceMemberRole" AS ENUM ('OWNER', 'MEMBER', 'VIEWER');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "ActionPriority" AS ENUM ('NONE', 'LOW', 'MEDIUM', 'HIGH', 'URGENT');
+DO $$ BEGIN
+  CREATE TYPE "ActionPriority" AS ENUM ('NONE', 'LOW', 'MEDIUM', 'HIGH', 'URGENT');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- DropIndex
-DROP INDEX "actions_closed_at_idx";
+DROP INDEX IF EXISTS "actions_closed_at_idx";
 
 -- DropIndex
-DROP INDEX "actions_end_date_idx";
+DROP INDEX IF EXISTS "actions_end_date_idx";
 
 -- DropIndex
-DROP INDEX "actions_start_date_idx";
+DROP INDEX IF EXISTS "actions_start_date_idx";
 
 -- DropIndex
-DROP INDEX "actions_type_idx";
+DROP INDEX IF EXISTS "actions_type_idx";
 
 -- AlterTable
 ALTER TABLE "actions" ADD COLUMN     "column_id" TEXT,

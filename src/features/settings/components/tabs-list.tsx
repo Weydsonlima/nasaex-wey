@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2Icon, SettingsIcon, UsersIcon, ShieldCheck, FileInput } from "lucide-react";
+import { Building2Icon, SettingsIcon, UsersIcon, ShieldCheck, FileInput, Clock } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useOrgRole } from "@/hooks/use-org-role";
@@ -29,6 +29,12 @@ const tabsLink = [
     href: "/permissions",
     icon: ShieldCheck,
     singleAllowed: true,   // can see but can't edit
+  },
+  {
+    label: "Histórico",
+    href: "/history",
+    icon: Clock,
+    singleAllowed: false,
   },
   {
     label: "Importar",

@@ -24,7 +24,7 @@ import {
   DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Shield, Users, Clock, Star, Trash2, ChevronDown, ChevronUp,
+  Shield, Users, Star, Trash2, ChevronDown, ChevronUp,
   Eye, PenLine, Plus, UserX, Lock, CheckCircle2, AlertCircle,
   UserPlus, Copy, Check,
 } from "lucide-react";
@@ -168,7 +168,6 @@ export function PermissionsTab() {
   const { data: session } = authClient.useSession();
   const qc = useQueryClient();
   const [showMatrix, setShowMatrix] = useState(true);
-  const [showLogs, setShowLogs] = useState(false);
 
   // Add member dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -435,51 +434,6 @@ export function PermissionsTab() {
           </div>
         )}
       </div>
-
-      {/* ── Activity log ──────────────────────────────────────────────────── */}
-      {canManage && (
-        <div className="space-y-3">
-          <button
-            className="flex items-center gap-2 text-base font-semibold w-full text-left"
-            onClick={() => setShowLogs((v) => !v)}
-          >
-            <Clock className="size-4" />
-            Histórico de Atividades
-            {showLogs ? <ChevronUp className="size-4 ml-auto" /> : <ChevronDown className="size-4 ml-auto" />}
-          </button>
-
-          {showLogs && (
-            <div className="rounded-xl border overflow-hidden divide-y">
-              {(data?.logs ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground p-4">Nenhuma atividade registrada ainda.</p>
-              ) : (
-                data?.logs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/10">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full mt-1.5 shrink-0",
-                      log.action === "member_removed" ? "bg-red-500" :
-                      log.action === "role_changed" ? "bg-blue-500" :
-                      log.action === "permission_updated" ? "bg-violet-500" : "bg-slate-400"
-                    )} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium">{log.userName}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {log.action === "role_changed" && `Cargo de ${log.resource} alterado`}
-                        {log.action === "member_removed" && `Removeu ${log.resource} da empresa`}
-                        {log.action === "permission_updated" && `Permissão atualizada: ${log.resource}`}
-                        {!["role_changed","member_removed","permission_updated"].includes(log.action) && log.action}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground shrink-0">
-                      {new Date(log.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Stars usage ───────────────────────────────────────────────────── */}
       {isMaster && (data?.starTransactions?.length ?? 0) > 0 && (

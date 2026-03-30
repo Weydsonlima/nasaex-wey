@@ -137,6 +137,8 @@ model Organization {
   nasaPosts           NasaPost[]
   orgPermissions   OrgPermission[]
   activityLogs     OrgActivityLog[]
+  systemActivityLogs SystemActivityLog[]
+  userPresences      UserPresence[]
 
   @@unique([slug])
   @@map("organization")
@@ -1541,4 +1543,40 @@ model OrgActivityLog {
   @@index([organizationId, createdAt])
   @@index([userId])
   @@map("org_activity_log")
+}
+
+model SystemActivityLog {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  userName       String       @map("user_name")
+  userEmail      String       @map("user_email")
+  userImage      String?      @map("user_image")
+  appSlug        String       @default("system") @map("app_slug")
+  action         String
+  actionLabel    String       @map("action_label")
+  resource       String?
+  resourceId     String?      @map("resource_id")
+  metadata       Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@index([appSlug])
+  @@map("system_activity_log")
+}
+
+model UserPresence {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  userName       String       @map("user_name")
+  userEmail      String       @map("user_email")
+  userImage      String?      @map("user_image")
+  lastSeenAt     DateTime     @default(now()) @map("last_seen_at")
+
+  @@unique([userId, organizationId])
+  @@map("user_presence")
 }

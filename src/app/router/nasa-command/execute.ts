@@ -19,6 +19,31 @@ import {
   generateWithAI,
   type ExecuteOutput,
 } from "./execute-helpers";
+import { parseCommandIntent } from "./ai-intent";
+
+// ─── Fuzzy normaliser ─────────────────────────────────────────────────────────
+// Maps common misspellings / phonetic variants to canonical tokens so intent
+// detection works even when the user types "agendmentu", "propposta", etc.
+function normaliseCommand(raw: string): string {
+  return raw
+    .toLowerCase()
+    // agendamento variants
+    .replace(/agend[a-z]{0,6}/g, (m) => {
+      if (/agend(amento|ament|amnt|mnto|mento|emnt|emento|ementu|amentu|ament[uo]|ament[oi])/i.test(m)) return "agendamento";
+      if (/agend[ae]r?/i.test(m)) return "agendar";
+      return m;
+    })
+    // proposta variants
+    .replace(/pr[ao]p[oua]s?t[ao]s?/g, "proposta")
+    // reunião variants
+    .replace(/r[eu]{1,2}ni[aã][uo]?s?/g, "reunião")
+    // criar variants
+    .replace(/\b(cri[ae]r?|quero\s+criar|quero\s+cri[ae]|quero\s+fazer|quero\s+faz[ae]r?)\b/g, "criar")
+    // lead variants
+    .replace(/\bl[ie][ae]d[sz]?\b/g, "lead")
+    // mover variants
+    .replace(/\bm[ou]v[ae]r?\b/g, "mover");
+}
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +73,8 @@ export const execute = base
   )
   .handler(async ({ input, context, errors }) => {
     const { command } = input;
-    const cmd = command.toLowerCase();
+    // Normalised version handles typos/phonetic variants ("agendmentu" → "agendamento")
+    const cmd = normaliseCommand(command);
     const orgId = context.org.id;
 
     // ── Parse "key"="value" pairs ─────────────────────────────────────────────
@@ -79,8 +105,10 @@ export const execute = base
     const isCount = /\b(quantos|quantas|total|count)\b/.test(cmd);
     const isQuery = isList || isCount;
 
-    // ── Semantic intent detection ─────────────────────────────────────────────
-    const isAppointment = /\b(agend[ae]|agendar|reuni[aã]o|compromisso|hor[aá]rio|marqu[ae]|marcar)\b/.test(cmd);
+    // ── Semantic intent detection (operates on normalised cmd) ────────────────
+    const isAppointment =
+      /\b(agendamento|agendar|agenda[re]|reuni[aã]o|compromisso|hor[aá]rio|marqu[ae]|marcar)\b/.test(cmd) ||
+      /\b(quero|preciso|desejo)\b.*\b(agend|reuni|comprom)\w*/i.test(cmd);
     const isProposal = /\b(proposta|proposal|or[çc]amento|orcamento)\b/.test(cmd) && isCreate;
     const isMoveLead = /\b(mov[ae]|mover|transferi[rr]|mudar)\b/.test(cmd) && /\b(lead|contato|cliente)\b/.test(cmd);
     const isPost = /\b(post|publika[çc]|publicar|conte[úu]do|story|reel|carrossel)\b/.test(cmd) && isCreate;
@@ -621,7 +649,7 @@ CTA: [chamada para ação]`;
     }
 
     // ── AGENDA — Create appointment (semantic, conversational) ───────────────
-    if (isAppointment && isCreate || cmd.includes("agendar") || cmd.includes("agende") || cmd.includes("marque") || (cmd.includes("reuni") && isCreate)) {
+    if (isAppointment) {
       try {
         // ── Detect action context ──────────────────────────────────────────
         const actionContext = /\b(cancelar|cancel)\b/.test(cmd)
@@ -1184,12 +1212,49 @@ CTA: [chamada para ação]`;
       }
     }
 
+    // ── AI FALLBACK — try to understand via connected AI ─────────────────────
+    const aiIntent = await parseCommandIntent(command, orgId);
+    if (aiIntent) {
+      // If AI identified a clear intent with no missing fields, give a helpful prompt
+      if (aiIntent.missingRequired.length > 0) {
+        const fieldLabels: Record<string, string> = {
+          agendaName: "nome da agenda",
+          date: "data",
+          time: "horário",
+          leadName: "nome do lead/cliente",
+          productName: "nome do produto",
+          clientName: "nome do cliente",
+          statusName: "status de destino",
+          topic: "tema do post",
+        };
+        const missing = aiIntent.missingRequired.map((k) => fieldLabels[k] ?? k);
+        return {
+          type: "needs_input" as const,
+          title: `${aiIntent.summary} — informações necessárias`,
+          description: `Para ${aiIntent.summary.toLowerCase()}, preciso de: ${missing.join(", ")}.`,
+          appName: aiIntent.app ?? "NASA",
+          missingFields: aiIntent.missingRequired.map((k) => ({
+            key: k,
+            label: fieldLabels[k] ?? k,
+          })),
+          partialContext: { ...parsedVars, _intent: aiIntent.intent, _app: aiIntent.app ?? "" },
+        } satisfies ExecuteOutput;
+      }
+      // AI understood but we don't have a handler yet — give a helpful generic message
+      return {
+        type: "query_result" as const,
+        title: aiIntent.summary,
+        description: `Entendi que você quer: ${aiIntent.summary}. Esta funcionalidade estará disponível em breve.`,
+        appName: aiIntent.app ?? "NASA",
+      } satisfies ExecuteOutput;
+    }
+
     // ── DEFAULT FALLBACK ──────────────────────────────────────────────────────
     return {
-      type: "query_result" as const,
-      title: "Comando processado",
-      description:
-        "Não foi possível identificar uma ação específica. Tente usar #app para especificar o destino (ex: #forge, #agenda, #nasa-planner, #tracking).",
+      type: "needs_input" as const,
+      title: "Não entendi o comando",
+      description: "Pode reformular? Exemplos: \"Crie um agendamento para amanhã às 14h\", \"Mova o lead João para o status Proposta\", \"Crie uma proposta para Maria\".",
       appName: "NASA",
+      missingFields: [],
     } satisfies ExecuteOutput;
   });

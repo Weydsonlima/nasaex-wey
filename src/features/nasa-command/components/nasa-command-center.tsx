@@ -1386,7 +1386,7 @@ function CommandInput({
             onScroll={syncScroll}
             disabled={loading}
             rows={1}
-            placeholder={`Crie uma proposta no "#forge" do produto "/PRODUTX"...`}
+            placeholder="Fala comandante, quais as ordens?"
             className="relative w-full bg-transparent text-transparent caret-white resize-none outline-none text-sm leading-relaxed placeholder:text-zinc-600 placeholder:font-sans placeholder:text-xs min-h-[48px] max-h-[200px] overflow-y-auto"
             style={{
               caretColor: "white",

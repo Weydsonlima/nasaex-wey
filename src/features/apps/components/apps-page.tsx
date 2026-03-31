@@ -595,7 +595,7 @@ const TrackingIcon = () => (
   </svg>
 );
 
-const NasaPostIcon = () => (
+const NasaPlannerIcon = () => (
   <svg
     viewBox="0 0 48 48"
     fill="none"
@@ -873,18 +873,19 @@ const APPS: AppDef[] = [
     theme: "purple",
   },
   {
-    id: "nasa-post",
-    name: "NASA POST",
+    id: "nasa-planner",
+    name: "NASA PLANNER",
     byline: "by NASA®",
     status: "installed",
-    icon: NasaPostIcon,
-    shortDesc: "Crie e publique posts para redes sociais com IA",
+    icon: NasaPlannerIcon,
+    shortDesc:
+      "Planeje, crie e execute estratégias de marketing com IA e Mapas Mentais",
     fullDesc:
-      "Ferramenta completa de criação de conteúdo para redes sociais com inteligência artificial. Configure a identidade da sua marca (ICP, SWOT, tom de voz, cores, tipografia) e deixe o Claude IA gerar posts estáticos, carrosséis, reels e stories com legenda, hashtags e CTA alinhados ao seu branding. Agende publicações com kanban e calendário integrados.",
+      "Planejamento estratégico de marketing com IA e Mapas Mentais. Crie múltiplos planners com identidade de marca, Voz & Tom, SWOT e IA integrados. Gere posts para redes sociais, organize ações em mapas mentais (Gantt, diagrama, checklist), acompanhe no calendário e compartilhe com clientes via link. Conectado a todos os apps do NASA.",
     category: "Marketing",
-    integration: "Instagram · Facebook · LinkedIn · TikTok",
+    integration: "Demand · Tracking · N-Box · Spacetime · Nasachat · Insights",
     action: "internal",
-    href: "/nasa-post",
+    href: "/nasa-planner",
     activeUsers: null,
     theme: "purple",
   },

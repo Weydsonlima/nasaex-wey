@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   Image,
-  LayoutGrid,
   Link2,
   X,
   CheckCircle2,
@@ -60,7 +59,7 @@ interface ExampleCategory {
 }
 
 interface ResultData {
-  type?: "created" | "query_result" | "error" | "needs_input" | "post_generated";
+  type?: "created" | "query_result" | "error" | "needs_input" | "post_generated" | "confirmation_needed";
   title: string;
   description: string;
   url: string;
@@ -69,6 +68,7 @@ interface ResultData {
   partialContext?: Record<string, unknown>;
   content?: string;
   starsSpent?: number;
+  confirmOptions?: Array<{ key: string; label: string; icon?: string }>;
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -513,52 +513,30 @@ function AppDropdown({ search, onSelect }: AppDropdownProps) {
 
 // ─── Plus Menu ────────────────────────────────────────────────────────────────
 
-const NASA_APP_IDS = ["forge", "tracking", "agenda", "nasa-planner", "nbox", "contatos", "nasachat", "linnker", "spacetime"];
-
 interface PlusMenuProps {
   onClose: () => void;
-  onSelectApp: (appId: string) => void;
 }
 
-function PlusMenu({ onClose, onSelectApp }: PlusMenuProps) {
-  const handleAppClick = (appItem: AppItem) => {
-    if (NASA_APP_IDS.includes(appItem.id)) {
-      onSelectApp(appItem.id);
-    }
-    onClose();
-  };
-
+function PlusMenu({ onClose }: PlusMenuProps) {
   return (
-    <div className="absolute bottom-full left-0 mb-2 w-56 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden z-50">
+    <div className="absolute bottom-full left-0 mb-2 w-48 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden z-50">
       <div className="px-3 py-2 border-b border-zinc-800">
-        <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Apps Rápidos</p>
+        <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Anexar</p>
       </div>
-      {nasaApps.map((appItem) => (
-        <button
-          key={appItem.id}
-          onClick={() => handleAppClick(appItem)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors text-left"
-        >
-          <LayoutGrid className="w-4 h-4 text-zinc-400 shrink-0" />
-          <span className={appItem.color}>{appItem.label}</span>
-        </button>
-      ))}
-      <div className="border-t border-zinc-800 mt-1">
-        <button
-          onClick={onClose}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-        >
-          <Image className="w-4 h-4 text-zinc-400" />
-          Arquivos & Fotos
-        </button>
-        <button
-          onClick={onClose}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-        >
-          <Link2 className="w-4 h-4 text-zinc-400" />
-          Links
-        </button>
-      </div>
+      <button
+        onClick={onClose}
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+      >
+        <Image className="w-4 h-4 text-zinc-400" />
+        Arquivos &amp; Fotos
+      </button>
+      <button
+        onClick={onClose}
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+      >
+        <Link2 className="w-4 h-4 text-zinc-400" />
+        Links
+      </button>
     </div>
   );
 }
@@ -1069,9 +1047,10 @@ interface ResponseCardProps {
   result: ResultData;
   onClose: () => void;
   onContinue?: (extra: string) => void;
+  onConfirm?: (key: string, partialContext: Record<string, unknown>) => void;
 }
 
-function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
+function ResponseCard({ result, onClose, onContinue, onConfirm }: ResponseCardProps) {
   const [copied, setCopied] = useState(false);
   const [contentCopied, setContentCopied] = useState(false);
   const [missingValues, setMissingValues] = useState<Record<string, string>>({});
@@ -1106,14 +1085,22 @@ function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
   const handleContinue = () => {
     if (!onContinue) return;
     const extras = Object.entries(missingValues)
+      .filter(([, v]) => v.trim())
       .map(([k, v]) => `/"${k}"="${v}"`)
       .join(" ");
     onContinue(extras);
   };
 
+  const handleConfirmOption = (key: string) => {
+    if (onConfirm) {
+      onConfirm(key, result.partialContext ?? {});
+    }
+  };
+
   const isNeedsInput = result.type === "needs_input";
   const isPostGenerated = result.type === "post_generated";
   const isError = result.type === "error";
+  const isConfirmationNeeded = result.type === "confirmation_needed";
 
   const iconEl = isError ? (
     <div className="w-9 h-9 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
@@ -1122,6 +1109,10 @@ function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
   ) : isNeedsInput ? (
     <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
       <Sparkles className="w-4 h-4 text-amber-400" />
+    </div>
+  ) : isConfirmationNeeded ? (
+    <div className="w-9 h-9 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
+      <Users className="w-4 h-4 text-violet-400" />
     </div>
   ) : (
     <div className="w-9 h-9 rounded-full bg-linear-to-br from-violet-600 to-purple-800 flex items-center justify-center shrink-0 shadow-lg shadow-violet-900/40">
@@ -1140,6 +1131,8 @@ function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
               <span className="text-amber-400 text-sm">⚠️</span>
             ) : isError ? (
               <span className="text-red-400 text-sm">✗</span>
+            ) : isConfirmationNeeded ? (
+              <span className="text-violet-400 text-sm">?</span>
             ) : (
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             )}
@@ -1161,18 +1154,25 @@ function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
             {result.description}
           </p>
 
-          {/* needs_input: render input fields */}
+          {/* needs_input: render labeled input fields for each missing field */}
           {isNeedsInput && result.missingFields && result.missingFields.length > 0 && (
             <div className="mt-4 space-y-3">
+              <p className="text-xs text-zinc-500">
+                Para continuar, informe:{" "}
+                <span className="text-zinc-300">
+                  {result.missingFields.map((f) => f.label).join(", ")}
+                </span>
+              </p>
               {result.missingFields.map((field) => (
                 <div key={field.key}>
-                  <label className="block text-xs text-zinc-400 mb-1">{field.label}</label>
+                  <label className="block text-xs text-zinc-400 mb-1 font-medium">{field.label}</label>
                   <input
                     type="text"
                     value={missingValues[field.key] ?? ""}
                     onChange={(e) => setMissingValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
-                    placeholder={`Digite ${field.label.toLowerCase()}...`}
+                    placeholder={field.label}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
                   />
                 </div>
               ))}
@@ -1182,6 +1182,21 @@ function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
               >
                 Continuar
               </button>
+            </div>
+          )}
+
+          {/* confirmation_needed: show option buttons */}
+          {isConfirmationNeeded && result.confirmOptions && result.confirmOptions.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {result.confirmOptions.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => handleConfirmOption(opt.key)}
+                  className="flex items-center gap-1.5 bg-transparent border border-violet-500/60 text-violet-300 hover:bg-violet-500/10 hover:border-violet-400 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           )}
 
@@ -1212,7 +1227,7 @@ function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
         </div>
 
         {/* Actions */}
-        {!isNeedsInput && result.url && (
+        {!isNeedsInput && !isConfirmationNeeded && result.url && (
           <div className="flex items-center gap-2 px-5 pb-4">
             <a
               href={result.url}
@@ -1250,7 +1265,6 @@ interface CommandInputProps {
   ) => void;
   dropdownSearch: string;
   setDropdownSearch: (v: string) => void;
-  onSelectApp?: (appId: string) => void;
 }
 
 function CommandInput({
@@ -1264,7 +1278,6 @@ function CommandInput({
   setDropdown,
   dropdownSearch,
   setDropdownSearch,
-  onSelectApp,
 }: CommandInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -1397,17 +1410,7 @@ function CommandInput({
                 <Plus className="w-4 h-4" />
               </button>
               {dropdown === "plus" && (
-                <PlusMenu
-                  onClose={() => setDropdown(null)}
-                  onSelectApp={(appId) => {
-                    const prefix = `#${appId} `;
-                    if (!command.startsWith(prefix)) {
-                      setCommand(prefix + command);
-                    }
-                    setDropdown(null);
-                    if (onSelectApp) onSelectApp(appId);
-                  }}
-                />
+                <PlusMenu onClose={() => setDropdown(null)} />
               )}
             </div>
             <span className="text-[11px] text-zinc-600">
@@ -1415,11 +1418,7 @@ function CommandInput({
               <kbd className="bg-zinc-800 text-zinc-500 px-1 py-0.5 rounded text-[10px] font-mono">
                 /
               </kbd>{" "}
-              variáveis e{" "}
-              <kbd className="bg-zinc-800 text-zinc-500 px-1 py-0.5 rounded text-[10px] font-mono">
-                #App
-              </kbd>{" "}
-              para escolher o app
+              variáveis — o app é detectado automaticamente
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -1510,7 +1509,6 @@ export function NasaCommandCenter() {
   const [model, setModel] = useState<ModelType>("astro");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [activeAppContext, setActiveAppContext] = useState<string | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const executeCommand = useMutation(
@@ -1522,19 +1520,12 @@ export function NasaCommandCenter() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Derive appContext from command prefix #appid
-  const deriveAppContext = (text: string): string | undefined => {
-    const m = text.match(/^#([\w-]+)/);
-    return m ? m[1] : activeAppContext;
-  };
-
   const submitCommand = async (userText: string) => {
     if (!userText.trim() || loading) return;
     setLoading(true);
     setCommand("");
     setDropdown(null);
 
-    const appContext = deriveAppContext(userText);
     const thinkingSteps = buildThinkingSteps(userText);
     const msgId = Math.random().toString(36).slice(2);
 
@@ -1551,7 +1542,7 @@ export function NasaCommandCenter() {
     ]);
 
     try {
-      const res = await executeCommand.mutateAsync({ command: userText, model, appContext });
+      const res = await executeCommand.mutateAsync({ command: userText, model });
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId + "-think"
@@ -1568,6 +1559,7 @@ export function NasaCommandCenter() {
                   partialContext: res.partialContext,
                   content: res.content,
                   starsSpent: res.starsSpent,
+                  confirmOptions: res.confirmOptions,
                 },
               }
             : m,
@@ -1605,8 +1597,30 @@ export function NasaCommandCenter() {
     await submitCommand(command.trim());
   };
 
+  // Re-submit with extra /"key"="value" pairs appended to the original command
   const handleContinue = (originalCommand: string) => (extra: string) => {
+    // Rebuild: original command + partialContext pairs (already parsed server-side) + new fields
     submitCommand(`${originalCommand} ${extra}`);
+  };
+
+  // Handle confirmation option button clicks
+  const handleConfirm = (originalCommand: string, partialContext: Record<string, unknown>) => (key: string) => {
+    // Build partialContext pairs from whatever was already parsed
+    const ctxPairs = Object.entries(partialContext)
+      .map(([k, v]) => `/"${k}"="${String(v)}"`)
+      .join(" ");
+
+    if (key.startsWith("lead_")) {
+      const leadId = key.replace("lead_", "");
+      submitCommand(`${originalCommand} ${ctxPairs} /"lead_id"="${leadId}" /"lead_confirmed"="true"`);
+    } else if (key === "create_new_lead") {
+      submitCommand(`${originalCommand} ${ctxPairs} /"create_new_lead"="true"`);
+    } else if (key.startsWith("status_")) {
+      const statusId = key.replace("status_", "");
+      submitCommand(`${originalCommand} ${ctxPairs} /"status_id"="${statusId}"`);
+    } else {
+      submitCommand(`${originalCommand} ${ctxPairs} /"${key}"="true"`);
+    }
   };
 
   const removeMessage = (id: string) => {
@@ -1615,10 +1629,6 @@ export function NasaCommandCenter() {
 
   const fillExample = (example: string) => {
     setCommand(example);
-  };
-
-  const handleSelectApp = (appId: string) => {
-    setActiveAppContext(appId);
   };
 
   const hasMessages = messages.length > 0;
@@ -1634,7 +1644,6 @@ export function NasaCommandCenter() {
     setDropdown,
     dropdownSearch,
     setDropdownSearch,
-    onSelectApp: handleSelectApp,
   };
 
   return (
@@ -1671,6 +1680,7 @@ export function NasaCommandCenter() {
                     result={msg.result}
                     onClose={() => removeMessage(msg.id)}
                     onContinue={msg.originalCommand ? handleContinue(msg.originalCommand) : undefined}
+                    onConfirm={msg.originalCommand ? handleConfirm(msg.originalCommand, msg.result.partialContext ?? {}) : undefined}
                   />
                 )}
               </div>

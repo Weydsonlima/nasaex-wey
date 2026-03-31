@@ -196,7 +196,7 @@ export async function generateWithAI(
 // ─── Type for execute output ──────────────────────────────────────────────────
 
 export type ExecuteOutput = {
-  type: "created" | "query_result" | "error" | "needs_input" | "post_generated";
+  type: "created" | "query_result" | "error" | "needs_input" | "post_generated" | "confirmation_needed";
   title: string;
   description: string;
   url?: string;
@@ -206,4 +206,5 @@ export type ExecuteOutput = {
   partialContext?: Record<string, string>;
   content?: string;
   starsSpent?: number;
+  confirmOptions?: Array<{ key: string; label: string; icon?: string }>;
 };

@@ -33,7 +33,7 @@ export const execute = base
   }))
   .output(
     z.object({
-      type: z.enum(["created", "query_result", "error", "needs_input", "post_generated"]),
+      type: z.enum(["created", "query_result", "error", "needs_input", "post_generated", "confirmation_needed"]),
       title: z.string(),
       description: z.string(),
       url: z.string().optional(),
@@ -43,17 +43,18 @@ export const execute = base
       partialContext: z.record(z.string(), z.string()).optional(),
       content: z.string().optional(),
       starsSpent: z.number().optional(),
+      confirmOptions: z.array(z.object({ key: z.string(), label: z.string() })).optional(),
     }),
   )
   .handler(async ({ input, context, errors }) => {
-    const { command, appContext } = input;
+    const { command } = input;
     const cmd = command.toLowerCase();
     const orgId = context.org.id;
 
     // ── Parse "key"="value" pairs ─────────────────────────────────────────────
     const parsedVars = parseParsedVars(command);
 
-    // ── Detect app ────────────────────────────────────────────────────────────
+    // ── Detect app from #hashtags only ────────────────────────────────────────
     const app = cmd.includes("#forge")
       ? "forge"
       : cmd.includes("#agenda")
@@ -66,12 +67,10 @@ export const execute = base
               ? "nbox"
               : cmd.includes("#contatos")
                 ? "contatos"
-                : appContext
-                  ? appContext
-                  : /\b(tracking|pipeline|funil|add_tracking)\b/.test(cmd) &&
-                      /\b(crie|criar|novo|nova|adicione|add)\b/.test(cmd)
-                    ? "tracking"
-                    : null;
+                : /\b(tracking|pipeline|funil|add_tracking)\b/.test(cmd) &&
+                    /\b(crie|criar|novo|nova|adicione|add)\b/.test(cmd)
+                  ? "tracking"
+                  : null;
 
     // ── Detect action type ────────────────────────────────────────────────────
     const isCreate =
@@ -79,6 +78,12 @@ export const execute = base
     const isList = /\b(liste|listar|mostrar|mostre|quais|quem|ver)\b/.test(cmd);
     const isCount = /\b(quantos|quantas|total|count)\b/.test(cmd);
     const isQuery = isList || isCount;
+
+    // ── Semantic intent detection ─────────────────────────────────────────────
+    const isAppointment = /\b(agend[ae]|agendar|reuni[aã]o|compromisso|hor[aá]rio|marqu[ae]|marcar)\b/.test(cmd);
+    const isProposal = /\b(proposta|proposal|or[çc]amento|orcamento)\b/.test(cmd) && isCreate;
+    const isMoveLead = /\b(mov[ae]|mover|transferi[rr]|mudar)\b/.test(cmd) && /\b(lead|contato|cliente)\b/.test(cmd);
+    const isPost = /\b(post|publika[çc]|publicar|conte[úu]do|story|reel|carrossel)\b/.test(cmd) && isCreate;
 
     // ── Extract /Variables from command ───────────────────────────────────────
     const variableRegex = /\/([A-Za-zÀ-ÿ0-9_\.]+)/g;
@@ -311,7 +316,7 @@ export const execute = base
 
     // ── TRACKING — Move lead ──────────────────────────────────────────────────
     if (
-      (app === "tracking" || !app) &&
+      (app === "tracking" || !app || isMoveLead) &&
       /\b(mov|mova|mover)\b/.test(cmd) &&
       cmd.includes("lead")
     ) {
@@ -337,14 +342,22 @@ export const execute = base
         const trackingName: string | null =
           parsedVars["tracking"] ?? parsedVars["pipeline"] ?? null;
 
-        if (!statusName) {
+        // Gather ALL missing fields at once
+        const moveMissing: Array<{ key: string; label: string }> = [];
+        if (!leadName) moveMissing.push({ key: "lead", label: "Nome do lead a ser movido" });
+        if (!statusName) moveMissing.push({ key: "status", label: "Para qual status mover o lead?" });
+
+        if (moveMissing.length > 0) {
           return {
             type: "needs_input" as const,
             title: "Informação necessária",
-            description: `Para qual status mover o lead${leadName ? ` "${leadName}"` : ""}?`,
+            description: `Para mover o lead, preciso de mais informações:\n${moveMissing.map((f) => `• ${f.label}`).join("\n")}`,
             appName: "Tracking",
-            missingFields: [{ key: "statusName", label: `Para qual status mover o lead${leadName ? ` ${leadName}` : ""}?` }],
-            partialContext: leadName ? ({ leadName } as Record<string, string>) : {},
+            missingFields: moveMissing,
+            partialContext: {
+              ...(leadName ? { lead: leadName } : {}),
+              ...(statusName ? { status: statusName } : {}),
+            } as Record<string, string>,
           };
         }
 
@@ -607,51 +620,262 @@ CTA: [chamada para ação]`;
       }
     }
 
-    // ── AGENDA — Create appointment ───────────────────────────────────────────
-    if (app === "agenda" && isCreate) {
+    // ── AGENDA — Create appointment (semantic, conversational) ───────────────
+    if (isAppointment && isCreate || cmd.includes("agendar") || cmd.includes("agende") || cmd.includes("marque") || (cmd.includes("reuni") && isCreate)) {
       try {
-        const agenda = await prisma.agenda.findFirst({
-          where: { organizationId: orgId, isActive: true },
-        });
-        if (!agenda) {
-          throw errors.BAD_REQUEST;
+        // ── Detect action context ──────────────────────────────────────────
+        const actionContext = /\b(cancelar|cancel)\b/.test(cmd)
+          ? "cancel"
+          : /\b(editar|alterar|edit|update)\b/.test(cmd)
+            ? "edit"
+            : "create";
+
+        // ── Extract agendaName ─────────────────────────────────────────────
+        let agendaName: string | null =
+          parsedVars["agenda"] ?? null;
+        if (!agendaName) {
+          const agendaMatch = command.match(/(?:na agenda|agenda)\s+([\w\s]+?)(?:\s+para|\s+com|\s+no|\s+amanhã|\s+amanha|$)/i);
+          if (agendaMatch) agendaName = agendaMatch[1].trim();
         }
 
-        const appointmentDate = parseDate(cmd);
-        const timeStr = parseTime(cmd) ?? "09:00";
-        const startsAt = buildDateTime(appointmentDate, timeStr);
+        // ── Extract date ───────────────────────────────────────────────────
+        const dateStr: string | null = parsedVars["data"] ?? parsedVars["date"] ?? null;
+        let dateResolved: Date | null = null;
+        if (dateStr) {
+          dateResolved = parseDate(dateStr);
+        } else if (
+          cmd.includes("amanhã") || cmd.includes("amanha") ||
+          cmd.includes("hoje") || cmd.includes("semana que vem") ||
+          /\d{2}\.\d{2}\.\d{4}/.test(cmd)
+        ) {
+          dateResolved = parseDate(cmd);
+        }
+
+        // ── Extract time ───────────────────────────────────────────────────
+        let timeStr: string | null =
+          parsedVars["horario"] ?? parsedVars["hora"] ?? null;
+        if (!timeStr) timeStr = parseTime(cmd);
+
+        // ── Extract leadName ───────────────────────────────────────────────
+        let leadName: string | null =
+          parsedVars["lead"] ?? parsedVars["cliente"] ?? parsedVars["contato"] ?? null;
+        if (!leadName && resolvedContact) leadName = resolvedContact.name;
+        if (!leadName) {
+          const leadMatch = command.match(/(?:para|com)\s+([\w\s]+?)(?:\s+na|\s+às|\s+as|\s+amanhã|\s+amanha|$)/i);
+          if (leadMatch) leadName = leadMatch[1].trim();
+        }
+
+        // ── Gather ALL missing fields at once ─────────────────────────────
+        const missing: Array<{ key: string; label: string }> = [];
+        if (!agendaName) missing.push({ key: "agenda", label: "Nome da agenda" });
+        if (!dateResolved && !dateStr) missing.push({ key: "data", label: "Data do agendamento (ex: amanhã, 25/06/2026)" });
+        if (!timeStr) missing.push({ key: "horario", label: "Horário do agendamento (ex: 14h30)" });
+        if (!leadName) missing.push({ key: "lead", label: "Nome do lead/cliente" });
+
+        if (missing.length > 0) {
+          return {
+            type: "needs_input" as const,
+            title: "Informações necessárias",
+            description: `Para criar o agendamento, preciso de mais informações:\n${missing.map((f) => `• ${f.label}`).join("\n")}`,
+            appName: "Spacetime",
+            missingFields: missing,
+            partialContext: {
+              ...(agendaName ? { agenda: agendaName } : {}),
+              ...(dateResolved ? { data: dateResolved.toISOString() } : {}),
+              ...(timeStr ? { horario: timeStr } : {}),
+              ...(leadName ? { lead: leadName } : {}),
+            } as Record<string, string>,
+          } satisfies ExecuteOutput;
+        }
+
+        // ── Check if user confirmed lead choice ────────────────────────────
+        const confirmedLeadId = parsedVars["lead_id"] ?? null;
+        const createNewLead = parsedVars["create_new_lead"] === "true";
+
+        let resolvedLead: { id: string; name: string } | null = null;
+
+        if (confirmedLeadId) {
+          // User selected a specific lead by id
+          resolvedLead = await prisma.lead.findFirst({
+            where: { id: confirmedLeadId, tracking: { organizationId: orgId } },
+            select: { id: true, name: true },
+          });
+        } else if (createNewLead) {
+          // Create a new lead with the given name
+          const contactInfo = parsedVars["contato"] ?? null;
+          if (!contactInfo) {
+            return {
+              type: "needs_input" as const,
+              title: "Informação necessária",
+              description: "Qual é o contato do novo lead (telefone ou e-mail)?",
+              appName: "Spacetime",
+              missingFields: [{ key: "contato", label: "Contato do novo lead (telefone ou email)" }],
+              partialContext: {
+                lead: leadName!,
+                ...(agendaName ? { agenda: agendaName } : {}),
+                ...(dateResolved ? { data: dateResolved.toISOString() } : {}),
+                ...(timeStr ? { horario: timeStr } : {}),
+                create_new_lead: "true",
+              } as Record<string, string>,
+            } satisfies ExecuteOutput;
+          }
+          const firstTracking = await prisma.tracking.findFirst({
+            where: { organizationId: orgId },
+            select: { id: true },
+          });
+          const firstStatus = firstTracking
+            ? await prisma.status.findFirst({
+                where: { trackingId: firstTracking.id },
+                orderBy: { order: "asc" },
+                select: { id: true },
+              })
+            : null;
+          if (firstTracking && firstStatus) {
+            resolvedLead = await prisma.lead.create({
+              data: {
+                name: leadName!,
+                email: contactInfo.includes("@") ? contactInfo : null,
+                phone: !contactInfo.includes("@") ? contactInfo : null,
+                trackingId: firstTracking.id,
+                statusId: firstStatus.id,
+              },
+              select: { id: true, name: true },
+            });
+          }
+        } else {
+          // Search for lead by name
+          const leads = await prisma.lead.findMany({
+            where: {
+              name: { contains: leadName!, mode: "insensitive" },
+              tracking: { organizationId: orgId },
+            },
+            select: { id: true, name: true },
+            take: 5,
+          });
+
+          if (leads.length > 1) {
+            const confirmOptions = [
+              ...leads.map((l) => ({ key: `lead_${l.id}`, label: `Sim, é ${l.name}` })),
+              { key: "create_new_lead", label: "Criar novo lead" },
+            ];
+            return {
+              type: "confirmation_needed" as const,
+              title: "Qual lead deseja usar?",
+              description: `Encontrei ${leads.length} leads com esse nome:\n${leads.map((l, i) => `(lead ${i + 1}: ${l.name})`).join("\n")}`,
+              appName: "Spacetime",
+              confirmOptions,
+              partialContext: {
+                ...(agendaName ? { agenda: agendaName } : {}),
+                ...(dateResolved ? { data: dateResolved.toISOString() } : {}),
+                ...(timeStr ? { horario: timeStr } : {}),
+                lead: leadName!,
+              } as Record<string, string>,
+            } satisfies ExecuteOutput;
+          } else if (leads.length === 1) {
+            const exactMatch = leads[0].name.toLowerCase() === leadName!.toLowerCase();
+            if (!exactMatch && parsedVars["lead_confirmed"] !== "true") {
+              return {
+                type: "confirmation_needed" as const,
+                title: "Confirmar lead",
+                description: `Encontrei o lead "${leads[0].name}". É para ele?`,
+                appName: "Spacetime",
+                confirmOptions: [
+                  { key: `lead_${leads[0].id}`, label: `Sim, é para ${leads[0].name}` },
+                  { key: "create_new_lead", label: "Criar novo lead" },
+                ],
+                partialContext: {
+                  ...(agendaName ? { agenda: agendaName } : {}),
+                  ...(dateResolved ? { data: dateResolved.toISOString() } : {}),
+                  ...(timeStr ? { horario: timeStr } : {}),
+                  lead: leadName!,
+                } as Record<string, string>,
+              } satisfies ExecuteOutput;
+            }
+            resolvedLead = leads[0];
+          } else {
+            // No lead found — offer to create one
+            return {
+              type: "confirmation_needed" as const,
+              title: "Lead não encontrado",
+              description: `Não encontrei nenhum lead com o nome "${leadName}". Deseja criar um novo?`,
+              appName: "Spacetime",
+              confirmOptions: [
+                { key: "create_new_lead", label: `Criar lead "${leadName}"` },
+              ],
+              partialContext: {
+                ...(agendaName ? { agenda: agendaName } : {}),
+                ...(dateResolved ? { data: dateResolved.toISOString() } : {}),
+                ...(timeStr ? { horario: timeStr } : {}),
+                lead: leadName!,
+              } as Record<string, string>,
+            } satisfies ExecuteOutput;
+          }
+        }
+
+        if (!resolvedLead) {
+          return {
+            type: "error" as const,
+            title: "Lead não resolvido",
+            description: "Não foi possível encontrar ou criar o lead para o agendamento.",
+            appName: "Spacetime",
+          } satisfies ExecuteOutput;
+        }
+
+        // ── Resolve agenda ─────────────────────────────────────────────────
+        const agenda = await prisma.agenda.findFirst({
+          where: {
+            organizationId: orgId,
+            OR: agendaName
+              ? [{ name: { contains: agendaName, mode: "insensitive" } }, { isActive: true }]
+              : [{ isActive: true }],
+          },
+        });
+
+        if (!agenda) {
+          return {
+            type: "error" as const,
+            title: "Agenda não encontrada",
+            description: "Nenhuma agenda ativa encontrada. Crie uma agenda no Spacetime primeiro.",
+            appName: "Spacetime",
+          } satisfies ExecuteOutput;
+        }
+
+        // ── Create appointment ─────────────────────────────────────────────
+        const finalDate = dateResolved ?? (dateStr ? parseDate(dateStr) : new Date());
+        const finalTime = timeStr ?? "09:00";
+        const startsAt = buildDateTime(finalDate, finalTime);
         const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
 
         await prisma.appointment.create({
           data: {
             agendaId: agenda.id,
-            title: `Reunião - ${resolvedClientName ?? "Cliente"}`,
+            title: `${actionContext === "create" ? "Reunião" : "Compromisso"} - ${resolvedLead.name}`,
+            leadId: resolvedLead.id,
+            userId: context.user.id,
             status: "PENDING" as never,
-            notes: command,
             startsAt,
             endsAt,
-            leadId: resolvedContact?.id ?? null,
-            userId: resolvedUser?.id ?? context.user.id,
-            trackingId: agenda.trackingId,
+            trackingId: agenda.trackingId ?? null,
+            notes: command,
           },
           select: { id: true },
         });
 
         const cost = STAR_COSTS.create;
-        await tryDebitStars(cost, `Agendamento criado`);
+        await tryDebitStars(cost, `Agendamento criado — ${resolvedLead.name}`);
 
         return {
           type: "created" as const,
           title: "Agendamento criado!",
-          description: `Reunião com ${resolvedClientName ?? "cliente"} agendada para ${startsAt.toLocaleDateString("pt-BR")} às ${timeStr}.`,
-          url: `/agendas`,
-          appName: "Agenda",
+          description: `Reunião com ${resolvedLead.name} em ${startsAt.toLocaleDateString("pt-BR")} às ${finalTime}.`,
+          url: "/agendas",
+          appName: "Spacetime",
           starsSpent: cost,
         } satisfies ExecuteOutput;
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
         if (e?.code === "BAD_REQUEST") throw err;
-        console.error("[nasa-command/execute agenda appointment]", err);
+        console.error("[nasa-command/execute appointment semantic]", err);
         throw errors.INTERNAL_SERVER_ERROR;
       }
     }

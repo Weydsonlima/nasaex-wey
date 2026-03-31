@@ -60,10 +60,15 @@ interface ExampleCategory {
 }
 
 interface ResultData {
+  type?: "created" | "query_result" | "error" | "needs_input" | "post_generated";
   title: string;
   description: string;
   url: string;
   appName: string;
+  missingFields?: Array<{ key: string; label: string }>;
+  partialContext?: Record<string, unknown>;
+  content?: string;
+  starsSpent?: number;
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -508,34 +513,52 @@ function AppDropdown({ search, onSelect }: AppDropdownProps) {
 
 // ─── Plus Menu ────────────────────────────────────────────────────────────────
 
+const NASA_APP_IDS = ["forge", "tracking", "agenda", "nasa-planner", "nbox", "contatos", "nasachat", "linnker", "spacetime"];
+
 interface PlusMenuProps {
   onClose: () => void;
+  onSelectApp: (appId: string) => void;
 }
 
-function PlusMenu({ onClose }: PlusMenuProps) {
+function PlusMenu({ onClose, onSelectApp }: PlusMenuProps) {
+  const handleAppClick = (appItem: AppItem) => {
+    if (NASA_APP_IDS.includes(appItem.id)) {
+      onSelectApp(appItem.id);
+    }
+    onClose();
+  };
+
   return (
-    <div className="absolute bottom-full left-0 mb-2 w-52 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden z-50">
-      <button
-        onClick={onClose}
-        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-      >
-        <Image className="w-4 h-4 text-zinc-400" />
-        Arquivos & Fotos
-      </button>
-      <button
-        onClick={onClose}
-        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-      >
-        <LayoutGrid className="w-4 h-4 text-zinc-400" />
-        Apps
-      </button>
-      <button
-        onClick={onClose}
-        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
-      >
-        <Link2 className="w-4 h-4 text-zinc-400" />
-        Links
-      </button>
+    <div className="absolute bottom-full left-0 mb-2 w-56 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden z-50">
+      <div className="px-3 py-2 border-b border-zinc-800">
+        <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Apps Rápidos</p>
+      </div>
+      {nasaApps.map((appItem) => (
+        <button
+          key={appItem.id}
+          onClick={() => handleAppClick(appItem)}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors text-left"
+        >
+          <LayoutGrid className="w-4 h-4 text-zinc-400 shrink-0" />
+          <span className={appItem.color}>{appItem.label}</span>
+        </button>
+      ))}
+      <div className="border-t border-zinc-800 mt-1">
+        <button
+          onClick={onClose}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+        >
+          <Image className="w-4 h-4 text-zinc-400" />
+          Arquivos & Fotos
+        </button>
+        <button
+          onClick={onClose}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+        >
+          <Link2 className="w-4 h-4 text-zinc-400" />
+          Links
+        </button>
+      </div>
     </div>
   );
 }
@@ -942,6 +965,7 @@ interface ChatMessage {
   thinking?: string[]; // step labels shown during processing
   result?: ResultData;
   isThinking?: boolean; // still loading
+  originalCommand?: string; // for needs_input re-submission
 }
 
 function buildThinkingSteps(cmd: string): string[] {
@@ -1041,15 +1065,17 @@ function UserBubble({ command }: { command: string }) {
 
 // ─── Response Card ────────────────────────────────────────────────────────────
 
-function ResponseCard({
-  result,
-  onClose,
-}: {
+interface ResponseCardProps {
   result: ResultData;
   onClose: () => void;
-}) {
+  onContinue?: (extra: string) => void;
+}
+
+function ResponseCard({ result, onClose, onContinue }: ResponseCardProps) {
   const [copied, setCopied] = useState(false);
-  const fullUrl = `${typeof window !== "undefined" ? window.location.origin : ""}${result.url}`;
+  const [contentCopied, setContentCopied] = useState(false);
+  const [missingValues, setMissingValues] = useState<Record<string, string>>({});
+  const fullUrl = `${typeof window !== "undefined" ? window.location.origin : ""}${result.url ?? ""}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullUrl).then(() => {
@@ -1058,50 +1084,152 @@ function ResponseCard({
     });
   };
 
+  const handleCopyContent = () => {
+    if (!result.content) return;
+    navigator.clipboard.writeText(result.content).then(() => {
+      setContentCopied(true);
+      setTimeout(() => setContentCopied(false), 2000);
+    });
+  };
+
+  const handleDownload = () => {
+    if (!result.content) return;
+    const blob = new Blob([result.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "post-gerado.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleContinue = () => {
+    if (!onContinue) return;
+    const extras = Object.entries(missingValues)
+      .map(([k, v]) => `/"${k}"="${v}"`)
+      .join(" ");
+    onContinue(extras);
+  };
+
+  const isNeedsInput = result.type === "needs_input";
+  const isPostGenerated = result.type === "post_generated";
+  const isError = result.type === "error";
+
+  const iconEl = isError ? (
+    <div className="w-9 h-9 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
+      <X className="w-4 h-4 text-red-400" />
+    </div>
+  ) : isNeedsInput ? (
+    <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+      <Sparkles className="w-4 h-4 text-amber-400" />
+    </div>
+  ) : (
+    <div className="w-9 h-9 rounded-full bg-linear-to-br from-violet-600 to-purple-800 flex items-center justify-center shrink-0 shadow-lg shadow-violet-900/40">
+      <Sparkles className="w-4 h-4 text-white" />
+    </div>
+  );
+
   return (
     <div className="flex items-start gap-3 py-2">
-      <div className="w-9 h-9 rounded-full bg-linear-to-br from-violet-600 to-purple-800 flex items-center justify-center shrink-0 shadow-lg shadow-violet-900/40">
-        <Sparkles className="w-4 h-4 text-white" />
-      </div>
+      {iconEl}
       <div className="flex-1 min-w-0 bg-zinc-900/80 border border-zinc-700/60 rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-zinc-800/60">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-semibold text-white">
-              {result.title}
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {isNeedsInput ? (
+              <span className="text-amber-400 text-sm">⚠️</span>
+            ) : isError ? (
+              <span className="text-red-400 text-sm">✗</span>
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            )}
+            <span className="text-sm font-semibold text-white">{result.title}</span>
+            {(result.starsSpent ?? 0) > 0 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                −{result.starsSpent} ⭐
+              </span>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-600 hover:text-zinc-300 transition-colors"
-          >
+          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300 transition-colors shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
+
         {/* Body */}
         <div className="px-5 py-4">
           <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-line">
             {result.description}
           </p>
+
+          {/* needs_input: render input fields */}
+          {isNeedsInput && result.missingFields && result.missingFields.length > 0 && (
+            <div className="mt-4 space-y-3">
+              {result.missingFields.map((field) => (
+                <div key={field.key}>
+                  <label className="block text-xs text-zinc-400 mb-1">{field.label}</label>
+                  <input
+                    type="text"
+                    value={missingValues[field.key] ?? ""}
+                    onChange={(e) => setMissingValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
+                    placeholder={`Digite ${field.label.toLowerCase()}...`}
+                  />
+                </div>
+              ))}
+              <button
+                onClick={handleContinue}
+                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                Continuar
+              </button>
+            </div>
+          )}
+
+          {/* post_generated: show formatted content */}
+          {isPostGenerated && result.content && (
+            <div className="mt-4">
+              <pre className="bg-zinc-800/80 border border-zinc-700/60 rounded-xl px-4 py-3 text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed font-mono overflow-auto max-h-64">
+                {result.content}
+              </pre>
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={handleCopyContent}
+                  className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-2 rounded-lg transition-colors border border-zinc-700/50"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  {contentCopied ? "Copiado!" : "Copiar"}
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-2 rounded-lg transition-colors border border-zinc-700/50"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Baixar .txt
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
         {/* Actions */}
-        <div className="flex items-center gap-2 px-5 pb-4">
-          <a
-            href={result.url}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Abrir no {result.appName}
-          </a>
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700/50"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            {copied ? "Copiado!" : "Copiar link"}
-          </button>
-        </div>
+        {!isNeedsInput && result.url && (
+          <div className="flex items-center gap-2 px-5 pb-4">
+            <a
+              href={result.url}
+              className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Abrir no {result.appName}
+            </a>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700/50"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              {copied ? "Copiado!" : "Copiar link"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1122,6 +1250,7 @@ interface CommandInputProps {
   ) => void;
   dropdownSearch: string;
   setDropdownSearch: (v: string) => void;
+  onSelectApp?: (appId: string) => void;
 }
 
 function CommandInput({
@@ -1135,6 +1264,7 @@ function CommandInput({
   setDropdown,
   dropdownSearch,
   setDropdownSearch,
+  onSelectApp,
 }: CommandInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -1267,7 +1397,17 @@ function CommandInput({
                 <Plus className="w-4 h-4" />
               </button>
               {dropdown === "plus" && (
-                <PlusMenu onClose={() => setDropdown(null)} />
+                <PlusMenu
+                  onClose={() => setDropdown(null)}
+                  onSelectApp={(appId) => {
+                    const prefix = `#${appId} `;
+                    if (!command.startsWith(prefix)) {
+                      setCommand(prefix + command);
+                    }
+                    setDropdown(null);
+                    if (onSelectApp) onSelectApp(appId);
+                  }}
+                />
               )}
             </div>
             <span className="text-[11px] text-zinc-600">
@@ -1370,6 +1510,7 @@ export function NasaCommandCenter() {
   const [model, setModel] = useState<ModelType>("astro");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [activeAppContext, setActiveAppContext] = useState<string | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const executeCommand = useMutation(
@@ -1381,17 +1522,22 @@ export function NasaCommandCenter() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSubmit = async () => {
-    if (!command.trim() || loading) return;
-    const userText = command.trim();
+  // Derive appContext from command prefix #appid
+  const deriveAppContext = (text: string): string | undefined => {
+    const m = text.match(/^#([\w-]+)/);
+    return m ? m[1] : activeAppContext;
+  };
+
+  const submitCommand = async (userText: string) => {
+    if (!userText.trim() || loading) return;
     setLoading(true);
     setCommand("");
     setDropdown(null);
 
+    const appContext = deriveAppContext(userText);
     const thinkingSteps = buildThinkingSteps(userText);
     const msgId = Math.random().toString(36).slice(2);
 
-    // Add user bubble + thinking placeholder
     setMessages((prev) => [
       ...prev,
       { id: msgId + "-user", role: "user", command: userText },
@@ -1400,12 +1546,12 @@ export function NasaCommandCenter() {
         role: "assistant",
         isThinking: true,
         thinking: thinkingSteps,
+        originalCommand: userText,
       },
     ]);
 
     try {
-      const res = await executeCommand.mutateAsync({ command: userText });
-      // Replace thinking with real result
+      const res = await executeCommand.mutateAsync({ command: userText, model, appContext });
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId + "-think"
@@ -1413,10 +1559,15 @@ export function NasaCommandCenter() {
                 ...m,
                 isThinking: false,
                 result: {
+                  type: res.type,
                   title: res.title,
                   description: res.description,
                   url: res.url ?? "/home",
                   appName: res.appName,
+                  missingFields: res.missingFields,
+                  partialContext: res.partialContext,
+                  content: res.content,
+                  starsSpent: res.starsSpent,
                 },
               }
             : m,
@@ -1433,6 +1584,7 @@ export function NasaCommandCenter() {
                 ...m,
                 isThinking: false,
                 result: {
+                  type: "error" as const,
                   title: "Erro",
                   description: message,
                   url: "/home",
@@ -1448,12 +1600,25 @@ export function NasaCommandCenter() {
     }
   };
 
+  const handleSubmit = async () => {
+    if (!command.trim() || loading) return;
+    await submitCommand(command.trim());
+  };
+
+  const handleContinue = (originalCommand: string) => (extra: string) => {
+    submitCommand(`${originalCommand} ${extra}`);
+  };
+
   const removeMessage = (id: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
   const fillExample = (example: string) => {
     setCommand(example);
+  };
+
+  const handleSelectApp = (appId: string) => {
+    setActiveAppContext(appId);
   };
 
   const hasMessages = messages.length > 0;
@@ -1469,6 +1634,7 @@ export function NasaCommandCenter() {
     setDropdown,
     dropdownSearch,
     setDropdownSearch,
+    onSelectApp: handleSelectApp,
   };
 
   return (
@@ -1504,6 +1670,7 @@ export function NasaCommandCenter() {
                   <ResponseCard
                     result={msg.result}
                     onClose={() => removeMessage(msg.id)}
+                    onContinue={msg.originalCommand ? handleContinue(msg.originalCommand) : undefined}
                   />
                 )}
               </div>

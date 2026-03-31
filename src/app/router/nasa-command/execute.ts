@@ -3,95 +3,22 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
-
-// ─── Date/Time Helpers ────────────────────────────────────────────────────────
-
-function parseDate(cmd: string): Date {
-  if (cmd.includes("/amanhã") || cmd.includes("/amanha")) {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d;
-  }
-  if (cmd.includes("/semana_que_vem")) {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d;
-  }
-  // Try DD.MM.AAAA pattern
-  const dateMatch = cmd.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-  if (dateMatch) return new Date(`${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`);
-  return new Date(); // default to today
-}
-
-function parseTime(cmd: string): string | null {
-  const match = cmd.match(/às?\s*(\d{1,2})h(\d{2})?/);
-  if (match) return `${String(match[1]).padStart(2, "0")}:${match[2] ?? "00"}`;
-  return null;
-}
-
-function buildDateTime(date: Date, timeStr: string): Date {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  const d = new Date(date);
-  d.setHours(hours, minutes, 0, 0);
-  return d;
-}
-
-// ─── Entity Resolution ────────────────────────────────────────────────────────
-
-async function resolveContact(name: string, orgId: string) {
-  const normalized = name.replace(/_/g, " ");
-  return prisma.lead.findFirst({
-    where: {
-      name: { contains: normalized, mode: "insensitive" },
-      tracking: { organizationId: orgId },
-    },
-    select: { id: true, name: true },
-  });
-}
-
-async function resolveUser(name: string, orgId: string) {
-  const normalized = name.replace(/_/g, " ");
-  const member = await prisma.member.findFirst({
-    where: {
-      organizationId: orgId,
-      user: { name: { contains: normalized, mode: "insensitive" } },
-    },
-    include: { user: { select: { id: true, name: true } } },
-  });
-  return member?.user ?? null;
-}
-
-async function resolveProduct(name: string, orgId: string) {
-  const normalized = name.replace(/_/g, " ");
-  return prisma.forgeProduct.findFirst({
-    where: {
-      organizationId: orgId,
-      name: { contains: normalized, mode: "insensitive" },
-    },
-    select: { id: true, name: true },
-  });
-}
-
-// ─── Title Extractor ──────────────────────────────────────────────────────────
-
-function extractTitle(command: string): string {
-  // Remove #tags and /variables, trim to ~50 chars
-  const cleaned = command.replace(/#[\w-]+/g, "").replace(/\/[\w_ÀÀ-ÿ.]+/g, "").trim();
-  return cleaned.slice(0, 60) || "Novo post";
-}
-
-function extractTrackingName(command: string): string {
-  // 1. Straight quotes "Name" or curly quotes "Name"
-  const quotedMatch = command.match(/[\u201C"«]([^\u201D"»\n]+)[\u201D"»]/);
-  if (quotedMatch) return quotedMatch[1].trim();
-  // 2. chamado <name> (no/com/end)
-  const chamadoMatch = command.match(/chamado\s+(.+?)(?:\s+(?:no|com|em)\s+#|\s*$)/i);
-  if (chamadoMatch) return chamadoMatch[1].trim();
-  // 3. /Add_tracking <name>
-  const addMatch = command.match(/\/Add_tracking\s+(.+?)(?:\s+(?:no|com)\s+#|\s*$)/i);
-  if (addMatch) return addMatch[1].trim();
-  return "Novo Tracking";
-}
+import { debitStars } from "@/lib/star-service";
+import { StarTransactionType } from "@/generated/prisma/enums";
+import {
+  parseDate,
+  parseTime,
+  buildDateTime,
+  parseParsedVars,
+  STAR_COSTS,
+  resolveContact,
+  resolveUser,
+  resolveProduct,
+  extractTitle,
+  extractTrackingName,
+  generateWithAI,
+  type ExecuteOutput,
+} from "./execute-helpers";
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -99,21 +26,32 @@ export const execute = base
   .use(requiredAuthMiddleware)
   .use(requireOrgMiddleware)
   .route({ method: "POST", summary: "Execute NASA Command", tags: ["NASA Command"] })
-  .input(z.object({ command: z.string().min(1) }))
+  .input(z.object({
+    command: z.string().min(1),
+    model: z.string().optional(),
+    appContext: z.string().optional(),
+  }))
   .output(
     z.object({
-      type: z.enum(["created", "query_result", "error"]),
+      type: z.enum(["created", "query_result", "error", "needs_input", "post_generated"]),
       title: z.string(),
       description: z.string(),
       url: z.string().optional(),
       appName: z.string(),
       extraData: z.any().optional(),
+      missingFields: z.array(z.object({ key: z.string(), label: z.string() })).optional(),
+      partialContext: z.record(z.string(), z.string()).optional(),
+      content: z.string().optional(),
+      starsSpent: z.number().optional(),
     }),
   )
   .handler(async ({ input, context, errors }) => {
-    const { command } = input;
+    const { command, appContext } = input;
     const cmd = command.toLowerCase();
     const orgId = context.org.id;
+
+    // ── Parse "key"="value" pairs ─────────────────────────────────────────────
+    const parsedVars = parseParsedVars(command);
 
     // ── Detect app ────────────────────────────────────────────────────────────
     const app = cmd.includes("#forge")
@@ -128,17 +66,16 @@ export const execute = base
               ? "nbox"
               : cmd.includes("#contatos")
                 ? "contatos"
-                // Detecta intenção de tracking sem o # (ex: "Crie um tracking chamado X")
-                : /\b(tracking|pipeline|funil|add_tracking)\b/.test(cmd) &&
-                    /\b(crie|criar|novo|nova|adicione|add)\b/.test(cmd)
-                  ? "tracking"
-                  : null;
+                : appContext
+                  ? appContext
+                  : /\b(tracking|pipeline|funil|add_tracking)\b/.test(cmd) &&
+                      /\b(crie|criar|novo|nova|adicione|add)\b/.test(cmd)
+                    ? "tracking"
+                    : null;
 
     // ── Detect action type ────────────────────────────────────────────────────
     const isCreate =
-      /\b(crie|cria|criar|gere|gera|gerar|fa[çc]a|fazer|agende|agendar|marque|marcar|adicione|adicionar|nova|novo|add)\b/.test(
-        cmd,
-      );
+      /\b(crie|cria|criar|gere|gera|gerar|fa[çc]a|fazer|agende|agendar|marque|marcar|adicione|adicionar|nova|novo|add)\b/.test(cmd);
     const isList = /\b(liste|listar|mostrar|mostre|quais|quem|ver)\b/.test(cmd);
     const isCount = /\b(quantos|quantas|total|count)\b/.test(cmd);
     const isQuery = isList || isCount;
@@ -151,7 +88,6 @@ export const execute = base
       variables.push(match[1]);
     }
 
-    // Categorise variables (dates vs names)
     const dateKeywords = ["hoje", "amanhã", "amanha", "semana_que_vem"];
     const dateVars = variables.filter(
       (v) => dateKeywords.some((k) => v.toLowerCase() === k) || /^\d{2}\.\d{2}\.\d{4}$/.test(v),
@@ -176,18 +112,20 @@ export const execute = base
 
     const resolvedClientName = resolvedContact?.name ?? (nameVars[0]?.replace(/_/g, " ") ?? null);
 
+    // ─── Helper: debit stars safely ───────────────────────────────────────────
+    async function tryDebitStars(cost: number, description: string): Promise<void> {
+      try {
+        await debitStars(orgId, cost, StarTransactionType.APP_CHARGE, `NASA Explorer — ${description}`, "nasa-explorer");
+      } catch {
+        // Non-critical, don't block the response
+      }
+    }
+
     // ── STAR BALANCE ──────────────────────────────────────────────────────────
-    if (
-      cmd.includes("saldo") ||
-      cmd.includes("estrelas") ||
-      cmd.includes("stars")
-    ) {
+    if (cmd.includes("saldo") || cmd.includes("estrelas") || cmd.includes("stars")) {
       const org = await prisma.organization.findUnique({
         where: { id: orgId },
-        select: {
-          starsBalance: true,
-          plan: { select: { name: true } },
-        },
+        select: { starsBalance: true, plan: { select: { name: true } } },
       });
       const balance = org?.starsBalance ?? 0;
       const planName = org?.plan?.name ?? "FREE";
@@ -197,12 +135,61 @@ export const execute = base
         description: `Você tem ${balance.toLocaleString("pt-BR")} estrelas disponíveis. Plano: ${planName}.`,
         appName: "NASA",
         extraData: { balance, planName },
-      };
+      } satisfies ExecuteOutput;
     }
 
-    // ── FORGE — Create proposal ───────────────────────────────────────────────
-    if (app === "forge" && isCreate && cmd.includes("proposta")) {
+    // ── FORGE — Create proposal (enhanced) ───────────────────────────────────
+    if (
+      (app === "forge" || (!app && (cmd.includes("proposta") || cmd.includes("proposal")))) &&
+      isCreate &&
+      (cmd.includes("proposta") || cmd.includes("proposal"))
+    ) {
       try {
+        // Resolve productName: parsedVars first, then regex, then resolvedProduct
+        let productName: string | null =
+          parsedVars["produto"] ?? parsedVars["product"] ?? parsedVars["productnome"] ?? null;
+        if (!productName) {
+          const prodMatch = command.match(/(?:produto|serviço|product|service)\s+["']?([^"',\n]+)["']?/i);
+          if (prodMatch) productName = prodMatch[1].trim();
+        }
+        if (!productName && resolvedProduct) productName = resolvedProduct.name;
+
+        // Resolve clientName: parsedVars first, then resolvedContact
+        let clientName: string | null =
+          parsedVars["cliente"] ?? parsedVars["client"] ?? parsedVars["lead"] ?? null;
+        if (!clientName && resolvedContact) clientName = resolvedContact.name;
+        if (!clientName) {
+          const clientMatch = command.match(/(?:para|for|cliente|lead)\s+["']?([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇÀÜ][a-záéíóúâêîôûãõçàü]+(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇÀÜa-záéíóúâêîôûãõçàü]+)*)["']?/);
+          if (clientMatch) clientName = clientMatch[1].trim();
+        }
+
+        // Check required fields
+        if (!productName) {
+          return {
+            type: "needs_input" as const,
+            title: "Informação necessária",
+            description: "Qual é o nome do produto ou serviço da proposta?",
+            appName: "Forge",
+            missingFields: [{ key: "productName", label: "Nome do produto ou serviço" }],
+            partialContext: clientName ? ({ clientName } as Record<string, string>) : {},
+          };
+        }
+
+        if (!clientName) {
+          return {
+            type: "needs_input" as const,
+            title: "Informação necessária",
+            description: `Para quem é a proposta do produto "${productName}"?`,
+            appName: "Forge",
+            missingFields: [{ key: "clientName", label: "Nome do cliente (lead)" }],
+            partialContext: { productName } as Record<string, string>,
+          };
+        }
+
+        // Look up product and lead
+        const foundProduct = resolvedProduct ?? await resolveProduct(productName, orgId);
+        const foundContact = resolvedContact ?? await resolveContact(clientName, orgId);
+
         const last = await prisma.forgeProposal.findFirst({
           where: { organizationId: orgId },
           orderBy: { number: "desc" },
@@ -210,34 +197,45 @@ export const execute = base
         });
         const number = (last?.number ?? 0) + 1;
 
-        const validUntil = dateVars.length > 0 ? parseDate(cmd) : null;
+        // Parse validUntil
+        const validUntilRaw = parsedVars["validade"] ?? parsedVars["validuntil"] ?? null;
+        let validUntil: Date | null = null;
+        if (validUntilRaw) validUntil = parseDate(validUntilRaw);
+        else if (dateVars.length > 0) validUntil = parseDate(cmd);
+
+        const proposalTitle = `Proposta - ${clientName}`;
 
         const proposal = await prisma.forgeProposal.create({
           data: {
             organizationId: orgId,
-            title: `Proposta - ${resolvedClientName ?? "Novo Cliente"}`,
+            title: proposalTitle,
             number,
-            clientId: resolvedContact?.id ?? null,
+            clientId: foundContact?.id ?? null,
             responsibleId: resolvedUser?.id ?? context.user.id,
             participants: [],
             validUntil,
             status: "RASCUNHO" as never,
-            description: command,
+            description: foundProduct ? `Produto: ${foundProduct.name}\n\n${command}` : command,
             headerConfig: {},
             createdById: context.user.id,
           },
           select: { id: true, number: true },
         });
+
+        const cost = STAR_COSTS.create;
+        await tryDebitStars(cost, `Proposta criada — ${proposalTitle}`);
+
         return {
           type: "created" as const,
           title: "Proposta criada!",
-          description: `Proposta "${`Proposta - ${resolvedClientName ?? "Novo Cliente"}`}" criada no Forge.`,
+          description: `Proposta "${proposalTitle}" criada no Forge.${foundProduct ? ` Produto: ${foundProduct.name}.` : ""}`,
           url: `/forge?tab=proposals&id=${proposal.id}`,
           appName: "Forge",
-        };
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
       } catch (err) {
-        console.error("[nasa-command/execute forge proposal]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        console.error("[nasa-command/execute forge proposal enhanced]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -250,9 +248,10 @@ export const execute = base
           select: { number: true },
         });
         const number = (lastContract?.number ?? 0) + 1;
-
         const startDate = new Date();
-        const endDate = dateVars.length > 0 ? parseDate(cmd) : new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+        const endDate = dateVars.length > 0
+          ? parseDate(cmd)
+          : new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
 
         const contract = await prisma.forgeContract.create({
           data: {
@@ -268,16 +267,21 @@ export const execute = base
           },
           select: { id: true, number: true },
         });
+
+        const cost = STAR_COSTS.create;
+        await tryDebitStars(cost, `Contrato #${contract.number} criado`);
+
         return {
           type: "created" as const,
           title: "Contrato criado!",
           description: `Contrato #${contract.number} criado no Forge aguardando assinatura.`,
           url: `/forge?tab=contracts&id=${contract.id}`,
           appName: "Forge",
-        };
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute forge contract]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -298,10 +302,308 @@ export const execute = base
           url: "/forge",
           appName: "Forge",
           extraData: { proposals },
-        };
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute forge list]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
+    // ── TRACKING — Move lead ──────────────────────────────────────────────────
+    if (
+      (app === "tracking" || !app) &&
+      /\b(mov|mova|mover)\b/.test(cmd) &&
+      cmd.includes("lead")
+    ) {
+      try {
+        // Extract leadName
+        let leadName: string | null =
+          parsedVars["lead"] ?? parsedVars["nome"] ?? null;
+        if (!leadName && resolvedContact) leadName = resolvedContact.name;
+        if (!leadName) {
+          const leadMatch = command.match(/lead\s+["']?([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇÀÜ][a-záéíóúâêîôûãõçàü\s]+)["']?/i);
+          if (leadMatch) leadName = leadMatch[1].trim();
+        }
+
+        // Extract statusName
+        let statusName: string | null =
+          parsedVars["status"] ?? parsedVars["etapa"] ?? null;
+        if (!statusName) {
+          const statusMatch = command.match(/(?:para|to|status)\s+["']?([^"',\n]+)["']?/i);
+          if (statusMatch) statusName = statusMatch[1].trim();
+        }
+
+        // Extract trackingName (optional)
+        const trackingName: string | null =
+          parsedVars["tracking"] ?? parsedVars["pipeline"] ?? null;
+
+        if (!statusName) {
+          return {
+            type: "needs_input" as const,
+            title: "Informação necessária",
+            description: `Para qual status mover o lead${leadName ? ` "${leadName}"` : ""}?`,
+            appName: "Tracking",
+            missingFields: [{ key: "statusName", label: `Para qual status mover o lead${leadName ? ` ${leadName}` : ""}?` }],
+            partialContext: leadName ? ({ leadName } as Record<string, string>) : {},
+          };
+        }
+
+        // Find lead
+        const lead = leadName
+          ? await prisma.lead.findFirst({
+              where: {
+                name: { contains: leadName, mode: "insensitive" },
+                tracking: { organizationId: orgId },
+              },
+              select: { id: true, name: true, trackingId: true },
+            })
+          : null;
+
+        if (!lead) {
+          return {
+            type: "error" as const,
+            title: "Lead não encontrado",
+            description: `Não foi possível encontrar o lead "${leadName ?? "informado"}". Verifique o nome e tente novamente.`,
+            appName: "Tracking",
+          } satisfies ExecuteOutput;
+        }
+
+        // Find tracking
+        let trackingId = lead.trackingId;
+        if (trackingName) {
+          const tracking = await prisma.tracking.findFirst({
+            where: { organizationId: orgId, name: { contains: trackingName, mode: "insensitive" } },
+            select: { id: true },
+          });
+          if (tracking) trackingId = tracking.id;
+        }
+
+        // Find status
+        const status = await prisma.status.findFirst({
+          where: {
+            trackingId,
+            name: { contains: statusName, mode: "insensitive" },
+          },
+          select: { id: true, name: true },
+        });
+
+        if (!status) {
+          return {
+            type: "error" as const,
+            title: "Status não encontrado",
+            description: `Status "${statusName}" não encontrado no tracking. Verifique o nome da etapa.`,
+            appName: "Tracking",
+          } satisfies ExecuteOutput;
+        }
+
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { statusId: status.id, trackingId },
+        });
+
+        const cost = STAR_COSTS.move;
+        await tryDebitStars(cost, `Lead "${lead.name}" movido para "${status.name}"`);
+
+        return {
+          type: "created" as const,
+          title: "Lead movido!",
+          description: `Lead "${lead.name}" movido para a etapa "${status.name}".`,
+          url: "/tracking",
+          appName: "Tracking",
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute move lead]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
+    // ── NASA PLANNER — Generate post with AI ──────────────────────────────────
+    if (
+      (app === "nasa-planner" || cmd.includes("#nasa-planner")) &&
+      (cmd.includes("post") || cmd.includes("crie um post") || cmd.includes("gere um post"))
+    ) {
+      try {
+        // Extract topic
+        const topic =
+          parsedVars["tema"] ??
+          parsedVars["assunto"] ??
+          parsedVars["topic"] ??
+          extractTitle(command);
+
+        const postType = cmd.includes("carrossel") || cmd.includes("carousel")
+          ? "carousel"
+          : cmd.includes("reel") || cmd.includes("vídeo") || cmd.includes("video")
+            ? "reel"
+            : cmd.includes("story")
+              ? "story"
+              : "static";
+
+        const network = cmd.includes("linkedin")
+          ? "LinkedIn"
+          : cmd.includes("twitter") || cmd.includes("thread")
+            ? "Twitter/X"
+            : cmd.includes("tiktok")
+              ? "TikTok"
+              : "Instagram";
+
+        const postSystemPrompt = `Você é um especialista em marketing de conteúdo. Crie conteúdo para redes sociais em português do Brasil.
+Responda com o seguinte formato exato (sem markdown extra):
+
+TÍTULO: [título chamativo]
+LEGENDA: [legenda completa para o post]
+HASHTAGS: [lista de hashtags relevantes]
+CTA: [chamada para ação]`;
+
+        const postUserPrompt = `Crie um ${postType === "carousel" ? "carrossel" : postType === "reel" ? "reel" : postType === "story" ? "story" : "post"} para ${network} sobre: ${topic}`;
+
+        const aiContent = await generateWithAI(orgId, postSystemPrompt, postUserPrompt);
+
+        if (!aiContent) {
+          // Fallback: create draft without AI content
+          let planner = await prisma.nasaPlanner.findFirst({
+            where: { organizationId: orgId },
+            orderBy: { createdAt: "asc" },
+          });
+          if (!planner) {
+            planner = await prisma.nasaPlanner.create({
+              data: { organizationId: orgId, name: "Planner Principal" },
+            });
+          }
+          await prisma.nasaPlannerPost.create({
+            data: {
+              plannerId: planner.id,
+              organizationId: orgId,
+              createdById: context.user.id,
+              type: postType.toUpperCase() as never,
+              title: topic,
+              targetNetworks: [network.toLowerCase()],
+              aiPrompt: command,
+              status: "DRAFT" as never,
+              hashtags: [],
+            },
+          });
+          return {
+            type: "created" as const,
+            title: "Post criado!",
+            description: `Rascunho criado no NASA Planner. Conecte uma IA para gerar o conteúdo automaticamente.`,
+            url: "/nasa-planner",
+            appName: "NASA Planner",
+          } satisfies ExecuteOutput;
+        }
+
+        // Parse AI response into structured content
+        const content = aiContent;
+        const titleMatch = content.match(/TÍTULO:\s*(.+)/i);
+        const captionMatch = content.match(/LEGENDA:\s*([\s\S]+?)(?=HASHTAGS:|$)/i);
+        const hashtagsMatch = content.match(/HASHTAGS:\s*(.+)/i);
+        const ctaMatch = content.match(/CTA:\s*(.+)/i);
+
+        const postTitle = titleMatch?.[1]?.trim() ?? topic;
+        const caption = captionMatch?.[1]?.trim() ?? "";
+        const hashtags = hashtagsMatch?.[1]?.trim() ?? "";
+        const cta = ctaMatch?.[1]?.trim() ?? "";
+
+        const formattedContent = `**${postTitle}**\n\n${caption}\n\n${hashtags}\n\n📣 ${cta}`;
+
+        // Save draft to NASA Planner
+        let planner = await prisma.nasaPlanner.findFirst({
+          where: { organizationId: orgId },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!planner) {
+          planner = await prisma.nasaPlanner.create({
+            data: { organizationId: orgId, name: "Planner Principal" },
+          });
+        }
+        await prisma.nasaPlannerPost.create({
+          data: {
+            plannerId: planner.id,
+            organizationId: orgId,
+            createdById: context.user.id,
+            type: postType.toUpperCase() as never,
+            title: postTitle,
+            targetNetworks: [network.toLowerCase()],
+            aiPrompt: command,
+            status: "DRAFT" as never,
+            hashtags: hashtags ? hashtags.split(/\s+/).filter((h) => h.startsWith("#")) : [],
+          },
+        });
+
+        const cost = STAR_COSTS.ai_generate;
+        await tryDebitStars(cost, `Post gerado com IA — ${topic}`);
+
+        return {
+          type: "post_generated" as const,
+          title: "Post gerado!",
+          description: caption.slice(0, 150) + (caption.length > 150 ? "..." : ""),
+          url: "/nasa-planner",
+          appName: "NASA Planner",
+          content: formattedContent,
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute generate post]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
+    // ── NASA PLANNER — Create post (existing handler) ──────────────────────────
+    if (app === "nasa-planner" && isCreate) {
+      try {
+        const postType = cmd.includes("carrossel")
+          ? "CAROUSEL"
+          : cmd.includes("reel") || cmd.includes("vídeo") || cmd.includes("video")
+            ? "REEL"
+            : cmd.includes("story")
+              ? "STORY"
+              : "STATIC";
+
+        const networks = cmd.includes("linkedin")
+          ? ["linkedin"]
+          : cmd.includes("twitter") || cmd.includes("thread")
+            ? ["twitter"]
+            : ["instagram"];
+
+        let planner = await prisma.nasaPlanner.findFirst({
+          where: { organizationId: orgId },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!planner) {
+          planner = await prisma.nasaPlanner.create({
+            data: { organizationId: orgId, name: "Planner Principal" },
+          });
+        }
+
+        const post = await prisma.nasaPlannerPost.create({
+          data: {
+            plannerId: planner.id,
+            organizationId: orgId,
+            createdById: context.user.id,
+            type: postType as never,
+            title: extractTitle(command),
+            targetNetworks: networks,
+            aiPrompt: command,
+            status: "DRAFT" as never,
+            hashtags: [],
+          },
+          select: { id: true },
+        });
+
+        const cost = STAR_COSTS.create;
+        await tryDebitStars(cost, `Post criado no NASA Planner`);
+
+        return {
+          type: "created" as const,
+          title: "Post criado no NASA Planner!",
+          description: `${postType === "CAROUSEL" ? "Carrossel" : postType === "REEL" ? "Reel" : postType === "STORY" ? "Story" : "Post"} criado como rascunho para ${networks.join(", ")}.`,
+          url: `/nasa-planner`,
+          appName: "NASA Planner",
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute nasa-planner]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -312,17 +614,15 @@ export const execute = base
           where: { organizationId: orgId, isActive: true },
         });
         if (!agenda) {
-          throw errors.BAD_REQUEST({
-            message: "Nenhuma agenda ativa encontrada. Crie uma agenda primeiro em /agendas.",
-          });
+          throw errors.BAD_REQUEST;
         }
 
         const appointmentDate = parseDate(cmd);
         const timeStr = parseTime(cmd) ?? "09:00";
         const startsAt = buildDateTime(appointmentDate, timeStr);
-        const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000); // +30 min
+        const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
 
-        const appointment = await prisma.appointment.create({
+        await prisma.appointment.create({
           data: {
             agendaId: agenda.id,
             title: `Reunião - ${resolvedClientName ?? "Cliente"}`,
@@ -336,18 +636,23 @@ export const execute = base
           },
           select: { id: true },
         });
+
+        const cost = STAR_COSTS.create;
+        await tryDebitStars(cost, `Agendamento criado`);
+
         return {
           type: "created" as const,
           title: "Agendamento criado!",
           description: `Reunião com ${resolvedClientName ?? "cliente"} agendada para ${startsAt.toLocaleDateString("pt-BR")} às ${timeStr}.`,
           url: `/agendas`,
           appName: "Agenda",
-        };
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
         if (e?.code === "BAD_REQUEST") throw err;
         console.error("[nasa-command/execute agenda appointment]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -391,71 +696,14 @@ export const execute = base
           url: "/agendas",
           appName: "Agenda",
           extraData: { appointments },
-        };
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute agenda query]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
-      }
-    }
-
-    // ── NASA PLANNER — Create post ───────────────────────────────────────────────
-    if (app === "nasa-planner" && isCreate) {
-      try {
-        const postType = cmd.includes("carrossel")
-          ? "CAROUSEL"
-          : cmd.includes("reel") || cmd.includes("vídeo") || cmd.includes("video")
-            ? "REEL"
-            : cmd.includes("story")
-              ? "STORY"
-              : "STATIC";
-
-        const networks = cmd.includes("linkedin")
-          ? ["linkedin"]
-          : cmd.includes("twitter") || cmd.includes("thread")
-            ? ["twitter"]
-            : ["instagram"];
-
-        // Find or create default planner for the org
-        let planner = await prisma.nasaPlanner.findFirst({
-          where: { organizationId: orgId },
-          orderBy: { createdAt: "asc" },
-        });
-        if (!planner) {
-          planner = await prisma.nasaPlanner.create({
-            data: { organizationId: orgId, name: "Planner Principal" },
-          });
-        }
-
-        const post = await prisma.nasaPlannerPost.create({
-          data: {
-            plannerId: planner.id,
-            organizationId: orgId,
-            createdById: context.user.id,
-            type: postType as never,
-            title: extractTitle(command),
-            targetNetworks: networks,
-            aiPrompt: command,
-            status: "DRAFT" as never,
-            hashtags: [],
-          },
-          select: { id: true },
-        });
-
-        return {
-          type: "created" as const,
-          title: "Post criado no NASA Planner!",
-          description: `${postType === "CAROUSEL" ? "Carrossel" : postType === "REEL" ? "Reel" : postType === "STORY" ? "Story" : "Post"} criado como rascunho para ${networks.join(", ")}.`,
-          url: `/nasa-planner`,
-          appName: "NASA Planner",
-        };
-      } catch (err) {
-        console.error("[nasa-command/execute nasa-planner]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
     // ── TRACKING — Create tracking ────────────────────────────────────────────
-    // Condição: app é tracking E é uma criação E NÃO é criação de lead
     if (
       app === "tracking" &&
       isCreate &&
@@ -473,29 +721,23 @@ export const execute = base
           select: { id: true, name: true },
         });
 
-        // Adiciona o usuário atual como OWNER para aparecer na lista de trackings
         await prisma.trackingParticipant.create({
-          data: {
-            trackingId: tracking.id,
-            userId: context.user.id,
-            role: "OWNER",
-          },
+          data: { trackingId: tracking.id, userId: context.user.id, role: "OWNER" },
         });
 
-        // Cria etapas padrão em try-catch separado para não bloquear o retorno
         const defaultStatuses = ["Prospecção", "Contato", "Proposta", "Fechado"];
         try {
           await Promise.all(
             defaultStatuses.map((statusName, i) =>
-              prisma.status.create({
-                data: { name: statusName, trackingId: tracking.id, order: i },
-              }),
+              prisma.status.create({ data: { name: statusName, trackingId: tracking.id, order: i } }),
             ),
           );
         } catch (statusErr) {
           console.error("[nasa-command/execute create tracking statuses]", statusErr);
-          // Não bloqueia: tracking foi criado, etapas podem ser adicionadas depois
         }
+
+        const cost = STAR_COSTS.create;
+        await tryDebitStars(cost, `Tracking "${tracking.name}" criado`);
 
         return {
           type: "created" as const,
@@ -503,10 +745,11 @@ export const execute = base
           description: `Pipeline criado com as etapas: Prospecção, Contato, Proposta, Fechado. Acesse o app para personalizar.`,
           url: `/tracking`,
           appName: "Tracking",
-        };
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute create tracking]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro ao criar tracking. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -517,9 +760,7 @@ export const execute = base
           where: { organizationId: orgId },
         });
         if (!firstTracking) {
-          throw errors.BAD_REQUEST({
-            message: "Nenhum tracking encontrado. Crie um tracking primeiro.",
-          });
+          throw errors.BAD_REQUEST;
         }
 
         const firstStatus = await prisma.status.findFirst({
@@ -527,20 +768,23 @@ export const execute = base
           orderBy: { order: "asc" },
         });
         if (!firstStatus) {
-          throw errors.BAD_REQUEST({
-            message: "Nenhum status encontrado no tracking.",
-          });
+          throw errors.BAD_REQUEST;
         }
 
-        const leadName = resolvedClientName ?? nameVars[0]?.replace(/_/g, " ") ?? "Novo Lead";
+        const leadName =
+          parsedVars["lead"] ??
+          parsedVars["nome"] ??
+          resolvedClientName ??
+          nameVars[0]?.replace(/_/g, " ") ??
+          "Novo Lead";
+
         const lead = await prisma.lead.create({
-          data: {
-            name: leadName,
-            trackingId: firstTracking.id,
-            statusId: firstStatus.id,
-          },
+          data: { name: leadName, trackingId: firstTracking.id, statusId: firstStatus.id },
           select: { id: true, name: true },
         });
+
+        const cost = STAR_COSTS.create;
+        await tryDebitStars(cost, `Lead "${lead.name}" criado`);
 
         return {
           type: "created" as const,
@@ -548,12 +792,13 @@ export const execute = base
           description: `Lead "${lead.name}" adicionado ao tracking "${firstTracking.name}".`,
           url: `/tracking`,
           appName: "Tracking",
-        };
+          starsSpent: cost,
+        } satisfies ExecuteOutput;
       } catch (err: unknown) {
         const e = err as { code?: string };
         if (e?.code === "BAD_REQUEST") throw err;
         console.error("[nasa-command/execute create lead]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -569,10 +814,10 @@ export const execute = base
           description: `Você tem ${count.toLocaleString("pt-BR")} lead(s) ativo(s) no total.`,
           appName: "Tracking",
           extraData: { count },
-        };
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute count leads]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -588,17 +833,58 @@ export const execute = base
           description: `Você tem ${count.toLocaleString("pt-BR")} lead(s) ativo(s) no total.`,
           appName: "Tracking",
           extraData: { count },
-        };
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute count leads generic]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
+    // ── QUERY DATA — resultado, campanha, relatório, performance, dados de ─────
+    if (
+      cmd.includes("resultado") ||
+      cmd.includes("campanha") ||
+      cmd.includes("relatório") ||
+      cmd.includes("relatorio") ||
+      cmd.includes("performance") ||
+      /\bdados de\b/.test(cmd)
+    ) {
+      try {
+        const [leadCount, trackings] = await Promise.all([
+          prisma.lead.count({ where: { isActive: true, tracking: { organizationId: orgId } } }),
+          prisma.tracking.findMany({
+            where: { organizationId: orgId },
+            take: 5,
+            select: { id: true, name: true, _count: { select: { leads: true } } },
+          }),
+        ]);
+
+        const trackingLines = trackings.map((t) => `• ${t.name}: ${t._count.leads} leads`).join("\n");
+        const description = `Total de leads ativos: ${leadCount.toLocaleString("pt-BR")}\n\nTrackings:\n${trackingLines || "Nenhum tracking encontrado."}`;
+
+        return {
+          type: "query_result" as const,
+          title: "Dados da organização",
+          description,
+          appName: "NASA",
+          extraData: { leadCount, trackings },
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute query data]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
     // ── /pesquisar — Busca universal ──────────────────────────────────────────
-    if (cmd.includes("/pesquisar") || cmd.includes("pesquise") || cmd.includes("pesquisar") || cmd.includes("busque") || cmd.includes("buscar") || cmd.includes("encontre")) {
+    if (
+      cmd.includes("/pesquisar") ||
+      cmd.includes("pesquise") ||
+      cmd.includes("pesquisar") ||
+      cmd.includes("busque") ||
+      cmd.includes("buscar") ||
+      cmd.includes("encontre")
+    ) {
       try {
-        // Extract the search term: text after /pesquisar or after action verb
         const searchTermMatch =
           command.match(/\/pesquisar\s+(.+)/i) ??
           command.match(/(?:pesquise|busque|buscar|encontre|pesquisar)\s+(.+)/i);
@@ -611,11 +897,10 @@ export const execute = base
             title: "Pesquisa",
             description: "Informe o que deseja pesquisar. Ex: /pesquisar Francisco ou /pesquisar Clientes 2026",
             appName: "NASA",
-          };
+          } satisfies ExecuteOutput;
         }
 
         const [leads, users, trackings, products] = await Promise.all([
-          // Leads (por nome, e-mail)
           prisma.lead.findMany({
             where: {
               isActive: true,
@@ -628,7 +913,6 @@ export const execute = base
             take: 5,
             select: { id: true, name: true, email: true },
           }),
-          // Usuários (membros da org)
           prisma.member.findMany({
             where: {
               organizationId: orgId,
@@ -642,39 +926,23 @@ export const execute = base
             take: 5,
             include: { user: { select: { id: true, name: true, email: true } } },
           }),
-          // Trackings / Pipelines
           prisma.tracking.findMany({
-            where: {
-              organizationId: orgId,
-              name: { contains: termNorm, mode: "insensitive" },
-            },
+            where: { organizationId: orgId, name: { contains: termNorm, mode: "insensitive" } },
             take: 5,
             select: { id: true, name: true },
           }),
-          // Produtos (Forge)
           prisma.forgeProduct.findMany({
-            where: {
-              organizationId: orgId,
-              name: { contains: termNorm, mode: "insensitive" },
-            },
+            where: { organizationId: orgId, name: { contains: termNorm, mode: "insensitive" } },
             take: 5,
             select: { id: true, name: true },
           }),
         ]);
 
         const lines: string[] = [];
-        if (leads.length > 0) {
-          lines.push(`👤 Leads: ${leads.map((l) => `${l.name}${l.email ? ` (${l.email})` : ""}`).join(", ")}`);
-        }
-        if (users.length > 0) {
-          lines.push(`🧑‍💼 Usuários: ${users.map((m) => m.user.name ?? m.user.email).join(", ")}`);
-        }
-        if (trackings.length > 0) {
-          lines.push(`📊 Trackings: ${trackings.map((t) => t.name).join(", ")}`);
-        }
-        if (products.length > 0) {
-          lines.push(`📦 Produtos: ${products.map((p) => p.name).join(", ")}`);
-        }
+        if (leads.length > 0) lines.push(`👤 Leads: ${leads.map((l) => `${l.name}${l.email ? ` (${l.email})` : ""}`).join(", ")}`);
+        if (users.length > 0) lines.push(`🧑‍💼 Usuários: ${users.map((m) => m.user.name ?? m.user.email).join(", ")}`);
+        if (trackings.length > 0) lines.push(`📊 Trackings: ${trackings.map((t) => t.name).join(", ")}`);
+        if (products.length > 0) lines.push(`📦 Produtos: ${products.map((p) => p.name).join(", ")}`);
 
         const total = leads.length + users.length + trackings.length + products.length;
 
@@ -685,10 +953,10 @@ export const execute = base
           url: total > 0 ? "/tracking" : undefined,
           appName: "NASA",
           extraData: { leads, users: users.map((m) => m.user), trackings, products },
-        };
+        } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute pesquisar]", err);
-        throw errors.INTERNAL_SERVER_ERROR({ message: "Erro interno. Tente novamente." });
+        throw errors.INTERNAL_SERVER_ERROR;
       }
     }
 
@@ -699,5 +967,5 @@ export const execute = base
       description:
         "Não foi possível identificar uma ação específica. Tente usar #app para especificar o destino (ex: #forge, #agenda, #nasa-planner, #tracking).",
       appName: "NASA",
-    };
+    } satisfies ExecuteOutput;
   });

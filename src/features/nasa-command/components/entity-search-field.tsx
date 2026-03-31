@@ -32,7 +32,7 @@ const FIELD_ENTITY_MAP: Record<string, EntityType> = {
   clientename: "lead",
   client_name: "lead",
   clientname: "lead",
-  contato: "lead",
+  // NOTE: "contato" is intentionally NOT mapped — it's free text (phone/email)
   // Product
   produto: "product",
   productname: "product",

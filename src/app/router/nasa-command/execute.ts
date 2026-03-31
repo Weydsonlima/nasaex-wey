@@ -4,11 +4,12 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { debitStars } from "@/lib/star-service";
-import { StarTransactionType } from "@/generated/prisma/enums";
+import { StarTransactionType, ForgeProposalStatus } from "@/generated/prisma/enums";
 import {
   parseDate,
   parseTime,
   buildDateTime,
+  normalizeTimeStr,
   parseParsedVars,
   STAR_COSTS,
   resolveContact,
@@ -64,6 +65,7 @@ export const execute = base
       url: z.string().optional(),
       appName: z.string(),
       extraData: z.any().optional(),
+      resultLinks: z.array(z.object({ label: z.string(), url: z.string() })).optional(),
       missingFields: z.array(z.object({ key: z.string(), label: z.string() })).optional(),
       partialContext: z.record(z.string(), z.string()).optional(),
       content: z.string().optional(),
@@ -80,8 +82,8 @@ export const execute = base
     // ── Parse "key"="value" pairs ─────────────────────────────────────────────
     const parsedVars = parseParsedVars(command);
 
-    // ── Detect app from #hashtags only ────────────────────────────────────────
-    const app = cmd.includes("#forge")
+    // ── Detect app from #hashtags ─────────────────────────────────────────────
+    const appFromHash = cmd.includes("#forge")
       ? "forge"
       : cmd.includes("#agenda")
         ? "agenda"
@@ -93,25 +95,55 @@ export const execute = base
               ? "nbox"
               : cmd.includes("#contatos")
                 ? "contatos"
-                : /\b(tracking|pipeline|funil|add_tracking)\b/.test(cmd) &&
-                    /\b(crie|criar|novo|nova|adicione|add)\b/.test(cmd)
-                  ? "tracking"
-                  : null;
+                : null;
 
     // ── Detect action type ────────────────────────────────────────────────────
     const isCreate =
       /\b(crie|cria|criar|gere|gera|gerar|fa[çc]a|fazer|agende|agendar|marque|marcar|adicione|adicionar|nova|novo|add)\b/.test(cmd);
-    const isList = /\b(liste|listar|mostrar|mostre|quais|quem|ver)\b/.test(cmd);
+    const isList =
+      /\b(liste|listar|mostrar|mostre|mostra|quais|quem|ver|veja|vejas|me\s+mostr[ae]|exib[ae]|exibir|verifique|confira|aberta[s]?|pendente[s]?|traga|me\s+traga|busque|buscar|busca|encontre|encontrar|ache|achar|me\s+d[eê]|me\s+de|pega|pegue|pegar|quero\s+ver|quero\s+saber|me\s+mostra|todas?\s+as?|todos?\s+os?|todas?\s+as?\s+minhas?|todos?\s+os?\s+meus?)\b/.test(cmd);
     const isCount = /\b(quantos|quantas|total|count)\b/.test(cmd);
     const isQuery = isList || isCount;
 
-    // ── Semantic intent detection (operates on normalised cmd) ────────────────
+    // ── Keyword presence flags ────────────────────────────────────────────────
+    const hasProposal    = /\b(proposta[s]?|proposal[s]?|or[çc]amento[s]?)\b/.test(cmd);
+    const hasLead        = /\b(lead[s]?|contato[s]?|cliente[s]?)\b/.test(cmd);
+    const hasTracking    = /\b(tracking[s]?|pipeline[s]?|funil|funis)\b/.test(cmd);
+    const hasAgenda      = /\b(agenda[s]?|agendamento[s]?|reuni[aã]o|reuniões|compromisso[s]?)\b/.test(cmd);
+    const hasPost        = /\b(post[s]?|conte[úu]do|story|reel|carrossel|legenda|publicaç[aã]o)\b/.test(cmd);
+    const hasProduct     = /\b(produto[s]?|product[s]?|servi[çc]o[s]?)\b/.test(cmd);
+    const hasWorkspace   = /\b(workspace[s]?|quadro[s]?|board[s]?|painel[s]?)\b/.test(cmd);
+
+    // ── Infer app from keywords when no hashtag is present ───────────────────
+    const app = appFromHash ?? (
+      hasProposal  ? "forge" :
+      hasAgenda    ? "agenda" :
+      hasPost      ? "nasa-planner" :
+      hasWorkspace ? "workspaces" :
+      hasTracking  ? "tracking" :
+      hasLead      ? "tracking" :
+      null
+    );
+
+    // ── Semantic intent detection ─────────────────────────────────────────────
     const isAppointment =
       /\b(agendamento|agendar|agenda[re]|reuni[aã]o|compromisso|hor[aá]rio|marqu[ae]|marcar)\b/.test(cmd) ||
       /\b(quero|preciso|desejo)\b.*\b(agend|reuni|comprom)\w*/i.test(cmd);
-    const isProposal = /\b(proposta|proposal|or[çc]amento|orcamento)\b/.test(cmd) && isCreate;
-    const isMoveLead = /\b(mov[ae]|mover|transferi[rr]|mudar)\b/.test(cmd) && /\b(lead|contato|cliente)\b/.test(cmd);
-    const isPost = /\b(post|publika[çc]|publicar|conte[úu]do|story|reel|carrossel)\b/.test(cmd) && isCreate;
+    const isMoveLead      = /\b(mov[ae]|mover|transferi[rr]|mudar)\b/.test(cmd) && hasLead;
+    const isProposal      = hasProposal && isCreate;
+    // isProposalQuery: detecção explícita de lista/consulta OU contexto implícito
+    // (ex: "me traga todas as propostas", "quero as propostas", "propostas abertas")
+    const isProposalImplicitQuery =
+      hasProposal && !isCreate &&
+      /\b(todas?|todos?|minhas?|meus?|abertas?|pendentes?|enviadas?|pagas?|canceladas?)\b/.test(cmd);
+    const isProposalQuery = hasProposal && (isQuery || isProposalImplicitQuery);
+    const isLeadQuery     = hasLead && isQuery;
+    const isLeadCreate    = hasLead && isCreate && !isMoveLead;
+    const isTrackingQuery = hasTracking && isQuery;
+    const isPost          = hasPost && isCreate;
+    // isWorkspaceQuery: "me traga todos os workspaces", "quais workspaces", "liste os quadros", etc.
+    const isWorkspaceImplicitQuery = hasWorkspace && !isCreate;
+    const isWorkspaceQuery = hasWorkspace && (isQuery || isWorkspaceImplicitQuery);
 
     // ── Extract /Variables from command ───────────────────────────────────────
     const variableRegex = /\/([A-Za-zÀ-ÿ0-9_\.]+)/g;
@@ -318,22 +350,66 @@ export const execute = base
       }
     }
 
-    // ── FORGE — List proposals ────────────────────────────────────────────────
-    if (app === "forge" && isQuery) {
+    // ── FORGE — List proposals (with or without #forge hashtag) ──────────────
+    // ForgeProposalStatus enum: RASCUNHO | ENVIADA | VISUALIZADA | PAGA | EXPIRADA | CANCELADA
+    if (isProposalQuery || (app === "forge" && isQuery)) {
       try {
+        // "Abertas" = ainda em andamento (não pagas, não expiradas, não canceladas)
+        const filterOpen  = /\b(aberta[s]?|pendente[s]?|ativa[s]?|andamento)\b/.test(cmd);
+        const filterPaid  = /\b(paga[s]?|pago[s]?|recebida[s]?)\b/.test(cmd);
+        const filterExp   = /\b(expirada[s]?|vencida[s]?)\b/.test(cmd);
+        const filterCan   = /\b(cancelada[s]?)\b/.test(cmd);
+        const filterSent  = /\b(enviada[s]?)\b/.test(cmd);
+
+        const statusFilter: ForgeProposalStatus[] | undefined = filterPaid
+          ? [ForgeProposalStatus.PAGA]
+          : filterExp
+            ? [ForgeProposalStatus.EXPIRADA]
+            : filterCan
+              ? [ForgeProposalStatus.CANCELADA]
+              : filterSent
+                ? [ForgeProposalStatus.ENVIADA, ForgeProposalStatus.VISUALIZADA]
+                : filterOpen
+                  ? [ForgeProposalStatus.RASCUNHO, ForgeProposalStatus.ENVIADA, ForgeProposalStatus.VISUALIZADA]
+                  : undefined; // sem filtro = todas
+
         const proposals = await prisma.forgeProposal.findMany({
-          where: { organizationId: orgId },
+          where: {
+            organizationId: orgId,
+            ...(statusFilter ? { status: { in: statusFilter } } : {}),
+          },
           orderBy: { createdAt: "desc" },
           take: 10,
           select: { id: true, title: true, status: true, number: true },
         });
-        const list = proposals.map((p) => `#${p.number} — ${p.title} (${p.status})`).join("\n");
+
+        const statusLabel: Record<ForgeProposalStatus, string> = {
+          [ForgeProposalStatus.RASCUNHO]:   "Rascunho",
+          [ForgeProposalStatus.ENVIADA]:    "Enviada",
+          [ForgeProposalStatus.VISUALIZADA]:"Visualizada",
+          [ForgeProposalStatus.PAGA]:       "Paga",
+          [ForgeProposalStatus.EXPIRADA]:   "Expirada",
+          [ForgeProposalStatus.CANCELADA]:  "Cancelada",
+        };
+
+        const filterDesc = filterPaid ? " pagas" : filterExp ? " expiradas" : filterCan ? " canceladas" : filterSent ? " enviadas" : filterOpen ? " abertas" : "";
+
+        const resultLinks = proposals.map((p) => ({
+          label: `#${p.number} — ${p.title} (${statusLabel[p.status] ?? p.status})`,
+          url: `/forge?tab=proposals&id=${p.id}`,
+        }));
+
         return {
           type: "query_result" as const,
-          title: `${proposals.length} propostas encontradas`,
-          description: proposals.length > 0 ? list : "Nenhuma proposta encontrada.",
+          title: proposals.length > 0
+            ? `${proposals.length} proposta(s)${filterDesc} encontrada(s)`
+            : `Nenhuma proposta${filterDesc} encontrada`,
+          description: proposals.length > 0
+            ? `Clique em uma proposta para abrir diretamente no Forge:`
+            : `Não há propostas${filterDesc} no momento.`,
           url: "/forge",
           appName: "Forge",
+          resultLinks: proposals.length > 0 ? resultLinks : undefined,
           extraData: { proposals },
         } satisfies ExecuteOutput;
       } catch (err) {
@@ -682,6 +758,8 @@ CTA: [chamada para ação]`;
         // ── Extract time ───────────────────────────────────────────────────
         let timeStr: string | null =
           parsedVars["horario"] ?? parsedVars["hora"] ?? null;
+        // Normalize natural language time (e.g. "2 horas da tarde" → "14:00")
+        if (timeStr) timeStr = normalizeTimeStr(timeStr) ?? timeStr;
         if (!timeStr) timeStr = parseTime(cmd);
 
         // ── Extract leadName ───────────────────────────────────────────────
@@ -908,16 +986,21 @@ CTA: [chamada para ação]`;
       }
     }
 
-    // ── AGENDA — Query today's appointments ───────────────────────────────────
+    // ── AGENDA — Query appointments (today, or general list) ─────────────────
     if (
       (app === "agenda" && isQuery) ||
+      (hasAgenda && isQuery) ||
       (cmd.includes("reuniões") && cmd.includes("hoje")) ||
-      (cmd.includes("compromissos") && cmd.includes("hoje"))
+      (cmd.includes("compromissos") && cmd.includes("hoje")) ||
+      (cmd.includes("agendamentos") && isQuery)
     ) {
       try {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        // If no "hoje" keyword → show next 7 days
+        const isToday = cmd.includes("hoje");
+        const rangeEnd = isToday ? todayEnd : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
         const agendas = await prisma.agenda.findMany({
           where: { organizationId: orgId },
@@ -928,25 +1011,33 @@ CTA: [chamada para ação]`;
         const appointments = await prisma.appointment.findMany({
           where: {
             agendaId: { in: agendaIds },
-            startsAt: { gte: todayStart, lt: todayEnd },
+            startsAt: { gte: todayStart, lt: rangeEnd },
           },
           orderBy: { startsAt: "asc" },
+          take: 15,
           select: { title: true, startsAt: true, status: true },
         });
 
         const list = appointments
-          .map(
-            (a) =>
-              `${a.startsAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — ${a.title ?? "Reunião"} (${a.status})`,
-          )
+          .map((a) => {
+            const dateStr = a.startsAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+            const timeStr = a.startsAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            return isToday
+              ? `${timeStr} — ${a.title ?? "Reunião"} (${a.status})`
+              : `${dateStr} às ${timeStr} — ${a.title ?? "Reunião"} (${a.status})`;
+          })
           .join("\n");
+
+        const rangeLabel = isToday ? "hoje" : "nos próximos 7 dias";
 
         return {
           type: "query_result" as const,
-          title: `${appointments.length} compromisso(s) hoje`,
-          description: appointments.length > 0 ? list : "Nenhum compromisso para hoje.",
+          title: appointments.length > 0
+            ? `${appointments.length} compromisso(s) ${rangeLabel}`
+            : `Nenhum compromisso ${rangeLabel}`,
+          description: appointments.length > 0 ? list : `Você não tem compromissos agendados ${rangeLabel}.`,
           url: "/agendas",
-          appName: "Agenda",
+          appName: "Spacetime",
           extraData: { appointments },
         } satisfies ExecuteOutput;
       } catch (err) {
@@ -955,11 +1046,87 @@ CTA: [chamada para ação]`;
       }
     }
 
+    // ── TRACKING — List trackings/pipelines ──────────────────────────────────
+    if (isTrackingQuery) {
+      try {
+        const trackings = await prisma.tracking.findMany({
+          where: { organizationId: orgId },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: { id: true, name: true, _count: { select: { leads: true } } },
+        });
+        const list = trackings
+          .map((t) => `• ${t.name} — ${t._count.leads} lead(s)`)
+          .join("\n");
+        return {
+          type: "query_result" as const,
+          title: trackings.length > 0
+            ? `${trackings.length} tracking(s) encontrado(s)`
+            : "Nenhum tracking encontrado",
+          description: trackings.length > 0 ? list : "Crie seu primeiro pipeline no Tracking.",
+          url: "/tracking",
+          appName: "Tracking",
+          extraData: { trackings },
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute tracking list]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
+    // ── TRACKING — List leads ─────────────────────────────────────────────────
+    if (isLeadQuery && !isCount) {
+      try {
+        // Optional filter by tracking name
+        const trackingName = parsedVars["tracking"] ?? parsedVars["pipeline"] ?? null;
+        const trackingFilter = trackingName
+          ? await prisma.tracking.findFirst({
+              where: { organizationId: orgId, name: { contains: trackingName, mode: "insensitive" } },
+              select: { id: true, name: true },
+            })
+          : null;
+
+        const leads = await prisma.lead.findMany({
+          where: {
+            isActive: true,
+            tracking: trackingFilter
+              ? { id: trackingFilter.id }
+              : { organizationId: orgId },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 15,
+          select: {
+            id: true, name: true, email: true, phone: true,
+            status: { select: { name: true } },
+            tracking: { select: { name: true } },
+          },
+        });
+
+        const list = leads
+          .map((l) => `• ${l.name}${l.email ? ` (${l.email})` : l.phone ? ` (${l.phone})` : ""} — ${l.status?.name ?? "?"} / ${l.tracking.name}`)
+          .join("\n");
+
+        return {
+          type: "query_result" as const,
+          title: leads.length > 0
+            ? `${leads.length} lead(s) encontrado(s)${trackingFilter ? ` em "${trackingFilter.name}"` : ""}`
+            : "Nenhum lead encontrado",
+          description: leads.length > 0 ? list : "Nenhum lead ativo no momento.",
+          url: "/tracking",
+          appName: "Tracking",
+          extraData: { leads },
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute leads list]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
     // ── TRACKING — Create tracking ────────────────────────────────────────────
     if (
       app === "tracking" &&
       isCreate &&
-      !cmd.includes("lead") &&
+      !hasLead &&
       !cmd.includes("/novo_lead")
     ) {
       try {
@@ -1006,7 +1173,7 @@ CTA: [chamada para ação]`;
     }
 
     // ── TRACKING — Create lead ────────────────────────────────────────────────
-    if (app === "tracking" && isCreate && cmd.includes("lead")) {
+    if ((app === "tracking" || isLeadCreate) && isCreate && hasLead) {
       try {
         const firstTracking = await prisma.tracking.findFirst({
           where: { organizationId: orgId },
@@ -1054,8 +1221,8 @@ CTA: [chamada para ação]`;
       }
     }
 
-    // ── TRACKING — Count leads ────────────────────────────────────────────────
-    if (app === "tracking" && isCount) {
+    // ── TRACKING — Count leads (with or without #tracking) ───────────────────
+    if (isCount && hasLead) {
       try {
         const count = await prisma.lead.count({
           where: { isActive: true, tracking: { organizationId: orgId } },
@@ -1069,25 +1236,6 @@ CTA: [chamada para ação]`;
         } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute count leads]", err);
-        throw errors.INTERNAL_SERVER_ERROR;
-      }
-    }
-
-    // ── Generic count leads (no app prefix) ──────────────────────────────────
-    if (isCount && cmd.includes("lead")) {
-      try {
-        const count = await prisma.lead.count({
-          where: { isActive: true, tracking: { organizationId: orgId } },
-        });
-        return {
-          type: "query_result" as const,
-          title: "Total de leads",
-          description: `Você tem ${count.toLocaleString("pt-BR")} lead(s) ativo(s) no total.`,
-          appName: "Tracking",
-          extraData: { count },
-        } satisfies ExecuteOutput;
-      } catch (err) {
-        console.error("[nasa-command/execute count leads generic]", err);
         throw errors.INTERNAL_SERVER_ERROR;
       }
     }
@@ -1208,6 +1356,91 @@ CTA: [chamada para ação]`;
         } satisfies ExecuteOutput;
       } catch (err) {
         console.error("[nasa-command/execute pesquisar]", err);
+        throw errors.INTERNAL_SERVER_ERROR;
+      }
+    }
+
+    // ── WORKSPACE-LIST ────────────────────────────────────────────────────────
+    if (isWorkspaceQuery) {
+      const cost = STAR_COSTS.query;
+      await tryDebitStars(cost, "busca de workspaces");
+
+      try {
+        // Busca todos os workspaces da organização com colunas e contagem de cards
+        const workspaces = await prisma.workspace.findMany({
+          where: { organizationId: orgId, isArchived: false },
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            name: true,
+            columns: {
+              orderBy: { order: "asc" },
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                _count: { select: { actions: { where: { isArchived: false } } } },
+                actions: {
+                  where: { isArchived: false },
+                  orderBy: { order: "asc" },
+                  select: { id: true, title: true, isDone: true, priority: true },
+                },
+              },
+            },
+          },
+        });
+
+        if (workspaces.length === 0) {
+          return {
+            type: "query_result" as const,
+            title: "Nenhum workspace encontrado",
+            description: "Você ainda não tem workspaces criados nesta organização.",
+            url: "/workspaces",
+            appName: "Workspaces",
+            starsSpent: cost,
+          } satisfies ExecuteOutput;
+        }
+
+        // Formata a saída: workspace → colunas → cards
+        const lines: string[] = [];
+        const links: Array<{ label: string; url: string }> = [];
+
+        for (const ws of workspaces) {
+          const totalCards = ws.columns.reduce((s, c) => s + c._count.actions, 0);
+          lines.push(`📋 **${ws.name}** — ${totalCards} card(s)`);
+          links.push({ label: `Abrir ${ws.name}`, url: `/workspaces/${ws.id}` });
+
+          if (ws.columns.length === 0) {
+            lines.push("  └ Sem colunas cadastradas");
+          } else {
+            for (const col of ws.columns) {
+              const count = col._count.actions;
+              lines.push(`  📁 **${col.name}** (${count} card${count !== 1 ? "s" : ""})`);
+              for (const action of col.actions) {
+                const done = action.isDone ? "✅" : "⬜";
+                lines.push(`    ${done} ${action.title}`);
+              }
+            }
+          }
+          lines.push(""); // linha em branco entre workspaces
+        }
+
+        const totalGlobal = workspaces.reduce(
+          (s, ws) => s + ws.columns.reduce((c, col) => c + col._count.actions, 0),
+          0,
+        );
+
+        return {
+          type: "query_result" as const,
+          title: `${workspaces.length} workspace(s) encontrado(s) — ${totalGlobal} card(s) no total`,
+          description: lines.join("\n").trim(),
+          url: "/workspaces",
+          appName: "Workspaces",
+          starsSpent: cost,
+          resultLinks: links,
+        } satisfies ExecuteOutput;
+      } catch (err) {
+        console.error("[nasa-command/execute workspace-list]", err);
         throw errors.INTERNAL_SERVER_ERROR;
       }
     }

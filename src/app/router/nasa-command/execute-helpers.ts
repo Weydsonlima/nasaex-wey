@@ -8,6 +8,12 @@ import { IntegrationPlatform } from "@/generated/prisma/enums";
 // ─── Date/Time Helpers ────────────────────────────────────────────────────────
 
 export function parseDate(cmd: string): Date {
+  // Handle ISO string (e.g. "2026-03-31T10:50:36.434Z") — from partialContext re-use
+  const isoMatch = cmd.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  if (isoMatch) {
+    const d = new Date(isoMatch[0]);
+    if (!isNaN(d.getTime())) return d;
+  }
   if (cmd.includes("/amanhã") || cmd.includes("/amanha") || cmd.includes("amanhã") || cmd.includes("amanha")) {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -19,22 +25,64 @@ export function parseDate(cmd: string): Date {
     return d;
   }
   if (cmd.includes("hoje")) return new Date();
+  // Try "DD de MMMM" / "DD de MMMM de YYYY" (e.g. "01 de abril", "15 de junho de 2026")
+  const MONTHS: Record<string, number> = {
+    janeiro: 1, fevereiro: 2, março: 3, marco: 3, abril: 4, maio: 5, junho: 6,
+    julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+  };
+  const ptDateMatch = cmd.match(/(\d{1,2})\s+de\s+([a-záçêô]+)(?:\s+de\s+(\d{4}))?/i);
+  if (ptDateMatch) {
+    const day = parseInt(ptDateMatch[1]);
+    const month = MONTHS[ptDateMatch[2].toLowerCase()];
+    const year = ptDateMatch[3] ? parseInt(ptDateMatch[3]) : new Date().getFullYear();
+    if (month) {
+      const d = new Date(year, month - 1, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
   // Try DD.MM.AAAA pattern
   const dateMatch = cmd.match(/(\d{2})\.(\d{2})\.(\d{4})/);
   if (dateMatch) return new Date(`${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`);
   return new Date();
 }
 
-export function parseTime(cmd: string): string | null {
-  const match = cmd.match(/às?\s*(\d{1,2})h(\d{2})?/);
-  if (match) return `${String(match[1]).padStart(2, "0")}:${match[2] ?? "00"}`;
+// Normalise a time string from any format to "HH:mm"
+// Handles: "14h", "14h30", "14:00", "2 horas da tarde", "às 14h", "14 horas", "2pm", etc.
+export function normalizeTimeStr(raw: string): string | null {
+  const s = raw.toLowerCase().trim();
+  // Already HH:mm
+  if (/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5, "0");
+  // "Nh" or "Nh30" patterns
+  const hMatch = s.match(/(\d{1,2})h(\d{2})?/);
+  if (hMatch) return `${String(hMatch[1]).padStart(2, "0")}:${hMatch[2] ?? "00"}`;
+  // "N horas" / "N hora" (natural language)
+  const horasMatch = s.match(/(\d{1,2})\s*horas?/);
+  if (horasMatch) {
+    let h = parseInt(horasMatch[1]);
+    if (s.includes("tarde") || s.includes("noite")) h = h < 12 ? h + 12 : h;
+    return `${String(h).padStart(2, "0")}:00`;
+  }
+  // "N da tarde / noite / manhã"
+  const periodMatch = s.match(/(\d{1,2})\s*(?:da\s+)?(tarde|noite|manhã|manha)/);
+  if (periodMatch) {
+    let h = parseInt(periodMatch[1]);
+    const period = periodMatch[2];
+    if ((period === "tarde" || period === "noite") && h < 12) h += 12;
+    return `${String(h).padStart(2, "0")}:00`;
+  }
   return null;
 }
 
+export function parseTime(cmd: string): string | null {
+  return normalizeTimeStr(cmd);
+}
+
 export function buildDateTime(date: Date, timeStr: string): Date {
-  const [hours, minutes] = timeStr.split(":").map(Number);
+  // Normalise first in case timeStr is natural language
+  const normalized = normalizeTimeStr(timeStr) ?? timeStr;
+  const [hours, minutes] = normalized.split(":").map(Number);
   const d = new Date(date);
-  d.setHours(hours, minutes, 0, 0);
+  d.setHours(isNaN(hours) ? 9 : hours, isNaN(minutes) ? 0 : minutes, 0, 0);
   return d;
 }
 
@@ -50,6 +98,7 @@ export function parseParsedVars(command: string): Record<string, string> {
     const key = m[1] ?? m[3] ?? m[5] ?? m[7];
     const val = m[2] ?? m[4] ?? m[6] ?? m[8];
     if (key && val !== undefined) {
+      // LAST value wins — ISO dates from partialContext override human-readable ones
       result[key.toLowerCase()] = val;
     }
   }
@@ -202,6 +251,8 @@ export type ExecuteOutput = {
   url?: string;
   appName: string;
   extraData?: unknown;
+  /** Itens clicáveis exibidos abaixo da descrição (ex: lista de propostas, leads, etc.) */
+  resultLinks?: Array<{ label: string; url: string }>;
   missingFields?: Array<{ key: string; label: string }>;
   partialContext?: Record<string, string>;
   content?: string;

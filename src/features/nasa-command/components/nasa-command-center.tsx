@@ -1,6 +1,99 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+
+// ─── Recent requests (localStorage) ──────────────────────────────────────────
+
+const RECENT_KEY = "nasa-explorer:recent-commands";
+const RECENT_MAX = 8;
+
+function loadRecentCommands(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentCommand(cmd: string): string[] {
+  const trimmed = cmd.trim();
+  if (!trimmed) return loadRecentCommands();
+  const prev = loadRecentCommands().filter((c) => c !== trimmed);
+  const next = [trimmed, ...prev].slice(0, RECENT_MAX);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
+  return next;
+}
+
+// ─── Voice input hook (Web Speech API) ───────────────────────────────────────
+
+type VoiceState = "idle" | "listening" | "processing" | "unsupported";
+
+function useVoiceInput(onTranscript: (text: string) => void) {
+  const [voiceState, setVoiceState] = useState<VoiceState>("idle");
+  const voiceStateRef = useRef<VoiceState>("idle");
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const setVoice = (s: VoiceState) => {
+    voiceStateRef.current = s;
+    setVoiceState(s);
+  };
+
+  const isSupported = typeof window !== "undefined" &&
+    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+
+  const startListening = useCallback(() => {
+    if (!isSupported) {
+      setVoice("unsupported");
+      return;
+    }
+    if (voiceStateRef.current === "listening") {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const SpeechRecognitionAPI =
+      (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition })
+        .SpeechRecognition ??
+      (window as unknown as { webkitSpeechRecognition?: typeof SpeechRecognition })
+        .webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) return;
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.lang = "pt-BR";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    recognition.onstart = () => setVoice("listening");
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      setVoice("processing");
+      if (transcript.trim()) {
+        onTranscript(transcript.trim());
+      }
+      setTimeout(() => setVoice("idle"), 400);
+    };
+
+    recognition.onerror = () => setVoice("idle");
+    recognition.onend = () => {
+      // Só reseta se não houve resultado (onresult já gerencia o estado)
+      if (voiceStateRef.current === "listening") setVoice("idle");
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [isSupported, onTranscript]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setVoice("idle");
+  }, []);
+
+  return { voiceState, startListening, stopListening, isSupported };
+}
 import {
   EntitySearchField,
   PlainField,
@@ -20,19 +113,18 @@ import {
   Loader2,
   Bot,
   Sparkles,
-  Zap,
   Search,
   FileText,
-  Calendar,
   BarChart3,
-  MessageSquare,
   Package,
   Users,
   Lightbulb,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { IntegrationPlatform } from "@/generated/prisma/enums";
 import { toast } from "sonner";
@@ -49,18 +141,15 @@ import type { VariableCategory, AppItem } from "../data/variables";
 
 type DropdownType = "variable" | "app" | "plus" | null;
 
-interface RecentApp {
-  id: string;
-  name: string;
-  gradient: string;
-  url: string;
-  icon: React.ReactNode;
-}
-
 interface ExampleCategory {
   emoji: string;
   label: string;
   examples: string[];
+}
+
+interface ResultLink {
+  label: string;
+  url: string;
 }
 
 interface ResultData {
@@ -69,6 +158,7 @@ interface ResultData {
   description: string;
   url: string;
   appName: string;
+  resultLinks?: ResultLink[];
   missingFields?: Array<{ key: string; label: string }>;
   partialContext?: Record<string, unknown>;
   content?: string;
@@ -79,175 +169,73 @@ interface ResultData {
 // ─── Data ────────────────────────────────────────────────────────────────────
 // variableCategories, nasaApps, integrationApps, allApps são importados de ../data/variables
 
-const recentApps: RecentApp[] = [
-  {
-    id: "nasachat",
-    name: "NASACHAT",
-    gradient: "from-violet-600 to-purple-800",
-    url: "/tracking-chat",
-    icon: <MessageSquare className="w-5 h-5 text-white" />,
-  },
-  {
-    id: "linnker",
-    name: "LINNKER",
-    gradient: "from-cyan-500 to-blue-700",
-    url: "/integrations",
-    icon: <Link2 className="w-5 h-5 text-white" />,
-  },
-  {
-    id: "spacetime",
-    name: "SPACETIME",
-    gradient: "from-indigo-500 to-violet-700",
-    url: "/agendas",
-    icon: <Calendar className="w-5 h-5 text-white" />,
-  },
-  {
-    id: "forge",
-    name: "FORGE",
-    gradient: "from-orange-500 to-red-700",
-    url: "/forge",
-    icon: <Zap className="w-5 h-5 text-white" />,
-  },
-  {
-    id: "nasa-planner",
-    name: "NASA PLANNER",
-    gradient: "from-pink-500 to-rose-700",
-    url: "/nasa-planner",
-    icon: <Sparkles className="w-5 h-5 text-white" />,
-  },
-];
-
 const exampleCategories: ExampleCategory[] = [
-  // ── Criar Tracking ─────────────────────────────────────────────────────────
-  {
-    emoji: "📊",
-    label: "Criar Tracking (Pipeline)",
-    examples: [
-      'Crie um tracking chamado "Atendimento X" no #tracking',
-      'Crie um novo tracking chamado "Clientes 2026" no #tracking',
-      'Crie um tracking chamado "Suporte Técnico" no #tracking',
-      '/Add_tracking "Vendas Enterprise" no #tracking',
-      'Crie um tracking chamado "Parcerias /YYYY" no #tracking',
-    ],
-  },
-  // ── Criar Agenda & Agendamentos ────────────────────────────────────────────
+  // ── Agendamentos ──────────────────────────────────────────────────────────
   {
     emoji: "📅",
-    label: "Criar Agenda & Agendamentos",
+    label: "Agendamentos",
     examples: [
-      "Agende uma reunião no #agenda com /Francisco_Lima para /amanhã às 14h",
-      "Agende uma reunião no #agenda com /Maria_Costa para /hoje às 10h sobre /PRODUTX",
-      "Marque um follow-up com /João_Silva para /semana_que_vem às 09h e me manda /link_agendamento_criado",
-      "Agende reunião no #agenda com /Contato /Astro para /DD.MM.AAAA às /hh:mm:ss",
-      "Quais são os compromissos de /hoje no #agenda?",
+      "Quero criar um agendamento para amanhã às 14h",
+      "Agende uma reunião com Maria Costa para hoje às 10h",
+      "Marque um follow-up com João Silva para semana que vem às 09h",
+      "Quais são meus compromissos de hoje?",
     ],
   },
-  // ── Criar & Gerenciar Leads ────────────────────────────────────────────────
+  // ── Leads & Pipeline ──────────────────────────────────────────────────────
   {
     emoji: "🎯",
-    label: "Criar & Gerenciar Leads",
+    label: "Leads & Pipeline",
     examples: [
-      'Crie um novo lead chamado "João Pereira" no #tracking',
-      "/novo_lead /Francisco_Lima no #tracking com /tag VIP /Temperatura Quente /Responsável /Astro",
-      '/novo_lead "Empresa ABC" no #tracking com /E-mail contato@abc.com /Responsável /Weydson',
-      '/mover_lead /Maria_Costa para /status_tracking "Proposta Enviada" no #tracking',
-      "/mover_lead /João_Silva para /Ganho no #tracking",
-      "Quantos /lead ativos tenho no #tracking no total?",
+      "Crie um novo lead chamado João Pereira",
+      "Mova o lead Maria Costa para o status Proposta Enviada",
+      "Quantos leads ativos tenho no total?",
+      "Liste os leads do pipeline Vendas",
     ],
   },
-  // ── Empresa & Contatos ─────────────────────────────────────────────────────
-  {
-    emoji: "🏢",
-    label: "Empresa & Contatos",
-    examples: [
-      "/pesquisar /Empresa — busca todos os registros da empresa",
-      '/novo_lead /Empresa "Tech Solutions" /Contato "Ana Lima" /E-mail ana@tech.com no #tracking',
-      '/novo_lead /Empresa "Studio Digital" /Responsável /Astro /tag Agência no #tracking',
-      '/pesquisar "Studio Digital" — busca empresa, leads e responsáveis',
-      'Liste os leads da /Empresa "Tech Solutions" no #tracking',
-    ],
-  },
-  // ── Pesquisa Universal ─────────────────────────────────────────────────────
-  {
-    emoji: "🔍",
-    label: "Pesquisa Universal",
-    examples: [
-      "/pesquisar /Francisco_Lima — busca em leads, usuários, e-mails e trackings",
-      '/pesquisar "Atendimento X" — encontra o tracking pelo nome',
-      "/pesquisar /Weydson — todos os registros do /Responsável",
-      "/pesquisar contato@empresa.com — busca lead pelo /E-mail",
-      '/pesquisar "Clientes 2026" — busca tracking, leads e produtos',
-    ],
-  },
-  // ── Forge ──────────────────────────────────────────────────────────────────
+  // ── Propostas & Contratos ─────────────────────────────────────────────────
   {
     emoji: "🔥",
-    label: "Forge — Propostas e Contratos",
+    label: "Propostas & Contratos",
     examples: [
-      "Crie uma proposta no #forge para /Francisco_Lima do produto /PRODUTX com validade /amanhã e me manda /link_proposta_criada",
-      "Gere um contrato para /João_Silva referente ao /Plano_Pro com assinatura até /semana_que_vem",
-      'Crie uma proposta no #forge para /Empresa "Tech Solutions" produto /Consultoria /Responsável /Weydson',
-      "Liste todas as propostas abertas no #forge",
+      "Crie uma proposta para Maria do Amparo com validade hoje",
+      "Gere um contrato para João Silva referente ao Plano Pro",
+      "Liste todas as propostas abertas",
     ],
   },
-  // ── NASA Planner ──────────────────────────────────────────────────────────────
+  // ── Conteúdo & Posts ──────────────────────────────────────────────────────
   {
     emoji: "✨",
-    label: "NASA Planner — Conteúdo",
+    label: "Conteúdo & Posts",
     examples: [
-      'Crie um post para #instagram no #nasa-planner sobre o lançamento do /PRODUTX',
-      'Gere um carrossel de 5 slides no #nasa-planner com os benefícios do /Plano_Pro',
-      'Escreva uma legenda para #linkedin anunciando parceria com /Francisco_Lima e me manda /link_post_criado',
-      'Crie um post para #tiktok sobre os resultados do mês no #nasa-planner',
+      "Crie um post sobre o lançamento do nosso produto",
+      "Gere uma legenda para Instagram sobre os resultados do mês",
+      "Escreva um carrossel com os benefícios do Plano Pro",
     ],
   },
-  // ── Automações ─────────────────────────────────────────────────────────────
-  {
-    emoji: "⚡",
-    label: "Automações & Gatilhos",
-    examples: [
-      "Crie /Add_automacao: quando /novo_lead chegar, /Enviar_mensagem via #whatsapp e /Esperar /tempo_duracao 2h",
-      'Dispare /gatilho_manual na /Automacao "Boas-vindas" para o /lead /Francisco_Lima',
-      "Quando /IA_finalizou a análise, /Enviar_mensagem com resultado para /E-mail /Responsável",
-      'Configure /Assistente_chatbot no #nasachat para responder leads com /tag "Qualificado"',
-    ],
-  },
-  // ── Integrações ────────────────────────────────────────────────────────────
-  {
-    emoji: "🔌",
-    label: "Integrações",
-    examples: [
-      'Envie mensagem via #whatsapp para /Contato /Francisco_Lima: "Sua proposta está pronta!"',
-      'Poste no #instagram via #nasa-planner o conteúdo do /link_post_criado',
-      'Dispare /Enviar_mensagem pelo #telegram para /Responsável /Astro quando /novo_lead entrar',
-      'Sincronize /lead /Maria_Costa com #hubspot e atualize /status_tracking para "Integrado"',
-    ],
-  },
-  // ── Consultas Rápidas ──────────────────────────────────────────────────────
+  // ── Consultas Rápidas ─────────────────────────────────────────────────────
   {
     emoji: "💡",
     label: "Consultas Rápidas",
     examples: [
-      "Quais são minhas reuniões de /hoje?",
-      "Quantos /lead tenho no #tracking no total?",
       "Qual é meu saldo de estrelas atual?",
-      "Liste as propostas abertas no #forge",
-      "/pesquisar /Astro — todos os registros do usuário Astro",
+      "Quais são minhas reuniões de hoje?",
+      "Liste as propostas abertas",
+      "Quantos leads tenho no total?",
     ],
   },
 ];
 
 const rotatingExamples = [
-  'Crie um tracking chamado "Atendimento X" no #tracking',
-  "/pesquisar /Francisco_Lima — busca em leads, usuários e trackings",
-  "Agende reunião no #agenda com /Francisco_Lima para /amanhã às 14h",
-  '/novo_lead "João Pereira" no #tracking com /tag VIP /Responsável /Astro',
-  "Crie uma proposta no #forge para /Francisco_Lima e me manda /link_proposta_criada",
-  '/mover_lead /Maria_Costa para /status_tracking "Proposta Enviada" no #tracking',
-  'Gere um post no #nasa-planner sobre /PRODUTX para #instagram',
-  'Crie /Add_automacao: quando /novo_lead chegar /Enviar_mensagem via #whatsapp',
-  '/novo_lead /Empresa "Tech Solutions" /Responsável /Weydson /tag Agência no #tracking',
-  '/pesquisar "Atendimento X" — encontra o tracking pelo nome',
+  "Quero criar um agendamento para amanhã às 14h",
+  "Crie uma proposta para Maria do Amparo com validade hoje",
+  "Mova o lead João Silva para o status Proposta Enviada",
+  "Crie um post sobre o lançamento do nosso produto",
+  "Qual é meu saldo de estrelas atual?",
+  "Quantos leads ativos tenho no total?",
+  "Agende uma reunião com Carlos Lima para sexta às 10h",
+  "Gere uma legenda para Instagram sobre os resultados do mês",
+  "Liste as propostas abertas",
+  "Quais são meus compromissos de hoje?",
 ];
 
 // ─── Highlight Helper ─────────────────────────────────────────────────────────
@@ -611,42 +599,6 @@ function ResultOverlay({ result, onClose }: ResultOverlayProps) {
   );
 }
 
-// ─── Recent Apps ──────────────────────────────────────────────────────────────
-
-function RecentApps() {
-  return (
-    <div className="w-full">
-      <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 text-center">
-        Recentemente
-      </h3>
-      <div className="flex flex-wrap gap-3 justify-center">
-        {recentApps.map((app) => (
-          <a
-            key={app.id}
-            href={app.url}
-            className="flex items-center gap-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-xl px-3 py-2.5 transition-all group hover:bg-zinc-800/80"
-          >
-            <div
-              className={cn(
-                "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0",
-                app.gradient,
-              )}
-            >
-              {app.icon}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-white tracking-wide group-hover:text-white transition-colors">
-                {app.name}
-              </p>
-              <p className="text-[10px] text-zinc-600">by NASA®</p>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Example Library ─────────────────────────────────────────────────────────
 
 interface ExampleLibraryProps {
@@ -657,7 +609,7 @@ function ExampleLibrary({ onSelect }: ExampleLibraryProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="w-full">
+    <div className="w-full flex flex-col items-center">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
@@ -685,7 +637,7 @@ function ExampleLibrary({ onSelect }: ExampleLibraryProps) {
                 {cat.examples.map((example, i) => (
                   <button
                     key={i}
-                    onClick={() => onSelect(example)}
+                    onClick={() => { onSelect(example); setOpen(false); }}
                     className="w-full text-left text-xs text-zinc-500 hover:text-zinc-200 bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800/80 hover:border-zinc-700 rounded-lg px-3 py-2 transition-all leading-relaxed"
                   >
                     {example}
@@ -696,6 +648,49 @@ function ExampleLibrary({ onSelect }: ExampleLibraryProps) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Recent Requests ──────────────────────────────────────────────────────────
+
+interface RecentRequestsProps {
+  onSelect: (cmd: string) => void;
+  recent: string[];
+  onClear: () => void;
+}
+
+function RecentRequests({ onSelect, recent, onClear }: RecentRequestsProps) {
+  if (recent.length === 0) return null;
+
+  return (
+    <div className="w-full flex flex-col items-center gap-3">
+      <div className="flex items-center justify-between w-full max-w-xl">
+        <span className="flex items-center gap-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+          <Search className="w-3.5 h-3.5" />
+          Últimas solicitações
+        </span>
+        <button
+          onClick={onClear}
+          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+        >
+          Limpar
+        </button>
+      </div>
+      <div className="w-full max-w-xl space-y-1.5">
+        {recent.map((cmd, i) => (
+          <button
+            key={i}
+            onClick={() => onSelect(cmd)}
+            className="w-full text-left flex items-center gap-2.5 bg-zinc-900/40 hover:bg-zinc-800/70 border border-zinc-800/60 hover:border-zinc-700 rounded-lg px-3 py-2 transition-all group"
+          >
+            <BarChart3 className="w-3 h-3 text-zinc-600 group-hover:text-violet-400 shrink-0 transition-colors" />
+            <span className="text-xs text-zinc-500 group-hover:text-zinc-200 truncate transition-colors">
+              {cmd}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1173,6 +1168,24 @@ function ResponseCard({ result, onClose, onContinue, onConfirm }: ResponseCardPr
             {result.description}
           </p>
 
+          {/* result_links: lista de itens clicáveis (ex: propostas, leads) */}
+          {result.resultLinks && result.resultLinks.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {result.resultLinks.map((link, i) => (
+                <a
+                  key={i}
+                  href={link.url}
+                  className="flex items-center justify-between gap-2 w-full bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 hover:border-zinc-600 rounded-lg px-3 py-2 transition-all group"
+                >
+                  <span className="text-xs text-zinc-300 group-hover:text-white truncate">
+                    {link.label}
+                  </span>
+                  <ExternalLink className="w-3 h-3 text-zinc-600 group-hover:text-violet-400 shrink-0 transition-colors" />
+                </a>
+              ))}
+            </div>
+          )}
+
           {/* needs_input: smart search fields for each missing field */}
           {isNeedsInput && result.missingFields && result.missingFields.length > 0 && (
             <div className="mt-4 space-y-3">
@@ -1283,6 +1296,7 @@ interface CommandInputProps {
   setCommand: (v: string) => void;
   loading: boolean;
   onSubmit: () => void;
+  onVoiceTranscript: (text: string) => void;
   model: ModelType;
   setModel: (v: ModelType) => void;
   dropdown: DropdownType;
@@ -1298,6 +1312,7 @@ function CommandInput({
   setCommand,
   loading,
   onSubmit,
+  onVoiceTranscript,
   model,
   setModel,
   dropdown,
@@ -1305,6 +1320,7 @@ function CommandInput({
   dropdownSearch,
   setDropdownSearch,
 }: CommandInputProps) {
+  const { voiceState, startListening } = useVoiceInput(onVoiceTranscript);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -1439,13 +1455,36 @@ function CommandInput({
                 <PlusMenu onClose={() => setDropdown(null)} />
               )}
             </div>
-            <span className="text-[11px] text-zinc-600">
-              Adicione{" "}
-              <kbd className="bg-zinc-800 text-zinc-500 px-1 py-0.5 rounded text-[10px] font-mono">
-                /
-              </kbd>{" "}
-              variáveis — o app é detectado automaticamente
-            </span>
+
+            {/* ── Mic button ── */}
+            <button
+              type="button"
+              onClick={startListening}
+              disabled={loading || voiceState === "unsupported"}
+              title={
+                voiceState === "unsupported"
+                  ? "Navegador não suporta reconhecimento de voz"
+                  : voiceState === "listening"
+                  ? "Ouvindo... clique para parar"
+                  : "Falar comando"
+              }
+              className={cn(
+                "w-7 h-7 flex items-center justify-center rounded-lg border transition-all",
+                voiceState === "listening"
+                  ? "bg-red-500/20 border-red-500/60 text-red-400 animate-pulse"
+                  : voiceState === "processing"
+                  ? "bg-violet-500/20 border-violet-500/60 text-violet-400"
+                  : voiceState === "unsupported"
+                  ? "bg-zinc-800 border-zinc-700/50 text-zinc-600 cursor-not-allowed opacity-40"
+                  : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700/50 text-zinc-400 hover:text-white",
+              )}
+            >
+              {voiceState === "listening" ? (
+                <MicOff className="w-3.5 h-3.5" />
+              ) : (
+                <Mic className="w-3.5 h-3.5" />
+              )}
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <ModelSelector value={model} onChange={setModel} />
@@ -1492,9 +1531,11 @@ function CommandInput({
 interface WelcomeScreenProps {
   onSelect: (e: string) => void;
   commandInputProps: CommandInputProps;
+  recentCommands: string[];
+  onClearRecent: () => void;
 }
 
-function WelcomeScreen({ onSelect, commandInputProps }: WelcomeScreenProps) {
+function WelcomeScreen({ onSelect, commandInputProps, recentCommands, onClearRecent }: WelcomeScreenProps) {
   return (
     <div className="flex flex-col items-center w-full min-h-full px-4 py-10 sm:py-14 select-none">
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-6">
@@ -1512,15 +1553,17 @@ function WelcomeScreen({ onSelect, commandInputProps }: WelcomeScreenProps) {
           <CommandInput {...commandInputProps} />
         </div>
 
-        {/* 3. Apps recentes */}
-        <div className="w-full">
-          <RecentApps />
-        </div>
-
-        {/* 4. Biblioteca de exemplos */}
-        <div className="w-full">
+        {/* 3. Biblioteca de exemplos */}
+        <div className="w-full flex flex-col items-center">
           <ExampleLibrary onSelect={onSelect} />
         </div>
+
+        {/* 4. Últimas solicitações */}
+        <RecentRequests
+          recent={recentCommands}
+          onSelect={onSelect}
+          onClear={onClearRecent}
+        />
       </div>
     </div>
   );
@@ -1535,7 +1578,9 @@ export function NasaCommandCenter() {
   const [model, setModel] = useState<ModelType>("astro");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [recentCommands, setRecentCommands] = useState<string[]>(() => loadRecentCommands());
   const bottomRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   const executeCommand = useMutation(
     orpc.nasaCommand.execute.mutationOptions(),
@@ -1546,11 +1591,12 @@ export function NasaCommandCenter() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const submitCommand = async (userText: string) => {
+  const submitCommand = useCallback(async (userText: string) => {
     if (!userText.trim() || loading) return;
     setLoading(true);
     setCommand("");
     setDropdown(null);
+    setRecentCommands(saveRecentCommand(userText));
 
     const thinkingSteps = buildThinkingSteps(userText);
     const msgId = Math.random().toString(36).slice(2);
@@ -1581,6 +1627,7 @@ export function NasaCommandCenter() {
                   description: res.description,
                   url: res.url ?? "/home",
                   appName: res.appName,
+                  resultLinks: res.resultLinks,
                   missingFields: res.missingFields,
                   partialContext: res.partialContext,
                   content: res.content,
@@ -1615,13 +1662,24 @@ export function NasaCommandCenter() {
       toast.error(message);
     } finally {
       setLoading(false);
+      // Atualiza saldo de stars imediatamente após o comando
+      queryClient.invalidateQueries({
+        queryKey: orpc.stars.getBalance.queryOptions().queryKey,
+      });
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model, queryClient]);
 
   const handleSubmit = async () => {
     if (!command.trim() || loading) return;
     await submitCommand(command.trim());
   };
+
+  // Chamado pelo hook de voz quando o transcript chega → envia direto
+  const handleVoiceTranscript = useCallback((text: string) => {
+    if (!text.trim() || loading) return;
+    submitCommand(text.trim());
+  }, [loading, submitCommand]);
 
   // Re-submit with extra /"key"="value" pairs appended to the original command
   const handleContinue = (originalCommand: string) => (extra: string) => {
@@ -1630,22 +1688,19 @@ export function NasaCommandCenter() {
   };
 
   // Handle confirmation option button clicks
-  const handleConfirm = (originalCommand: string, partialContext: Record<string, unknown>) => (key: string) => {
-    // Build partialContext pairs from whatever was already parsed
-    const ctxPairs = Object.entries(partialContext)
-      .map(([k, v]) => `/"${k}"="${String(v)}"`)
-      .join(" ");
-
+  // NOTE: originalCommand already contains all /"key"="value" pairs from the previous step.
+  // We only append the NEW decision key — never re-append ctxPairs to avoid duplicates.
+  const handleConfirm = (originalCommand: string, _partialContext: Record<string, unknown>) => (key: string) => {
     if (key.startsWith("lead_")) {
       const leadId = key.replace("lead_", "");
-      submitCommand(`${originalCommand} ${ctxPairs} /"lead_id"="${leadId}" /"lead_confirmed"="true"`);
+      submitCommand(`${originalCommand} /"lead_id"="${leadId}" /"lead_confirmed"="true"`);
     } else if (key === "create_new_lead") {
-      submitCommand(`${originalCommand} ${ctxPairs} /"create_new_lead"="true"`);
+      submitCommand(`${originalCommand} /"create_new_lead"="true"`);
     } else if (key.startsWith("status_")) {
       const statusId = key.replace("status_", "");
-      submitCommand(`${originalCommand} ${ctxPairs} /"status_id"="${statusId}"`);
+      submitCommand(`${originalCommand} /"status_id"="${statusId}"`);
     } else {
-      submitCommand(`${originalCommand} ${ctxPairs} /"${key}"="true"`);
+      submitCommand(`${originalCommand} /"${key}"="true"`);
     }
   };
 
@@ -1664,6 +1719,7 @@ export function NasaCommandCenter() {
     setCommand,
     loading,
     onSubmit: handleSubmit,
+    onVoiceTranscript: handleVoiceTranscript,
     model,
     setModel,
     dropdown,
@@ -1690,6 +1746,11 @@ export function NasaCommandCenter() {
           <WelcomeScreen
             onSelect={fillExample}
             commandInputProps={commandInputProps}
+            recentCommands={recentCommands}
+            onClearRecent={() => {
+              localStorage.removeItem("nasa-explorer:recent-commands");
+              setRecentCommands([]);
+            }}
           />
         ) : (
           <div className="max-w-3xl mx-auto px-3 sm:px-4 pt-4 pb-4 space-y-2">
@@ -1704,7 +1765,7 @@ export function NasaCommandCenter() {
                 {msg.role === "assistant" && !msg.isThinking && msg.result && (
                   <ResponseCard
                     result={msg.result}
-                    onClose={() => removeMessage(msg.id)}
+                    onClose={() => setMessages([])}
                     onContinue={msg.originalCommand ? handleContinue(msg.originalCommand) : undefined}
                     onConfirm={msg.originalCommand ? handleConfirm(msg.originalCommand, msg.result.partialContext ?? {}) : undefined}
                   />

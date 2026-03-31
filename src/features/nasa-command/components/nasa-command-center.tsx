@@ -1337,7 +1337,7 @@ function WelcomeScreen({ onSelect, commandInputProps }: WelcomeScreenProps) {
         <div className="flex flex-col items-center gap-2">
           <NasaLogo className="w-[180px] sm:w-[240px] h-auto opacity-95" />
           <p className="text-[10px] font-bold tracking-[0.35em] text-zinc-500 uppercase">
-            Command Center
+            EXPLORER
           </p>
           <RotatingExample />
         </div>

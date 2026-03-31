@@ -153,6 +153,25 @@ export const useUpdateColumn = () => {
   );
 };
 
+export const useUpdateColumnOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    orpc.column.updateNewOrder.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(
+          orpc.workspace.getColumnsByWorkspace.queryOptions({
+            input: { workspaceId: data.workspaceId },
+          }),
+        );
+      },
+      onError: () => {
+        toast.error("Erro ao reordenar coluna!");
+      },
+    }),
+  );
+};
+
 export const useDeleteColumn = () => {
   const queryClient = useQueryClient();
 
@@ -238,7 +257,9 @@ export const useCreateTag = () => {
       onSuccess: (data) => {
         toast.success("Tag criada!");
         queryClient.invalidateQueries(
-          orpc.workspace.listTags.queryOptions({ input: { workspaceId: data.tag.workspaceId } }),
+          orpc.workspace.listTags.queryOptions({
+            input: { workspaceId: data.tag.workspaceId },
+          }),
         );
       },
       onError: () => toast.error("Erro ao criar tag!"),
@@ -252,7 +273,9 @@ export const useUpdateTag = () => {
     orpc.workspace.updateTag.mutationOptions({
       onSuccess: (data) => {
         queryClient.invalidateQueries(
-          orpc.workspace.listTags.queryOptions({ input: { workspaceId: data.tag.workspaceId } }),
+          orpc.workspace.listTags.queryOptions({
+            input: { workspaceId: data.tag.workspaceId },
+          }),
         );
       },
       onError: () => toast.error("Erro ao atualizar tag!"),
@@ -317,7 +340,9 @@ export const useCreateFolder = () => {
     orpc.workspace.createFolder.mutationOptions({
       onSuccess: () => {
         toast.success("Pasta criada!");
-        queryClient.invalidateQueries(orpc.workspace.listFolders.queryOptions({ input: {} }));
+        queryClient.invalidateQueries(
+          orpc.workspace.listFolders.queryOptions({ input: {} }),
+        );
       },
       onError: () => toast.error("Erro ao criar pasta!"),
     }),
@@ -330,7 +355,9 @@ export const useDeleteFolder = () => {
     orpc.workspace.deleteFolder.mutationOptions({
       onSuccess: () => {
         toast.success("Pasta removida!");
-        queryClient.invalidateQueries(orpc.workspace.listFolders.queryOptions({ input: {} }));
+        queryClient.invalidateQueries(
+          orpc.workspace.listFolders.queryOptions({ input: {} }),
+        );
       },
       onError: () => toast.error("Erro ao remover pasta!"),
     }),
@@ -356,7 +383,9 @@ export const useCreateAutomation = () => {
       onSuccess: (data) => {
         toast.success("Automação criada!");
         queryClient.invalidateQueries(
-          orpc.workspace.listAutomations.queryOptions({ input: { workspaceId: data.automation.workspaceId } }),
+          orpc.workspace.listAutomations.queryOptions({
+            input: { workspaceId: data.automation.workspaceId },
+          }),
         );
       },
       onError: () => toast.error("Erro ao criar automação!"),
@@ -370,7 +399,9 @@ export const useUpdateAutomation = () => {
     orpc.workspace.updateAutomation.mutationOptions({
       onSuccess: (data) => {
         queryClient.invalidateQueries(
-          orpc.workspace.listAutomations.queryOptions({ input: { workspaceId: data.automation.workspaceId } }),
+          orpc.workspace.listAutomations.queryOptions({
+            input: { workspaceId: data.automation.workspaceId },
+          }),
         );
       },
       onError: () => toast.error("Erro ao atualizar automação!"),
@@ -386,10 +417,14 @@ export const useDeleteAutomation = (workspaceId?: string) => {
         toast.success("Automação removida!");
         if (workspaceId) {
           queryClient.invalidateQueries(
-            orpc.workspace.listAutomations.queryOptions({ input: { workspaceId } }),
+            orpc.workspace.listAutomations.queryOptions({
+              input: { workspaceId },
+            }),
           );
         } else {
-          queryClient.invalidateQueries({ queryKey: ["workspace.listAutomations"] });
+          queryClient.invalidateQueries({
+            queryKey: ["workspace.listAutomations"],
+          });
         }
       },
       onError: () => toast.error("Erro ao remover automação!"),
@@ -450,10 +485,15 @@ export const useShareAction = () => {
   return useMutation(
     orpc.workspace.shareAction.mutationOptions({
       onSuccess: (data) => {
-        toast.success(`Card enviado para ${data.targetOrgName}! Aguardando aprovação.`);
-        queryClient.invalidateQueries(orpc.workspace.listOutgoingShares.queryOptions({ input: {} }));
+        toast.success(
+          `Card enviado para ${data.targetOrgName}! Aguardando aprovação.`,
+        );
+        queryClient.invalidateQueries(
+          orpc.workspace.listOutgoingShares.queryOptions({ input: {} }),
+        );
       },
-      onError: (error: any) => toast.error(error.message || "Erro ao compartilhar card!"),
+      onError: (error: any) =>
+        toast.error(error.message || "Erro ao compartilhar card!"),
     }),
   );
 };
@@ -481,8 +521,12 @@ export const useApproveShare = () => {
   return useMutation(
     orpc.workspace.approveShare.mutationOptions({
       onSuccess: () => {
-        toast.success("Compartilhamento aprovado! Card copiado para o workspace.");
-        queryClient.invalidateQueries(orpc.workspace.listIncomingShares.queryOptions({ input: {} }));
+        toast.success(
+          "Compartilhamento aprovado! Card copiado para o workspace.",
+        );
+        queryClient.invalidateQueries(
+          orpc.workspace.listIncomingShares.queryOptions({ input: {} }),
+        );
         queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
       },
       onError: (error: any) => toast.error(error.message || "Erro ao aprovar!"),
@@ -496,9 +540,12 @@ export const useRejectShare = () => {
     orpc.workspace.rejectShare.mutationOptions({
       onSuccess: () => {
         toast.success("Compartilhamento rejeitado.");
-        queryClient.invalidateQueries(orpc.workspace.listIncomingShares.queryOptions({ input: {} }));
+        queryClient.invalidateQueries(
+          orpc.workspace.listIncomingShares.queryOptions({ input: {} }),
+        );
       },
-      onError: (error: any) => toast.error(error.message || "Erro ao rejeitar!"),
+      onError: (error: any) =>
+        toast.error(error.message || "Erro ao rejeitar!"),
     }),
   );
 };

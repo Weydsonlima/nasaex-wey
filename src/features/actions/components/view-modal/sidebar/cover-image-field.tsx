@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarField } from "./sidebar-field";
 import { Uploader } from "@/components/file-uploader/uploader";
 import { useConstructUrl } from "@/hooks/use-construct-url";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Props {
   coverImage: string | null;
@@ -15,11 +15,44 @@ interface Props {
 
 export function CoverImageField({ coverImage, onUpdate, disabled }: Props) {
   const [editing, setEditing] = useState(false);
-  const imageUrl = useConstructUrl(coverImage || "");
+  const [localKey, setLocalKey] = useState<string | null>(coverImage);
+  
+  // Synchronize local state with the prop when it changes externally
+  useEffect(() => {
+    setLocalKey(coverImage);
+  }, [coverImage]);
+
+  // Use localKey for immediate UI feedback before the parent state updates
+  const imageUrl = useConstructUrl(localKey || "");
+
+  const handleUpdate = (newKey: string | null) => {
+    const normalizedKey = newKey || null;
+    setLocalKey(normalizedKey);
+    onUpdate(normalizedKey);
+    setEditing(false);
+  };
 
   return (
     <SidebarField label="Imagem de Capa" icon={<ImageIcon className="size-3.5" />}>
-      {coverImage && imageUrl ? (
+      {editing ? (
+        <div className="space-y-2">
+          <Uploader
+            value={localKey || ""}
+            onConfirm={(key) => handleUpdate(key || null)}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 text-xs"
+            onClick={() => {
+              setEditing(false);
+              setLocalKey(coverImage); // Reset local state on cancel
+            }}
+          >
+            Cancelar
+          </Button>
+        </div>
+      ) : (localKey && imageUrl) ? (
         <div className="relative rounded-md overflow-hidden group">
           <img
             src={imageUrl}
@@ -40,30 +73,12 @@ export function CoverImageField({ coverImage, onUpdate, disabled }: Props) {
                 size="icon"
                 variant="destructive"
                 className="size-6"
-                onClick={() => onUpdate(null)}
+                onClick={() => handleUpdate(null)}
               >
                 <XIcon className="size-3" />
               </Button>
             </div>
           )}
-        </div>
-      ) : editing ? (
-        <div className="space-y-2">
-          <Uploader
-            value=""
-            onConfirm={(url) => {
-              onUpdate(url || null);
-              setEditing(false);
-            }}
-          />
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 text-xs"
-            onClick={() => setEditing(false)}
-          >
-            Cancelar
-          </Button>
         </div>
       ) : (
         <Button

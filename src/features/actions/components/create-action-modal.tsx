@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "./data-picker";
+import dayjs from "dayjs";
 
 interface Props {
   open: boolean;
@@ -63,8 +64,8 @@ export const CreateActionModal = ({
       priority: "MEDIUM",
       title: "",
       description: "",
-      dueDate: undefined,
-      startDate: undefined,
+      startDate: dayjs().startOf("day").toDate(),
+      dueDate: dayjs().add(1, "day").startOf("day").toDate(),
       columnId: defaultColumnId ?? "",
     },
   });
@@ -244,4 +245,3 @@ export const CreateActionModal = ({
     </Dialog>
   );
 };
-

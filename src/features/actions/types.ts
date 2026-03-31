@@ -53,6 +53,7 @@ export interface Action {
       };
     }[];
   }[];
+
   // Sprint 2 fields
   attachments: { name: string; url: string; type?: string }[];
   links: { title: string; url: string }[];
@@ -60,7 +61,12 @@ export interface Action {
   coverImage: string | null;
   isArchived: boolean;
   isFavorited: boolean;
-  history: { type: string; userId: string; timestamp: string; changes?: string[] }[];
+  history: {
+    type: string;
+    userId: string;
+    timestamp: string;
+    changes?: string[];
+  }[];
   tags: {
     tag: {
       id: string;

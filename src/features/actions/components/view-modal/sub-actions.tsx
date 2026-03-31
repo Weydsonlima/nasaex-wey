@@ -36,7 +36,11 @@ interface SubActionsProps {
   onDelete: (id: string) => void;
   onUpdate: (
     id: string,
-    data: { description?: string | null; finishDate?: Date | null },
+    data: {
+      title?: string;
+      description?: string | null;
+      finishDate?: Date | null;
+    },
   ) => void;
   onAddResponsible: (subActionId: string, userId: string) => void;
   onRemoveResponsible: (subActionId: string, userId: string) => void;
@@ -62,6 +66,7 @@ export function ActionSubActions({
   isUpdating,
 }: SubActionsProps) {
   const [newSubActionTitle, setNewSubActionTitle] = useState("");
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [addingSubAction, setAddingSubAction] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const subActionInputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +141,7 @@ export function ActionSubActions({
       <div className="space-y-1">
         {subActions.map((sub) => {
           const isExpanded = expandedId === sub.id;
+          const isEditingTitle = editingTitleId === sub.id;
           const finishDateValue = sub.finishDate
             ? new Date(sub.finishDate).toISOString().split("T")[0]
             : "";
@@ -153,15 +159,41 @@ export function ActionSubActions({
                   className="shrink-0"
                 />
 
-                <button
-                  className={cn(
-                    "flex-1 text-sm text-left",
-                    sub.isDone && "line-through text-muted-foreground",
-                  )}
-                  onClick={() => setExpandedId(isExpanded ? null : sub.id)}
-                >
-                  {sub.title}
-                </button>
+                {isEditingTitle ? (
+                  <Input
+                    autoFocus
+                    defaultValue={sub.title}
+                    className="h-7 text-sm flex-1"
+                    onBlur={(e) => {
+                      const val = e.target.value.trim();
+                      if (val && val !== sub.title) {
+                        onUpdate(sub.id, { title: val });
+                      }
+                      setEditingTitleId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const val = e.currentTarget.value.trim();
+                        if (val && val !== sub.title) {
+                          onUpdate(sub.id, { title: val });
+                        }
+                        setEditingTitleId(null);
+                      }
+                      if (e.key === "Escape") setEditingTitleId(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    className={cn(
+                      "flex-1 text-sm text-left truncate py-0.5",
+                      sub.isDone && "line-through text-muted-foreground",
+                    )}
+                    onClick={() => setExpandedId(isExpanded ? null : sub.id)}
+                    onDoubleClick={() => setEditingTitleId(sub.id)}
+                  >
+                    {sub.title}
+                  </button>
+                )}
 
                 {/* Responsible avatars */}
                 {sub.responsibles.length > 0 && (
@@ -208,6 +240,13 @@ export function ActionSubActions({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem
+                      onClick={() => setEditingTitleId(sub.id)}
+                      className="gap-2"
+                    >
+                      <PlusIcon className="size-3.5 rotate-45" />
+                      Renomear
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       onClick={() => onPromote(sub.id)}
                       disabled={isUpdating}
                       className="gap-2"
@@ -231,6 +270,33 @@ export function ActionSubActions({
               {/* Expanded details */}
               {isExpanded && (
                 <div className="px-3 pb-3 space-y-3 border-t border-border/50 mt-0.5 pt-2.5">
+                  {/* Title Editing in Expanded Mode as well */}
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                      Título
+                    </p>
+                    <Input
+                      placeholder="Título da sub-ação..."
+                      defaultValue={sub.title}
+                      onBlur={(e) => {
+                        const val = e.target.value.trim();
+                        if (val && val !== sub.title) {
+                          onUpdate(sub.id, { title: val });
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const val = e.currentTarget.value.trim();
+                          if (val && val !== sub.title) {
+                            onUpdate(sub.id, { title: val });
+                          }
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      className="h-8 text-xs font-medium"
+                    />
+                  </div>
+
                   {/* Description */}
                   <div>
                     <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">

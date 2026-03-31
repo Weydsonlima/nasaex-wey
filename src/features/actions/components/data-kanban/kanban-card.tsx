@@ -26,18 +26,18 @@ interface Props {
 }
 
 const PRIORITY_COLOR: Record<ActionPriority, string> = {
-  [ActionPriority.NONE]:   "#6B7280",
-  [ActionPriority.LOW]:    "#22c55e",
+  [ActionPriority.NONE]: "#6B7280",
+  [ActionPriority.LOW]: "#22c55e",
   [ActionPriority.MEDIUM]: "#eab308",
-  [ActionPriority.HIGH]:   "#f97316",
+  [ActionPriority.HIGH]: "#f97316",
   [ActionPriority.URGENT]: "#ef4444",
 };
 
 const PRIORITY_LABEL: Record<ActionPriority, string | null> = {
-  [ActionPriority.NONE]:   null,
-  [ActionPriority.LOW]:    "Baixa",
+  [ActionPriority.NONE]: null,
+  [ActionPriority.LOW]: "Baixa",
   [ActionPriority.MEDIUM]: "Média",
-  [ActionPriority.HIGH]:   "Alta",
+  [ActionPriority.HIGH]: "Alta",
   [ActionPriority.URGENT]: "Urgente",
 };
 
@@ -45,21 +45,26 @@ function formatDueDate(date: Date) {
   const overdue = isPast(date) && !isToday(date);
   const today = isToday(date);
   const tomorrow = isTomorrow(date);
-  const label = today ? "Hoje" : tomorrow ? "Amanhã" : format(date, "dd MMM", { locale: ptBR });
+  const label = today
+    ? "Hoje"
+    : tomorrow
+      ? "Amanhã"
+      : format(date, "dd MMM", { locale: ptBR });
   return { label, overdue, today };
 }
 
 // Placeholder cover shown when card has no image
-const PLACEHOLDER_BG = "bg-gradient-to-br from-muted to-muted/40";
+const PLACEHOLDER_BG = "bg-linear-to-br from-muted to-muted/40";
 
 export function KanbanCard({ action }: Props) {
   const [open, setOpen] = useState(false);
   const coverUrl = useConstructUrl((action as any).coverImage || "");
 
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: action.id,
-    data: { type: "Action", action },
-  });
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({
+      id: action.id,
+      data: { type: "Action", action },
+    });
 
   const style = { transition, transform: CSS.Translate.toString(transform) };
 
@@ -68,7 +73,7 @@ export function KanbanCard({ action }: Props) {
   const priorityColor = PRIORITY_COLOR[action.priority];
   const doneSubActions = action.subActions.filter((s) => s.isDone).length;
   const totalSubActions = action.subActions.length;
-  const tags = (action as any).tags as { tag: { id: string; name: string; color: string } }[] | undefined;
+  const tags = action.tags ? action.tags : [];
   const attachments = ((action as any).attachments ?? []) as any[];
   const hasDescription = !!action.description;
   const dueDateInfo = action.dueDate ? formatDueDate(action.dueDate) : null;
@@ -89,54 +94,65 @@ export function KanbanCard({ action }: Props) {
         )}
       >
         {/* ── COVER IMAGE ─────────────────────────────────── */}
-        <div className={cn("relative w-full h-36 overflow-hidden", !hasCover && PLACEHOLDER_BG)}>
-          {hasCover ? (
-            <img
-              src={coverUrl}
-              alt="Capa"
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-          ) : (
-            /* Subtle gradient placeholder */
-            <div className="absolute inset-0 flex items-center justify-center opacity-20">
-              <AlignLeftIcon className="size-8 text-foreground" />
-            </div>
-          )}
-
-          {/* 3-dot menu – top right */}
+        {hasCover && (
           <div
-            className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "relative w-full h-36 overflow-hidden",
+              !hasCover && PLACEHOLDER_BG,
+            )}
           >
-            <CardActionsMenu
-              actionId={action.id}
-              workspaceId={action.workspaceId}
-              isFavorited={(action as any).isFavorited}
-              isArchived={(action as any).isArchived}
-              className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
-            />
-          </div>
+            {hasCover ? (
+              <img
+                src={coverUrl}
+                alt="Capa"
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                <AlignLeftIcon className="size-8 text-foreground" />
+              </div>
+            )}
 
-          {/* Favorite star */}
-          {(action as any).isFavorited && (
-            <div className="absolute top-2 left-2">
-              <StarIcon className="size-4 fill-yellow-400 text-yellow-400 drop-shadow" />
+            {/* 3-dot menu – top right */}
+            <div
+              className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardActionsMenu
+                actionId={action.id}
+                workspaceId={action.workspaceId}
+                isFavorited={(action as any).isFavorited}
+                isArchived={(action as any).isArchived}
+                className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
+              />
             </div>
-          )}
-        </div>
+
+            {/* Favorite star */}
+            {(action as any).isFavorited && (
+              <div className="absolute top-2 left-2">
+                <StarIcon className="size-4 fill-yellow-400 text-yellow-400 drop-shadow" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── CONTENT AREA ────────────────────────────────── */}
         <div className="px-3 pt-2.5 pb-3 space-y-2">
-
           {/* Status row: priority pill + done badge */}
           <div className="flex items-center gap-2">
             {priorityLabel && (
               <span
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ backgroundColor: priorityColor + "22", color: priorityColor }}
+                style={{
+                  backgroundColor: priorityColor + "22",
+                  color: priorityColor,
+                }}
               >
-                <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: priorityColor }} />
+                <span
+                  className="size-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: priorityColor }}
+                />
                 {priorityLabel}
               </span>
             )}
@@ -147,22 +163,43 @@ export function KanbanCard({ action }: Props) {
               </span>
             )}
             {/* Tags */}
-            {tags && tags.slice(0, 2).map(({ tag }) => (
-              <span
-                key={tag.id}
-                className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-medium truncate max-w-[80px]"
-                style={{ backgroundColor: tag.color + "22", color: tag.color }}
+            {tags &&
+              tags.slice(0, 2).map(({ tag }) => (
+                <span
+                  key={tag.id}
+                  className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-medium truncate max-w-[80px]"
+                  style={{
+                    backgroundColor: tag.color + "22",
+                    color: tag.color,
+                  }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+
+            {/* {!hasCover && (
+              <div
+                className="ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
               >
-                {tag.name}
-              </span>
-            ))}
+                <CardActionsMenu
+                  actionId={action.id}
+                  workspaceId={action.workspaceId}
+                  isFavorited={(action as any).isFavorited}
+                  isArchived={(action as any).isArchived}
+                  className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
+                />
+              </div>
+            )} */}
           </div>
 
           {/* Title */}
-          <p className={cn(
-            "text-sm font-semibold leading-snug line-clamp-2",
-            action.isDone && "line-through text-muted-foreground",
-          )}>
+          <p
+            className={cn(
+              "text-sm font-semibold leading-snug line-clamp-2",
+              action.isDone && "line-through text-muted-foreground",
+            )}
+          >
             {action.title}
           </p>
 
@@ -182,21 +219,25 @@ export function KanbanCard({ action }: Props) {
               )}
 
               {totalSubActions > 0 && (
-                <span className={cn(
-                  "flex items-center gap-0.5 text-[11px]",
-                  doneSubActions === totalSubActions && "text-emerald-500",
-                )}>
+                <span
+                  className={cn(
+                    "flex items-center gap-0.5 text-[11px]",
+                    doneSubActions === totalSubActions && "text-emerald-500",
+                  )}
+                >
                   <ListTodoIcon className="size-3.5 shrink-0" />
                   {doneSubActions}/{totalSubActions}
                 </span>
               )}
 
               {dueDateInfo && (
-                <span className={cn(
-                  "flex items-center gap-0.5 text-[11px]",
-                  dueDateInfo.overdue && "text-red-500 font-medium",
-                  dueDateInfo.today && "text-orange-500 font-medium",
-                )}>
+                <span
+                  className={cn(
+                    "flex items-center gap-0.5 text-[11px]",
+                    dueDateInfo.overdue && "text-red-500 font-medium",
+                    dueDateInfo.today && "text-orange-500 font-medium",
+                  )}
+                >
                   <CalendarIcon className="size-3.5 shrink-0" />
                   <span className="capitalize">{dueDateInfo.label}</span>
                 </span>
@@ -207,7 +248,10 @@ export function KanbanCard({ action }: Props) {
             {action.participants.length > 0 && (
               <div className="flex -space-x-1.5 shrink-0">
                 {action.participants.slice(0, 3).map((p) => (
-                  <Avatar className="size-5 ring-1 ring-background" key={p.user.id}>
+                  <Avatar
+                    className="size-5 ring-1 ring-background"
+                    key={p.user.id}
+                  >
                     <AvatarImage src={p.user.image || ""} alt={p.user.name} />
                     <AvatarFallback className="text-[8px] font-bold">
                       {p.user.name[0].toUpperCase()}
@@ -227,7 +271,11 @@ export function KanbanCard({ action }: Props) {
         </div>
       </div>
 
-      <ViewActionModal actionId={action.id} open={open} onOpenChange={setOpen} />
+      <ViewActionModal
+        actionId={action.id}
+        open={open}
+        onOpenChange={setOpen}
+      />
     </>
   );
 }

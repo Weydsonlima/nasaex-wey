@@ -18,6 +18,14 @@ import {
   useDeleteColumn,
   useAddWorkspaceMember,
   useRemoveWorkspaceMember,
+  useListTags,
+  useCreateTag,
+  useUpdateTag,
+  useDeleteTag,
+  useListAutomations,
+  useCreateAutomation,
+  useUpdateAutomation,
+  useDeleteAutomation,
 } from "@/features/workspace/hooks/use-workspace";
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -32,6 +40,12 @@ import {
   Trash2,
   Check,
   UserPlus,
+  TagIcon,
+  ZapIcon,
+  PlayIcon,
+  PauseIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 import {
   DndContext,
@@ -104,7 +118,7 @@ export function WorkspaceSettingsModal({
             onValueChange={setView}
             className="flex-1 flex flex-col overflow-hidden"
           >
-            <TabsList className="mx-8 mt-4">
+            <TabsList className="mx-8 mt-4 flex-wrap h-auto">
               <TabsTrigger value="general">
                 <Settings className="size-4 mr-2" />
                 Geral
@@ -116,6 +130,14 @@ export function WorkspaceSettingsModal({
               <TabsTrigger value="members">
                 <Users className="size-4 mr-2" />
                 Participantes
+              </TabsTrigger>
+              <TabsTrigger value="labels">
+                <TagIcon className="size-4 mr-2" />
+                Etiquetas
+              </TabsTrigger>
+              <TabsTrigger value="automations">
+                <ZapIcon className="size-4 mr-2" />
+                Automações
               </TabsTrigger>
               <TabsTrigger value="danger">
                 <AlertTriangle className="size-4 mr-2" />
@@ -141,6 +163,18 @@ export function WorkspaceSettingsModal({
                 className="mt-0 focus-visible:outline-none"
               >
                 <MembersTab workspaceId={workspaceId} />
+              </TabsContent>
+              <TabsContent
+                value="labels"
+                className="mt-0 focus-visible:outline-none"
+              >
+                <LabelsTab workspaceId={workspaceId} />
+              </TabsContent>
+              <TabsContent
+                value="automations"
+                className="mt-0 focus-visible:outline-none"
+              >
+                <AutomationsTab workspaceId={workspaceId} />
               </TabsContent>
               <TabsContent
                 value="danger"
@@ -632,6 +666,319 @@ function MembersTab({ workspaceId }: { workspaceId: string }) {
                 </Button>
               )}
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const PRESET_COLORS = [
+  "#7C3AED", "#DB2777", "#DC2626", "#D97706", "#16A34A",
+  "#0891B2", "#2563EB", "#9333EA", "#374151", "#6B7280",
+];
+
+function LabelsTab({ workspaceId }: { workspaceId: string }) {
+  const { tags, isLoading } = useListTags(workspaceId);
+  const createTag = useCreateTag();
+  const updateTag = useUpdateTag();
+  const deleteTag = useDeleteTag(workspaceId);
+
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#7C3AED");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("");
+
+  const handleCreate = () => {
+    if (!newName.trim()) return;
+    createTag.mutate(
+      { workspaceId, name: newName.trim(), color: newColor },
+      { onSuccess: () => { setNewName(""); setNewColor("#7C3AED"); } },
+    );
+  };
+
+  const handleStartEdit = (tag: any) => {
+    setEditingId(tag.id);
+    setEditName(tag.name);
+    setEditColor(tag.color);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId) return;
+    updateTag.mutate(
+      { tagId: editingId, name: editName.trim(), color: editColor },
+      { onSuccess: () => setEditingId(null) },
+    );
+  };
+
+  const handleDelete = (tagId: string, name: string) => {
+    if (confirm(`Excluir etiqueta "${name}"?`)) {
+      deleteTag.mutate({ tagId });
+    }
+  };
+
+  if (isLoading) return <div className="text-sm text-muted-foreground">Carregando etiquetas...</div>;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Etiquetas</h3>
+        <p className="text-sm text-muted-foreground">Gerencie as etiquetas para classificar ações neste workspace.</p>
+      </div>
+
+      {/* Create new tag */}
+      <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+        <div className="flex items-center gap-2">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c}
+              className={cn("size-5 rounded-full transition-all", newColor === c && "ring-2 ring-offset-1 ring-foreground")}
+              style={{ backgroundColor: c }}
+              onClick={() => setNewColor(c)}
+            />
+          ))}
+          <Input
+            type="color"
+            value={newColor}
+            onChange={(e) => setNewColor(e.target.value)}
+            className="size-7 p-0.5 cursor-pointer w-7"
+          />
+        </div>
+        <Input
+          placeholder="Nome da etiqueta..."
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          className="flex-1 h-8"
+          onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+        />
+        <Button size="sm" onClick={handleCreate} disabled={!newName.trim() || createTag.isPending}>
+          <Plus className="size-4 mr-1" />
+          Criar
+        </Button>
+      </div>
+
+      {/* Tag list */}
+      <div className="space-y-2">
+        {tags.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-6">Nenhuma etiqueta criada ainda.</p>
+        )}
+        {tags.map((tag: any) => (
+          <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg bg-background group">
+            {editingId === tag.id ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      className={cn("size-4 rounded-full", editColor === c && "ring-2 ring-offset-1 ring-foreground")}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setEditColor(c)}
+                    />
+                  ))}
+                  <Input
+                    type="color"
+                    value={editColor}
+                    onChange={(e) => setEditColor(e.target.value)}
+                    className="size-6 p-0.5 cursor-pointer w-6"
+                  />
+                </div>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="flex-1 h-8"
+                  autoFocus
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                />
+                <Button size="icon" variant="ghost" className="size-8 text-emerald-600" onClick={handleSaveEdit}>
+                  <Check className="size-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="size-8" onClick={() => setEditingId(null)}>
+                  <X className="size-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <span className="size-4 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
+                <span className="flex-1 font-medium text-sm">{tag.name}</span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button size="icon" variant="ghost" className="size-7" onClick={() => handleStartEdit(tag)}>
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="size-7 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(tag.id, tag.name)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const TRIGGER_OPTIONS = [
+  { value: "MANUAL", label: "Manual" },
+  { value: "NEW_CARD", label: "Novo card criado" },
+  { value: "MOVE_CARD", label: "Card movido de coluna" },
+  { value: "CARD_TAGGED", label: "Tag adicionada ao card" },
+];
+
+const STEP_TYPES = [
+  { value: "MOVE_CARD", label: "Mover card" },
+  { value: "SEND_MESSAGE", label: "Enviar mensagem" },
+  { value: "WAIT", label: "Aguardar" },
+  { value: "ARCHIVE", label: "Arquivar" },
+  { value: "ADD_TAG", label: "Adicionar tag" },
+  { value: "SET_RESPONSIBLE", label: "Definir responsável" },
+  { value: "CREATE_POST", label: "Criar Post" },
+];
+
+function AutomationsTab({ workspaceId }: { workspaceId: string }) {
+  const { automations, isLoading } = useListAutomations(workspaceId);
+  const createAutomation = useCreateAutomation();
+  const updateAutomation = useUpdateAutomation();
+  const deleteAutomation = useDeleteAutomation(workspaceId);
+
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [trigger, setTrigger] = useState("MANUAL");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleCreate = () => {
+    if (!name.trim()) return;
+    createAutomation.mutate(
+      { workspaceId, name: name.trim(), trigger, steps: [], conditions: [] },
+      { onSuccess: () => { setName(""); setTrigger("MANUAL"); setCreating(false); } },
+    );
+  };
+
+  const handleToggleActive = (automation: any) => {
+    updateAutomation.mutate({ automationId: automation.id, isActive: !automation.isActive });
+  };
+
+  const handleDelete = (id: string, automationName: string) => {
+    if (confirm(`Excluir automação "${automationName}"?`)) {
+      deleteAutomation.mutate({ automationId: id });
+    }
+  };
+
+  if (isLoading) return <div className="text-sm text-muted-foreground">Carregando automações...</div>;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Automações</h3>
+          <p className="text-sm text-muted-foreground">Configure gatilhos e ações automáticas para este workspace.</p>
+        </div>
+        <Button size="sm" onClick={() => setCreating(true)}>
+          <Plus className="size-4 mr-1" />
+          Nova Automação
+        </Button>
+      </div>
+
+      {/* Create form */}
+      {creating && (
+        <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+          <h4 className="font-medium text-sm">Nova Automação</h4>
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Nome</Label>
+              <Input
+                placeholder="Ex: Mover para Concluído ao marcar feito"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label className="text-xs">Gatilho</Label>
+              <select
+                value={trigger}
+                onChange={(e) => setTrigger(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {TRIGGER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleCreate} disabled={!name.trim() || createAutomation.isPending}>
+              {createAutomation.isPending ? "Criando..." : "Criar"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setCreating(false); setName(""); }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Automation list */}
+      <div className="space-y-2">
+        {automations.length === 0 && !creating && (
+          <div className="text-center py-10 border rounded-lg bg-muted/10">
+            <ZapIcon className="size-8 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium">Nenhuma automação configurada</p>
+            <p className="text-xs text-muted-foreground mt-1">Crie automações para agilizar seu fluxo de trabalho</p>
+          </div>
+        )}
+        {automations.map((auto: any) => (
+          <div key={auto.id} className="border rounded-lg bg-background overflow-hidden">
+            <div className="flex items-center gap-3 p-3">
+              <div className={cn("size-2 rounded-full shrink-0", auto.isActive ? "bg-emerald-500" : "bg-muted-foreground")} />
+              <span className="flex-1 font-medium text-sm">{auto.name}</span>
+              <span className="text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-muted">
+                {TRIGGER_OPTIONS.find((t) => t.value === auto.trigger)?.label ?? auto.trigger}
+              </span>
+              <div className="flex gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  title={auto.isActive ? "Pausar" : "Ativar"}
+                  onClick={() => handleToggleActive(auto)}
+                >
+                  {auto.isActive ? <PauseIcon className="size-3.5 text-yellow-500" /> : <PlayIcon className="size-3.5 text-emerald-500" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  onClick={() => setExpandedId(expandedId === auto.id ? null : auto.id)}
+                >
+                  {expandedId === auto.id ? <ChevronDownIcon className="size-3.5" /> : <ChevronRightIcon className="size-3.5" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 text-destructive hover:bg-destructive/10"
+                  onClick={() => handleDelete(auto.id, auto.name)}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            </div>
+            {expandedId === auto.id && (
+              <div className="border-t px-4 py-3 bg-muted/20 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Passos</p>
+                {(auto.steps as any[]).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhum passo configurado. Edite para adicionar ações.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {(auto.steps as any[]).map((step, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className="size-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-[9px]">{i + 1}</span>
+                        <span>{STEP_TYPES.find((s) => s.value === step.type)?.label ?? step.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

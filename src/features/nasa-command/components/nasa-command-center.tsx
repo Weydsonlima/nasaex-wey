@@ -786,12 +786,16 @@ const PROVIDER_MODELS: Record<string, ModelOption[]> = {
   ],
 };
 
-const ASTRO_OPTION: ModelOption = {
-  id: "astro",
-  label: "Astro",
-  sublabel: "NASA Explorer",
-  icon: <Sparkles className="w-4 h-4 text-violet-400" />,
-  provider: "NASA",
+const AI_PLATFORMS = [
+  IntegrationPlatform.ANTHROPIC,
+  IntegrationPlatform.OPENAI,
+  IntegrationPlatform.GEMINI,
+] as const;
+
+const PROVIDER_LABELS: Record<string, string> = {
+  [IntegrationPlatform.ANTHROPIC]: "Anthropic",
+  [IntegrationPlatform.OPENAI]: "OpenAI",
+  [IntegrationPlatform.GEMINI]: "Google",
 };
 
 interface ModelSelectorProps {
@@ -806,67 +810,122 @@ function ModelSelector({ value, onChange }: ModelSelectorProps) {
     orpc.platformIntegrations.getMany.queryOptions({}),
   );
 
-  const connectedPlatforms = new Set(
-    (integrationsData?.integrations ?? []).map((i) => i.platform),
-  );
+  const connectedPlatforms = (integrationsData?.integrations ?? [])
+    .map((i) => i.platform)
+    .filter((p) => AI_PLATFORMS.includes(p as (typeof AI_PLATFORMS)[number]));
 
-  // Build options: always show Astro, then connected AI providers
-  const aiPlatforms = [
-    IntegrationPlatform.ANTHROPIC,
-    IntegrationPlatform.OPENAI,
-    IntegrationPlatform.GEMINI,
-  ];
+  const connectedSet = new Set(connectedPlatforms);
 
-  const options: ModelOption[] = [ASTRO_OPTION];
-  for (const platform of aiPlatforms) {
-    if (connectedPlatforms.has(platform)) {
-      options.push(...(PROVIDER_MODELS[platform] ?? []));
+  // Individual model options from connected providers
+  const individualOptions: ModelOption[] = [];
+  for (const platform of AI_PLATFORMS) {
+    if (connectedSet.has(platform)) {
+      individualOptions.push(...(PROVIDER_MODELS[platform] ?? []));
     }
   }
 
-  const selected = options.find((o) => o.id === value) ?? ASTRO_OPTION;
+  const isAstro = value === "astro";
+  const selectedIndividual = individualOptions.find((o) => o.id === value);
 
   return (
     <div className="relative">
+      {/* Trigger button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 bg-zinc-800 border border-zinc-700/50 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
+        className={cn(
+          "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors border",
+          isAstro
+            ? "bg-violet-950/60 border-violet-700/50 text-violet-300 hover:bg-violet-900/60"
+            : "bg-zinc-800 border-zinc-700/50 text-zinc-300 hover:bg-zinc-700",
+        )}
       >
-        {selected.icon}
-        <span>{selected.label}</span>
-        <ChevronDown className="w-3 h-3 text-zinc-500" />
+        {isAstro ? (
+          <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+        ) : (
+          selectedIndividual?.icon ?? <Bot className="w-3.5 h-3.5 text-zinc-400" />
+        )}
+        <span>{isAstro ? "Astro" : (selectedIndividual?.label ?? "Modelo")}</span>
+        <ChevronDown className="w-3 h-3 opacity-50" />
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 mb-1 w-48 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden z-50">
-          {options.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => {
-                onChange(opt.id);
-                setOpen(false);
-              }}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors text-left",
-                value === opt.id
-                  ? "text-white bg-zinc-800"
-                  : "text-zinc-400 hover:bg-zinc-800",
-              )}
-            >
-              {opt.icon}
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-medium leading-tight">{opt.label}</span>
-                <span className="text-[10px] text-zinc-500 leading-tight">{opt.sublabel}</span>
+        <div className="absolute bottom-full right-0 mb-1 w-60 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl overflow-hidden z-50">
+
+          {/* ── Astro — opção principal ── */}
+          <button
+            onClick={() => { onChange("astro"); setOpen(false); }}
+            className={cn(
+              "w-full text-left transition-colors",
+              isAstro ? "bg-violet-950/80" : "hover:bg-zinc-800/80",
+            )}
+          >
+            <div className="px-3 pt-3 pb-2 flex items-start gap-2.5">
+              <div className="mt-0.5 w-7 h-7 rounded-lg bg-violet-600/20 border border-violet-500/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-3.5 h-3.5 text-violet-400" />
               </div>
-              {value === opt.id && (
-                <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 ml-auto shrink-0" />
-              )}
-            </button>
-          ))}
-          {options.length === 1 && (
-            <div className="px-3 py-2 text-[10px] text-zinc-600 border-t border-zinc-800">
-              Conecte OpenAI, Anthropic ou Gemini em Integrações para mais modelos.
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white">Astro</span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-600/30 text-violet-300 uppercase tracking-wide">
+                    Recomendado
+                  </span>
+                  {isAstro && <CheckCircle2 className="w-3 h-3 text-violet-400 ml-auto" />}
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug">
+                  Consolida todas as IAs conectadas e direciona cada comando ao modelo mais adequado.
+                </p>
+                {/* Pills das IAs que compõem o Astro */}
+                {connectedPlatforms.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {connectedPlatforms.map((p) => (
+                      <span
+                        key={p}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-700/60 text-zinc-400 font-medium"
+                      >
+                        {PROVIDER_LABELS[p] ?? p}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {connectedPlatforms.length === 0 && (
+                  <p className="text-[9px] text-zinc-600 mt-1">
+                    Conecte IAs em Integrações para potencializar o Astro.
+                  </p>
+                )}
+              </div>
             </div>
+          </button>
+
+          {/* ── Separador + modelos individuais ── */}
+          {individualOptions.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 px-3 py-1.5 border-t border-zinc-800">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                  Modelo específico
+                </span>
+              </div>
+              {individualOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => { onChange(opt.id); setOpen(false); }}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors text-left",
+                    value === opt.id
+                      ? "text-white bg-zinc-800"
+                      : "text-zinc-400 hover:bg-zinc-800",
+                  )}
+                >
+                  {opt.icon}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-medium leading-tight">{opt.label}</span>
+                    <span className="text-[10px] text-zinc-500 leading-tight">{opt.sublabel}</span>
+                  </div>
+                  {value === opt.id && (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 ml-auto shrink-0" />
+                  )}
+                </button>
+              ))}
+            </>
           )}
         </div>
       )}

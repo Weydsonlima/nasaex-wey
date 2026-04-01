@@ -13,27 +13,43 @@ export const removeFileAction = base
       attachmentId: z.string(),
     }),
   )
-  .handler(async ({ input, context }) => {
-    const { actionId, attachmentId } = input;
-    await prisma.action.findUnique({
-      where: { id: actionId },
-      select: { history: true },
-    });
+  .handler(async ({ input, context, errors }) => {
+    try {
+      const { actionId, attachmentId } = input;
+      const existingAction = await prisma.action.findUnique({
+        where: { id: actionId },
+        select: { history: true, attachments: true },
+      });
 
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/s3/delete`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        key: attachmentId,
-      }),
-    });
+      if (!existingAction) {
+        throw errors.NOT_FOUND({ message: "Action not found" });
+      }
 
-    const action = await prisma.action.update({
-      where: { id: actionId },
+      const currentAttachments = Array.isArray(existingAction.attachments)
+        ? existingAction.attachments
+        : [];
 
-      data: { attachments: { delete: { url: attachmentId } } },
-    });
-    return { action };
+      const updatedAttachments = currentAttachments.filter(
+        (att: any) => att.url !== attachmentId,
+      );
+
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/s3/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          key: attachmentId,
+        }),
+      });
+
+      const action = await prisma.action.update({
+        where: { id: actionId },
+        data: { attachments: updatedAttachments },
+      });
+      return { action };
+    } catch (error) {
+      console.log(error);
+      throw errors.INTERNAL_SERVER_ERROR();
+    }
   });

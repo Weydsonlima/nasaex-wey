@@ -532,3 +532,25 @@ export const useRejectShare = () => {
     }),
   );
 };
+
+export const useRemoveFileAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.workspace.removeFileAction.mutationOptions({
+      onSuccess: (data) => {
+        toast.success("Arquivo removido com sucesso!");
+        queryClient.invalidateQueries(
+          orpc.workspace.getColumnsByWorkspace.queryOptions({
+            input: { workspaceId: data.action.workspaceId },
+          }),
+        );
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId: data.action.id } }),
+        );
+        queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
+      },
+      onError: (error: any) =>
+        toast.error(error.message || "Erro ao remover arquivo!"),
+    }),
+  );
+};

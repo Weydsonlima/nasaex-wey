@@ -19,6 +19,7 @@ import {
   useColumnsByWorkspace,
   useWorkspaceMembers,
   useUpdateActionFields,
+  useRemoveFileAction,
 } from "@/features/workspace/hooks/use-workspace";
 import { toast } from "sonner";
 import { Action } from "../types";
@@ -54,6 +55,7 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
   const addSubActionResponsible = useAddSubActionResponsible(actionId);
   const removeSubActionResponsible = useRemoveSubActionResponsible(actionId);
   const promoteSubAction = usePromoteSubAction(actionId);
+  const removeFileAction = useRemoveFileAction();
 
   const { columns } = useColumnsByWorkspace(action?.workspaceId ?? "");
   const { members } = useWorkspaceMembers(action?.workspaceId ?? "");
@@ -152,12 +154,12 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
     updateFields.mutate({ actionId: action.id, ...data });
   };
 
-  // const handleRemoveFile = (attachmentId: string) => {
-  //   removeFileAction.mutate(
-  //     { actionId, attachmentId },
-  //     { onError: () => toast.error("Erro ao remover arquivo") },
-  //   );
-  // };
+  const handleRemoveFile = (attachmentId: string) => {
+    removeFileAction.mutate(
+      { actionId, attachmentId },
+      { onError: () => toast.error("Erro ao remover arquivo") },
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,8 +213,8 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
                   onUpdate={(attachments) =>
                     handleUpdateFields({ attachments })
                   }
-                  // onRemove={handleRemoveFile}
-                  disabled={updateFields.isPending}
+                  onRemove={handleRemoveFile}
+                  disabled={updateFields.isPending || removeFileAction.isPending}
                 />
 
                 <LinksSection

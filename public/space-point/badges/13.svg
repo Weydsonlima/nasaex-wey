@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg13" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a0a3d"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="ring13" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7b1fa2"/>
+      <stop offset="50%" stop-color="#e040fb"/>
+      <stop offset="100%" stop-color="#7b1fa2"/>
+    </linearGradient>
+    <filter id="glow13">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip13"><circle cx="100" cy="100" r="88"/></clipPath>
+  </defs>
+  <!-- Outer glow ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#7b1fa2" stroke-width="1" opacity="0.3"/>
+  <!-- Main ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#ring13)" stroke-width="6"/>
+  <!-- Background -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg13)"/>
+  <!-- Stars -->
+  <g clip-path="url(#clip13)">
+    <circle cx="18.9" cy="14.5" r="0.8" fill="white" opacity="0.20"/>
+    <circle cx="161.2" cy="105.3" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="123.6" cy="16.1" r="0.5" fill="white" opacity="0.32"/>
+    <circle cx="86.0" cy="106.9" r="0.8" fill="white" opacity="0.38"/>
+    <circle cx="48.4" cy="17.7" r="0.5" fill="white" opacity="0.44"/>
+    <circle cx="10.7" cy="108.5" r="0.5" fill="white" opacity="0.50"/>
+    <circle cx="153.1" cy="19.3" r="0.8" fill="white" opacity="0.56"/>
+    <circle cx="115.5" cy="110.0" r="0.5" fill="white" opacity="0.20"/>
+    <circle cx="77.8" cy="20.8" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="40.2" cy="111.6" r="0.8" fill="white" opacity="0.32"/>
+    <circle cx="182.6" cy="22.4" r="0.5" fill="white" opacity="0.38"/>
+    <circle cx="144.9" cy="113.2" r="0.5" fill="white" opacity="0.44"/>
+  </g>
+  <!-- Planet -->
+  
+  <defs>
+    <radialGradient id="gal13" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#8e24aa"/>
+      <stop offset="60%" stop-color="#4a148c"/>
+      <stop offset="100%" stop-color="#0a0020"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(0,100,100)"/>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(51,100,100)"/>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(103,100,100)"/>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(154,100,100)"/>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(206,100,100)"/>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(257,100,100)"/>
+  <ellipse cx="100" cy="100" rx="24" ry="5" fill="#9c27b0" opacity="0.23" transform="rotate(309,100,100)"/>
+  
+  <circle cx="100" cy="100" r="30" fill="url(#gal13)" filter="url(#glow13)"/>
+  <circle cx="100" cy="100" r="12" fill="#ba68c8" opacity="0.6"/>
+  <circle cx="100" cy="100" r="6" fill="white" opacity="0.9"/>
+  
+  <!-- Name label -->
+  <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#d1b3e8" letter-spacing="1">GALAXY 2</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">>2.500 pts</text>
+</svg>

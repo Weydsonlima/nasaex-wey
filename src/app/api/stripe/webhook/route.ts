@@ -38,7 +38,23 @@ export async function POST(req: NextRequest) {
       // ── Checkout concluído ───────────────────────────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object;
-        const { organizationId, itemType, itemSlug } = session.metadata ?? {};
+        const { organizationId, itemType, itemSlug, starsPaymentId } = session.metadata ?? {};
+
+        // ── New Stars gateway checkout (starsPaymentId present) ──────────────
+        if (starsPaymentId) {
+          const sp = await prisma.starsPayment.findUnique({ where: { id: starsPaymentId } });
+          if (sp && sp.status !== "paid") {
+            await prisma.starsPayment.update({
+              where: { id: starsPaymentId },
+              data:  { status: "paid", externalId: session.id },
+            });
+            await purchaseTopUp(sp.organizationId, sp.packageId);
+            console.log(`[stripe/webhook] ✅ ${sp.starsAmount} stars credited via gateway checkout`);
+          }
+          break;
+        }
+
+        // ── Legacy flow (organizationId in metadata) ──────────────────────────
         if (!organizationId) break;
 
         if (itemType === "plan") {

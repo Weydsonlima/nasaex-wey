@@ -31,6 +31,7 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCreateAgenda } from "../hooks/use-agenda";
 import { useQueryTracking } from "@/features/tracking-settings/hooks/use-tracking";
+import { useSpacePointCtx } from "@/features/space-point";
 import {
   Select,
   SelectContent,
@@ -59,6 +60,7 @@ type CreateAgendaSchema = z.infer<typeof createAgendaSchema>;
 export function CreateAgendaModal({ open, onOpenChange }: Props) {
   const { trackings, isLoadingTrackings } = useQueryTracking();
   const createAgenda = useCreateAgenda();
+  const { earn } = useSpacePointCtx();
 
   const form = useForm<CreateAgendaSchema>({
     resolver: zodResolver(createAgendaSchema),
@@ -84,6 +86,7 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
       },
       {
         onSuccess: () => {
+          earn("create_agenda", "Agenda criada 📅");
           onOpenChange(false);
         },
       },

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg5" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a0a3d"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="ring5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd54f"/>
+      <stop offset="50%" stop-color="#e65100"/>
+      <stop offset="100%" stop-color="#ffd54f"/>
+    </linearGradient>
+    <filter id="glow5">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip5"><circle cx="100" cy="100" r="88"/></clipPath>
+  </defs>
+  <!-- Outer glow ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#ffd54f" stroke-width="1" opacity="0.3"/>
+  <!-- Main ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#ring5)" stroke-width="6"/>
+  <!-- Background -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg5)"/>
+  <!-- Stars -->
+  <g clip-path="url(#clip5)">
+    <circle cx="14.4" cy="12.1" r="0.8" fill="white" opacity="0.20"/>
+    <circle cx="156.8" cy="102.9" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="119.1" cy="13.7" r="0.5" fill="white" opacity="0.32"/>
+    <circle cx="81.5" cy="104.4" r="0.8" fill="white" opacity="0.38"/>
+    <circle cx="43.9" cy="15.2" r="0.5" fill="white" opacity="0.44"/>
+    <circle cx="186.2" cy="106.0" r="0.5" fill="white" opacity="0.50"/>
+    <circle cx="148.6" cy="16.8" r="0.8" fill="white" opacity="0.56"/>
+    <circle cx="111.0" cy="107.6" r="0.5" fill="white" opacity="0.20"/>
+    <circle cx="73.4" cy="18.4" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="35.7" cy="109.2" r="0.8" fill="white" opacity="0.32"/>
+    <circle cx="178.1" cy="19.9" r="0.5" fill="white" opacity="0.38"/>
+    <circle cx="140.5" cy="110.7" r="0.5" fill="white" opacity="0.44"/>
+  </g>
+  <!-- Planet -->
+  
+  <defs>
+    <radialGradient id="venus5" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#fff176"/><stop offset="100%" stop-color="#f57f17"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="40" fill="url(#venus5)" filter="url(#glow5)"/>
+  <ellipse cx="100" cy="88" rx="32" ry="6" fill="#ffcc02" opacity="0.3" transform="rotate(-15,100,100)"/>
+  <ellipse cx="100" cy="98" rx="34" ry="5" fill="#ffaa00" opacity="0.25" transform="rotate(-10,100,100)"/>
+  <ellipse cx="100" cy="108" rx="30" ry="5" fill="#ff8f00" opacity="0.25" transform="rotate(-20,100,100)"/>
+  <ellipse cx="100" cy="118" rx="28" ry="4" fill="#e65100" opacity="0.2" transform="rotate(-5,100,100)"/>
+  <!-- Name label -->
+  <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#fff9c4" letter-spacing="1">VÊNUS</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">400 pts</text>
+</svg>

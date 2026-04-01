@@ -202,9 +202,12 @@ export function NavUser() {
                 Configurações
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => router.push("/settings/notifications")}
+                className="cursor-pointer"
+              >
                 <Bell />
-                Notificações
+                Preferências de Notificações
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

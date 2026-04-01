@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg17" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a0a3d"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="ring17" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffc107"/>
+      <stop offset="50%" stop-color="#fff176"/>
+      <stop offset="100%" stop-color="#ffc107"/>
+    </linearGradient>
+    <filter id="glow17">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip17"><circle cx="100" cy="100" r="88"/></clipPath>
+  </defs>
+  <!-- Outer glow ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#ffc107" stroke-width="1" opacity="0.3"/>
+  <!-- Main ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#ring17)" stroke-width="6"/>
+  <!-- Background -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg17)"/>
+  <!-- Stars -->
+  <g clip-path="url(#clip17)">
+    <circle cx="21.1" cy="15.8" r="0.8" fill="white" opacity="0.20"/>
+    <circle cx="163.5" cy="106.6" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="125.9" cy="17.3" r="0.5" fill="white" opacity="0.32"/>
+    <circle cx="88.2" cy="108.1" r="0.8" fill="white" opacity="0.38"/>
+    <circle cx="50.6" cy="18.9" r="0.5" fill="white" opacity="0.44"/>
+    <circle cx="13.0" cy="109.7" r="0.5" fill="white" opacity="0.50"/>
+    <circle cx="155.3" cy="20.5" r="0.8" fill="white" opacity="0.56"/>
+    <circle cx="117.7" cy="111.3" r="0.5" fill="white" opacity="0.20"/>
+    <circle cx="80.1" cy="22.1" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="42.4" cy="112.8" r="0.8" fill="white" opacity="0.32"/>
+    <circle cx="184.8" cy="23.6" r="0.5" fill="white" opacity="0.38"/>
+    <circle cx="147.2" cy="114.4" r="0.5" fill="white" opacity="0.44"/>
+  </g>
+  <!-- Planet -->
+  
+  <defs>
+    <radialGradient id="gal17" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#d4a000"/>
+      <stop offset="60%" stop-color="#6a4000"/>
+      <stop offset="100%" stop-color="#0a0020"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(0,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(33,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(65,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(98,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(131,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(164,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(196,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(229,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(262,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(295,100,100)"/>
+  <ellipse cx="100" cy="100" rx="30" ry="7" fill="#ffca28" opacity="0.31" transform="rotate(327,100,100)"/>
+  
+  <circle cx="100" cy="100" r="32" fill="url(#gal17)" filter="url(#glow17)"/>
+  <circle cx="100" cy="100" r="14" fill="#ffe57f" opacity="0.6"/>
+  <circle cx="100" cy="100" r="7" fill="white" opacity="0.9"/>
+  <ellipse cx="100" cy="80" rx="4" ry="2" fill="white" opacity="0.5"/>
+  <!-- Name label -->
+  <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#fff9c4" letter-spacing="1">GALAXY 6</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">>20.000 pts</text>
+</svg>

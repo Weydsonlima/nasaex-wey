@@ -6,6 +6,8 @@ import { getAppStarCost } from "./get-app-cost";
 import { updateStarAlertConfig } from "./update-alert-config";
 import { listPlans } from "./list-plans";
 import { createCheckoutSession } from "./create-checkout-session";
+import { listActiveGateways } from "./list-active-gateways";
+import { createGatewayCheckout } from "./create-gateway-checkout";
 
 export const starsRouter = {
   getBalance: getStarBalance,
@@ -16,4 +18,6 @@ export const starsRouter = {
   updateAlertConfig: updateStarAlertConfig,
   listPlans,
   createCheckoutSession,
+  listActiveGateways,
+  createGatewayCheckout,
 };

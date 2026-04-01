@@ -16,6 +16,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { StarsWidget } from "@/features/stars";
+import { SpacePointWidget } from "@/features/space-point";
 
 export function ForgePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -34,6 +35,7 @@ export function ForgePage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SpacePointWidget />
           <StarsWidget />
           <Button
             size="icon"

@@ -97,6 +97,9 @@ function useVoiceInput(onTranscript: (text: string) => void) {
 import {
   EntitySearchField,
   PlainField,
+  DateTimePickerField,
+  TextareaField,
+  DatePickerField,
   getEntityType,
 } from "./entity-search-field";
 import {
@@ -121,6 +124,7 @@ import {
   Lightbulb,
   Mic,
   MicOff,
+  PencilLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -129,6 +133,7 @@ import { orpc } from "@/lib/orpc";
 import { IntegrationPlatform } from "@/generated/prisma/enums";
 import { toast } from "sonner";
 import { StarsWidget } from "@/features/stars";
+import { SpacePointWidget } from "@/features/space-point";
 import {
   variableCategories,
   allApps,
@@ -150,6 +155,8 @@ interface ExampleCategory {
 interface ResultLink {
   label: string;
   url: string;
+  /** Comando pré-preenchido no Explorer ao clicar no ícone de editar */
+  explorerCmd?: string;
 }
 
 interface ResultData {
@@ -1048,9 +1055,10 @@ interface ResponseCardProps {
   onClose: () => void;
   onContinue?: (extra: string) => void;
   onConfirm?: (key: string, partialContext: Record<string, unknown>) => void;
+  onExplorerCmd?: (cmd: string) => void;
 }
 
-function ResponseCard({ result, onClose, onContinue, onConfirm }: ResponseCardProps) {
+function ResponseCard({ result, onClose, onContinue, onConfirm, onExplorerCmd }: ResponseCardProps) {
   const [copied, setCopied] = useState(false);
   const [contentCopied, setContentCopied] = useState(false);
   // Stores both the id (for DB lookup) and the display label per field
@@ -1168,20 +1176,31 @@ function ResponseCard({ result, onClose, onContinue, onConfirm }: ResponseCardPr
             {result.description}
           </p>
 
-          {/* result_links: lista de itens clicáveis (ex: propostas, leads) */}
+          {/* result_links: lista de itens clicáveis (ex: propostas, reuniões, leads) */}
           {result.resultLinks && result.resultLinks.length > 0 && (
             <div className="mt-3 space-y-1.5">
               {result.resultLinks.map((link, i) => (
-                <a
-                  key={i}
-                  href={link.url}
-                  className="flex items-center justify-between gap-2 w-full bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 hover:border-zinc-600 rounded-lg px-3 py-2 transition-all group"
-                >
-                  <span className="text-xs text-zinc-300 group-hover:text-white truncate">
-                    {link.label}
-                  </span>
-                  <ExternalLink className="w-3 h-3 text-zinc-600 group-hover:text-violet-400 shrink-0 transition-colors" />
-                </a>
+                <div key={i} className="flex items-center gap-1.5 group">
+                  <a
+                    href={link.url}
+                    className="flex items-center justify-between gap-2 flex-1 min-w-0 bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 hover:border-zinc-600 rounded-lg px-3 py-2 transition-all"
+                  >
+                    <span className="text-xs text-zinc-300 group-hover:text-white truncate">
+                      {link.label}
+                    </span>
+                    <ExternalLink className="w-3 h-3 text-zinc-600 group-hover:text-violet-400 shrink-0 transition-colors" />
+                  </a>
+                  {link.explorerCmd && onExplorerCmd && (
+                    <button
+                      type="button"
+                      title="Editar no Explorer"
+                      onClick={() => onExplorerCmd(link.explorerCmd!)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800/60 hover:bg-violet-600/30 border border-zinc-700/50 hover:border-violet-500/60 text-zinc-500 hover:text-violet-400 transition-all shrink-0"
+                    >
+                      <PencilLine className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -1190,17 +1209,42 @@ function ResponseCard({ result, onClose, onContinue, onConfirm }: ResponseCardPr
           {isNeedsInput && result.missingFields && result.missingFields.length > 0 && (
             <div className="mt-4 space-y-3">
               {result.missingFields.map((field) => {
-                const entityType = getEntityType(field.key);
+                const entityType  = getEntityType(field.key);
+                const isDatetime  = field.key === "datetime";
+                const isDateOnly  = field.key === "startdate" || field.key === "duedate";
+                const isTextarea  = field.key === "descricao" || field.key === "description";
+                // workspaceColumn needs the selected workspace id as parentId
+                const parentId    = (field.key === "coluna" || field.key === "column")
+                  ? (missingValues["workspace"] ?? undefined)
+                  : undefined;
                 return (
                   <div key={field.key}>
                     <label className="block text-xs text-zinc-400 mb-1.5 font-medium">
                       {field.label}
                     </label>
-                    {entityType ? (
+                    {isDatetime ? (
+                      <DateTimePickerField
+                        value={missingValues[field.key] ?? ""}
+                        onChange={(v) => setFieldValue(field.key, "", v)}
+                        onConfirm={handleContinue}
+                      />
+                    ) : isDateOnly ? (
+                      <DatePickerField
+                        value={missingValues[field.key] ?? ""}
+                        onChange={(v) => setFieldValue(field.key, "", v)}
+                      />
+                    ) : isTextarea ? (
+                      <TextareaField
+                        label={field.label}
+                        value={missingValues[field.key] ?? ""}
+                        onChange={(v) => setFieldValue(field.key, "", v)}
+                      />
+                    ) : entityType ? (
                       <EntitySearchField
                         fieldKey={field.key}
                         label={field.label}
                         entityType={entityType}
+                        parentId={parentId}
                         value={missingValues[field.key] ?? ""}
                         onChange={(id, label) => setFieldValue(field.key, id, label)}
                       />
@@ -1406,7 +1450,37 @@ function CommandInput({
 
   return (
     <div ref={wrapperRef} className="relative">
-      <div className="relative bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-xl overflow-visible transition-all focus-within:border-zinc-600/80">
+      <style>{`
+        @keyframes explorerBorder {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .explorer-border {
+          background: linear-gradient(
+            270deg,
+            #7C3AED,
+            #9333ea,
+            #a855f7,
+            #EC4899,
+            rgba(255, 255, 255, 0.92),
+            #EC4899,
+            #a855f7,
+            #7C3AED
+          );
+          background-size: 600% 600%;
+          animation: explorerBorder 5s ease infinite;
+        }
+      `}</style>
+
+      {/* Animated gradient border + float effect */}
+      <div
+        className="relative rounded-2xl explorer-border"
+        style={{
+          padding: 1,
+        }}
+      >
+      <div className="relative bg-zinc-900 rounded-[calc(1rem-1px)] overflow-visible transition-all">
         {/* Text area with highlight */}
         <div className="relative px-12 pt-4 pb-2">
           <div
@@ -1522,6 +1596,30 @@ function CommandInput({
           </div>
         )}
       </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Space Background ────────────────────────────────────────────────────────
+
+const STARS = Array.from({ length: 160 }, (_, i) => ({
+  x: ((i * 1_234_567 + 89) % 9_973) / 9_973 * 100,
+  y: ((i * 7_654_321 + 31) % 9_973) / 9_973 * 100,
+  r: i % 7 === 0 ? 1.4 : i % 3 === 0 ? 0.9 : 0.5,
+  o: 0.12 + (i % 9) * 0.09,
+}));
+
+function StarField() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {STARS.map((s, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-white"
+          style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.r * 2, height: s.r * 2, opacity: s.o }}
+        />
+      ))}
     </div>
   );
 }
@@ -1536,10 +1634,32 @@ interface WelcomeScreenProps {
 }
 
 function WelcomeScreen({ onSelect, commandInputProps, recentCommands, onClearRecent }: WelcomeScreenProps) {
+  const [mouse, setMouse] = useState({ x: -999, y: -999 });
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => setMouse({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
+  }, []);
+
   return (
-    <div className="flex flex-col items-center w-full min-h-full px-4 py-10 sm:py-14 select-none">
-      <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-6">
-        {/* 1. Marca / Logo */}
+    <div className="relative flex flex-col items-center w-full min-h-full px-4 py-10 sm:py-14 select-none">
+      {/* Ambient nebula glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[640px] h-[400px] rounded-full bg-[#7C3AED]/10 blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-1/3 left-1/4 w-[320px] h-[320px] rounded-full bg-[#a855f7]/7 blur-[100px] pointer-events-none" />
+
+      {/* Mouse-tracking glow — bright blurred white dot */}
+      <div
+        className="fixed pointer-events-none z-50 w-20 h-20 rounded-full bg-white/30 blur-[40px]"
+        style={{
+          left: mouse.x - 40,
+          top: mouse.y - 40,
+          transition: "left 0.05s linear, top 0.05s linear",
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-2xl mx-auto flex flex-col items-center gap-6">
+        {/* 1. Logo */}
         <div className="flex flex-col items-center gap-2">
           <NasaLogo className="w-[180px] sm:w-[240px] h-auto opacity-95" />
           <p className="text-[10px] font-bold tracking-[0.35em] text-zinc-500 uppercase">
@@ -1729,19 +1849,23 @@ export function NasaCommandCenter() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-zinc-950">
+    <div className="h-full flex flex-col bg-[#050510] relative overflow-hidden" style={{ cursor: "url('/cursors/rocket.svg') 6 4, auto" }}>
+      <StarField />
       {/* ── Top bar: always visible ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/60 bg-zinc-950/95 backdrop-blur shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/60 bg-[#050510]/95 backdrop-blur shrink-0 relative z-10">
         {hasMessages ? (
           <NasaLogo className="w-[100px] sm:w-[130px] h-auto opacity-70" />
         ) : (
           <div /> /* spacer in welcome mode so StarsWidget stays right */
         )}
-        <StarsWidget />
+        <div className="flex items-center gap-2">
+          <SpacePointWidget />
+          <StarsWidget />
+        </div>
       </div>
 
       {/* ── Scrollable content ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto relative z-10">
         {!hasMessages ? (
           <WelcomeScreen
             onSelect={fillExample}
@@ -1768,6 +1892,14 @@ export function NasaCommandCenter() {
                     onClose={() => setMessages([])}
                     onContinue={msg.originalCommand ? handleContinue(msg.originalCommand) : undefined}
                     onConfirm={msg.originalCommand ? handleConfirm(msg.originalCommand, msg.result.partialContext ?? {}) : undefined}
+                    onExplorerCmd={(cmd) => {
+                      setCommand(cmd);
+                      // Foca o input para o usuário completar o comando
+                      setTimeout(() => {
+                        const ta = document.querySelector<HTMLTextAreaElement>("textarea");
+                        ta?.focus();
+                      }, 50);
+                    }}
                   />
                 )}
               </div>
@@ -1779,7 +1911,7 @@ export function NasaCommandCenter() {
 
       {/* ── Fixed bottom input — only in chat mode ── */}
       {hasMessages && (
-        <div className="border-t border-zinc-800/60 bg-zinc-950/90 backdrop-blur px-3 sm:px-4 py-3 shrink-0">
+        <div className="border-t border-zinc-800/60 bg-[#050510]/90 backdrop-blur px-3 sm:px-4 py-3 shrink-0 relative z-10">
           <div className="max-w-3xl mx-auto">
             <CommandInput {...commandInputProps} />
           </div>

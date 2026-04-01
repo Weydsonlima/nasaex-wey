@@ -1672,15 +1672,17 @@ CTA: [chamada para ação]`;
           resolvedColumnId = col?.id ?? null;
         }
 
-        // ── Resolve responsible (by ID or by name) ────────────────────────
+        // ── Resolve responsible (by user ID or by name via member) ───────
         let resolvedResponsavelId: string | null = null;
         if (responsavelId) {
+          // Try direct user ID first, then name search through org members
           const member = await prisma.member.findFirst({
             where: {
               organizationId: orgId,
               OR: [
                 { userId: responsavelId },
                 { user: { name: { contains: responsavelId, mode: "insensitive" } } },
+                { user: { email: { contains: responsavelId, mode: "insensitive" } } },
               ],
             },
             select: { userId: true },
@@ -1708,15 +1710,20 @@ CTA: [chamada para ação]`;
           select: { id: true },
         });
 
-        // ── Add participant ────────────────────────────────────────────────
+        // ── Add responsible + participant ──────────────────────────────────
         if (resolvedResponsavelId) {
-          try {
-            await prisma.actionsUserResponsible.create({
-              data: { actionId: task.id, userId: resolvedResponsavelId },
-            });
-          } catch {
-            // Non-critical
-          }
+          await Promise.allSettled([
+            prisma.actionsUserResponsible.upsert({
+              where: { actionId_userId: { actionId: task.id, userId: resolvedResponsavelId } },
+              create: { actionId: task.id, userId: resolvedResponsavelId },
+              update: {},
+            }),
+            prisma.actionsUserParticipant.upsert({
+              where: { actionId_userId: { actionId: task.id, userId: resolvedResponsavelId } },
+              create: { actionId: task.id, userId: resolvedResponsavelId },
+              update: {},
+            }),
+          ]);
         }
 
         const cost = STAR_COSTS.create;

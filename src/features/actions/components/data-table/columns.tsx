@@ -5,11 +5,15 @@ import { cn } from "@/lib/utils";
 import { getContrastColor } from "@/utils/get-contrast-color";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDownIcon, CheckCircle2Icon } from "lucide-react";
+import { CardActionsMenu } from "../card-actions-menu";
 
 export type Action = {
   id: string;
   createdAt: Date;
   description: string | null;
+  isArchived: boolean;
+  isFavorited: boolean;
+  workspaceId: string;
   participants: {
     user: {
       id: string;
@@ -57,7 +61,10 @@ export const columns: ColumnDef<Action>[] = [
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="font-semibold line-clamp-1"> {row.original.title} </div>
+      <div className="font-semibold line-clamp-1 hover:underline underline-offset-4 ">
+        {" "}
+        {row.original.title}{" "}
+      </div>
     ),
   },
   {
@@ -217,6 +224,20 @@ export const columns: ColumnDef<Action>[] = [
       <div className="w-full">
         {" "}
         {row.original.createdAt.toLocaleDateString()}{" "}
+      </div>
+    ),
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => (
+      <div className="flex items-center w-full">
+        <CardActionsMenu
+          actionId={row.original.id}
+          workspaceId={row.original.workspaceId}
+          isFavorited={row.original.isFavorited}
+          isArchived={row.original.isArchived}
+          className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
+        />
       </div>
     ),
   },

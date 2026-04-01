@@ -24,18 +24,41 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { orpc } from "@/lib/orpc";
 
-const ROLE_META: Record<string, { label: string; color: string; bg: string }> = {
-  owner:     { label: "Master",    color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-100 dark:bg-violet-900/50" },
-  admin:     { label: "Adm",      color: "text-blue-700 dark:text-blue-300",    bg: "bg-blue-100 dark:bg-blue-900/50"    },
-  member:    { label: "Single",   color: "text-slate-600 dark:text-slate-300",  bg: "bg-slate-100 dark:bg-slate-800"     },
-  moderador: { label: "Moderador", color: "text-orange-700 dark:text-orange-300", bg: "bg-orange-100 dark:bg-orange-900/50" },
-};
+const ROLE_META: Record<string, { label: string; color: string; bg: string }> =
+  {
+    owner: {
+      label: "Master",
+      color: "text-violet-700 dark:text-violet-300",
+      bg: "bg-violet-100 dark:bg-violet-900/50",
+    },
+    admin: {
+      label: "Adm",
+      color: "text-blue-700 dark:text-blue-300",
+      bg: "bg-blue-100 dark:bg-blue-900/50",
+    },
+    member: {
+      label: "Single",
+      color: "text-slate-600 dark:text-slate-300",
+      bg: "bg-slate-100 dark:bg-slate-800",
+    },
+    moderador: {
+      label: "Moderador",
+      color: "text-orange-700 dark:text-orange-300",
+      bg: "bg-orange-100 dark:bg-orange-900/50",
+    },
+  };
 
 function RolePill({ role }: { role: string }) {
   const meta = ROLE_META[role];
   if (!meta) return null;
   return (
-    <span className={cn("inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold leading-none", meta.color, meta.bg)}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold leading-none",
+        meta.color,
+        meta.bg,
+      )}
+    >
       {meta.label}
     </span>
   );
@@ -48,9 +71,10 @@ export function NavUser() {
   const router = useRouter();
 
   // Resolve current user's role in active org
-  const currentRole = (activeOrg?.members as any[])?.find(
-    (m: any) => m.userId === session?.user?.id
-  )?.role ?? null;
+  const currentRole =
+    (activeOrg?.members as any[])?.find(
+      (m: any) => m.userId === session?.user?.id,
+    )?.role ?? null;
 
   function getInitials(name: string): string {
     const initials = name
@@ -105,18 +129,20 @@ export function NavUser() {
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     {session?.user.name && (
-                      <span className="truncate font-medium">
-                        {session?.user.name}
-                      </span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="truncate font-medium">
+                          {session?.user.name}
+                        </span>
+                        {currentRole && (
+                          <span className="mt-0.5">
+                            <RolePill role={currentRole} />
+                          </span>
+                        )}
+                      </div>
                     )}
                     {session?.user.email && (
                       <span className="truncate text-xs">
                         {session.user.email}
-                      </span>
-                    )}
-                    {currentRole && (
-                      <span className="mt-0.5">
-                        <RolePill role={currentRole} />
                       </span>
                     )}
                   </div>

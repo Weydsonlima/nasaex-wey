@@ -1,5 +1,5 @@
 import React, { FC, useState } from "react";
-import { FormBlockInstance } from "@/features/form/types";
+import { FieldValue, FormBlockInstance } from "@/features/form/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUpRight, Clock, User } from "lucide-react";
 import { JsonValue } from "@prisma/client/runtime/client";
@@ -50,19 +50,35 @@ export function AllReponds({ blocks, responses }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-3 w-full">
       {responses.map((response) => {
-        let parsedResponses: Record<string, any> = {};
+        let parsedResponses: Record<string, FieldValue> = {};
         try {
           parsedResponses =
             typeof response.jsonResponse === "string"
               ? JSON.parse(response.jsonResponse)
-              : (response.jsonResponse as Record<string, any>);
+              : (response.jsonResponse as Record<string, FieldValue>);
         } catch (e) {
           console.error("Error parsing jsonResponse", e);
         }
 
+        // Safe value extractor
+        const extractValue = (field: any): string | undefined => {
+          if (!field) return undefined;
+          if (typeof field === "object" && field !== null && "value" in field) {
+            return String(field.value);
+          }
+          return String(field);
+        };
+
         // Find lead name or phone from response for display
-        const leadPhone = parsedResponses.user_phone || parsedResponses.phone;
-        const leadName = parsedResponses.user_name || parsedResponses.name;
+        const leadPhone = extractValue(
+          parsedResponses.user_phone || parsedResponses.phone,
+        );
+        const leadName = extractValue(
+          parsedResponses.user_name || parsedResponses.name,
+        );
+        const leadEmail = extractValue(
+          parsedResponses.user_email || parsedResponses.email,
+        );
         const leadId = response.leadId;
         const displayLead = leadName || leadPhone || "Lead Desconhecido";
         const identifier = leadPhone || leadId || leadName;
@@ -81,18 +97,13 @@ export function AllReponds({ blocks, responses }: Props) {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-bold truncate max-w-[150px]">
-                        {displayLead}
+                        {displayLead as React.ReactNode}
                       </span>
                       {response.form.settings?.needLogin && (
                         <div className="flex flex-col gap-0 mt-0.5">
-                          {parsedResponses.user_email && (
-                            <span className="text-[10px] text-muted-foreground lowercase truncate max-w-[120px]">
-                              {parsedResponses.user_email}
-                            </span>
-                          )}
-                          {parsedResponses.user_phone && (
+                          {leadPhone && (
                             <span className="text-[10px] text-muted-foreground truncate">
-                              {parsedResponses.user_phone}
+                              {leadPhone as React.ReactNode}
                             </span>
                           )}
                         </div>
@@ -132,7 +143,7 @@ export function AllReponds({ blocks, responses }: Props) {
 
                       const displayValue =
                         typeof value === "object" && value !== null
-                          ? value.responseValue
+                          ? value.value
                           : value;
 
                       return (

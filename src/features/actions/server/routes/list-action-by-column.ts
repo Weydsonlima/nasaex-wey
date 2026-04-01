@@ -14,11 +14,44 @@ export const listActionByColumn = base
       limit: z.number().min(1).max(100).default(50),
     }),
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, context, errors }) => {
     const limit = input.limit;
+
+    const member = await prisma.member.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: context.user.id,
+          organizationId: context.org.id,
+        },
+      },
+    });
+
+    if (!member) {
+      throw errors.FORBIDDEN;
+    }
+
+    const isMember = member.role === "member";
+
     const action = await prisma.action.findMany({
       where: {
         columnId: input.columnId,
+        isArchived: false,
+        ...(isMember
+          ? {
+              OR: [
+                {
+                  createdBy: context.user.id,
+                },
+                {
+                  participants: {
+                    some: {
+                      userId: context.user.id,
+                    },
+                  },
+                },
+              ],
+            }
+          : {}),
       },
       take: limit + 1,
       cursor: input.cursor ? { id: input.cursor } : undefined,
@@ -34,6 +67,7 @@ export const listActionByColumn = base
         columnId: true,
         createdBy: true,
         order: true,
+        coverImage: true,
         isDone: true,
         priority: true,
         user: {
@@ -58,6 +92,17 @@ export const listActionByColumn = base
           select: {
             id: true,
             isDone: true,
+          },
+        },
+        tags: {
+          select: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
         createdAt: true,

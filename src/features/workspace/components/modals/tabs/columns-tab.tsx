@@ -11,6 +11,7 @@ import {
   verticalListSortingStrategy, useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Decimal } from "@prisma/client/runtime/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import {
   useCreateColumn,
   useUpdateColumn,
   useDeleteColumn,
+  useUpdateColumnOrder,
 } from "@/features/workspace/hooks/use-workspace";
 
 export function ColumnsTab({ workspaceId }: { workspaceId: string }) {
@@ -27,6 +29,7 @@ export function ColumnsTab({ workspaceId }: { workspaceId: string }) {
   const [columns, setColumns] = useState<any[]>([]);
   const createColumn = useCreateColumn();
   const updateColumn = useUpdateColumn();
+  const reorderColumn = useUpdateColumnOrder();
   const deleteColumn = useDeleteColumn();
 
   const [newColumnName, setNewColumnName] = useState("");
@@ -45,8 +48,28 @@ export function ColumnsTab({ workspaceId }: { workspaceId: string }) {
     if (over && active.id !== over.id) {
       const oldIndex = columns.findIndex((col) => col.id === active.id);
       const newIndex = columns.findIndex((col) => col.id === over.id);
-      setColumns(arrayMove(columns, oldIndex, newIndex));
-      updateColumn.mutate({ columnId: active.id as string, order: newIndex });
+      
+      const newColumns = arrayMove(columns, oldIndex, newIndex);
+      setColumns(newColumns);
+
+      const prev = newColumns[newIndex - 1];
+      const next = newColumns[newIndex + 1];
+
+      let newOrder: string;
+      if (!prev && next) {
+        newOrder = new Decimal(next.order).minus(1000).toString();
+      } else if (prev && !next) {
+        newOrder = new Decimal(prev.order).plus(1000).toString();
+      } else if (prev && next) {
+        newOrder = new Decimal(prev.order).plus(next.order).div(2).toString();
+      } else {
+        newOrder = "1000";
+      }
+
+      reorderColumn.mutate({ 
+        id: active.id as string, 
+        order: newOrder,
+      });
     }
   };
 

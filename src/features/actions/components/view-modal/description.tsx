@@ -6,7 +6,10 @@ interface DescriptionProps {
   onDescriptionChange: (value: string) => void;
 }
 
-export function ActionDescription({ description, onDescriptionChange }: DescriptionProps) {
+export function ActionDescription({
+  description,
+  onDescriptionChange,
+}: DescriptionProps) {
   const descriptionSaveTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const handleChange = useCallback(
@@ -22,7 +25,7 @@ export function ActionDescription({ description, onDescriptionChange }: Descript
   );
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Descrição
       </p>

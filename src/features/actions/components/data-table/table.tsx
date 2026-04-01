@@ -32,6 +32,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { ViewActionModal } from "../view-action-modal";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -50,6 +51,9 @@ export function ActionsTable<TData, TValue>({
     pageIndex: parseAsInteger.withDefault(0),
     pageSize: parseAsInteger.withDefault(20),
   });
+
+  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const table = useReactTable({
     data,
@@ -108,6 +112,11 @@ export function ActionsTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer transition-colors hover:bg-muted/50"
+                  onClick={() => {
+                    setSelectedActionId((row.original as any).id);
+                    setIsModalOpen(true);
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -125,13 +134,21 @@ export function ActionsTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Nenhum resultado.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {selectedActionId && (
+        <ViewActionModal
+          actionId={selectedActionId}
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+        />
+      )}
 
       <div className="flex items-center justify-between space-x-2 py-4">
         <div>

@@ -15,16 +15,44 @@ export const listActionByWorkspace = base
     }),
   )
 
-  .handler(async ({ input }) => {
-    const where = {
-      workspaceId: input.workspaceId,
-    };
+  .handler(async ({ input, context, errors }) => {
+    const member = await prisma.member.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: context.user.id,
+          organizationId: context.org.id,
+        },
+      },
+    });
 
-    console.log("Innput", input);
+    if (!member) {
+      throw errors.FORBIDDEN;
+    }
+
+    const isMember = member.role === "member";
 
     const [actions, total] = await Promise.all([
       prisma.action.findMany({
-        where,
+        where: {
+          workspaceId: input.workspaceId,
+          isArchived: false,
+          ...(isMember
+            ? {
+                OR: [
+                  {
+                    createdBy: context.user.id,
+                  },
+                  {
+                    participants: {
+                      some: {
+                        userId: context.user.id,
+                      },
+                    },
+                  },
+                ],
+              }
+            : {}),
+        },
         orderBy: {
           createdAt: "desc",
         },
@@ -40,6 +68,9 @@ export const listActionByWorkspace = base
           createdBy: true,
           priority: true,
           isDone: true,
+          isArchived: true,
+          isFavorited: true,
+          workspaceId: true,
           column: {
             select: {
               id: true,
@@ -68,7 +99,26 @@ export const listActionByWorkspace = base
         },
       }),
       prisma.action.count({
-        where,
+        where: {
+          workspaceId: input.workspaceId,
+          isArchived: false,
+          ...(isMember
+            ? {
+                OR: [
+                  {
+                    createdBy: context.user.id,
+                  },
+                  {
+                    participants: {
+                      some: {
+                        userId: context.user.id,
+                      },
+                    },
+                  },
+                ],
+              }
+            : {}),
+        },
       }),
     ]);
 

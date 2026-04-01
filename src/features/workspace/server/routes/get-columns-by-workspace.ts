@@ -12,7 +12,22 @@ export const getColumnsByWorkspace = base
       workspaceId: z.string().min(1, "Workspace é obrigatório"),
     }),
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, context, errors }) => {
+    const member = await prisma.member.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: context.user.id,
+          organizationId: context.org.id,
+        },
+      },
+    });
+
+    if (!member) {
+      throw errors.FORBIDDEN;
+    }
+
+    const isMember = member.role === "member";
+
     const result = await prisma.workspaceColumn.findMany({
       where: {
         workspaceId: input.workspaceId,
@@ -24,10 +39,31 @@ export const getColumnsByWorkspace = base
         id: true,
         name: true,
         color: true,
+        order: true,
         workspaceId: true,
         _count: {
           select: {
-            actions: true,
+            actions: {
+              where: {
+                isArchived: false,
+                ...(isMember
+                  ? {
+                      OR: [
+                        {
+                          createdBy: context.user.id,
+                        },
+                        {
+                          participants: {
+                            some: {
+                              userId: context.user.id,
+                            },
+                          },
+                        },
+                      ],
+                    }
+                  : {}),
+              },
+            },
           },
         },
       },

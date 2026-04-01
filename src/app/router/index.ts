@@ -27,7 +27,11 @@ import { nasaCommandRouter } from "./nasa-command";
 import { permissionsRouter } from "./permissions";
 import { activityRouter } from "./activity";
 import { formRouter } from "./form";
-import { adminRouter } from "./admin";
+import { adminRouter }              from "./admin";
+import { userNotificationsRouter }  from "./user-notifications";
+import { sidebarPrefsRouter }       from "./sidebar-prefs";
+import { spacePointRouter }          from "./space-point";
+import { userRouter }                from "./user";
 
 export const router = {
   tracking: trackingRoutes,
@@ -59,4 +63,8 @@ export const router = {
   activity: activityRouter,
   form: formRouter,
   admin: adminRouter,
+  userNotifications: userNotificationsRouter,
+  sidebarPrefs: sidebarPrefsRouter,
+  spacePoint: spacePointRouter,
+  user:       userRouter,
 };

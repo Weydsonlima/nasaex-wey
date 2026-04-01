@@ -1,254 +1,306 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Rocket, User, Mail, Lock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { useQueryState } from "nuqs";
 
 const signUpSchema = z
   .object({
-    name: z.string().min(1, "Campo obrigatório"),
-    email: z.email(),
-    password: z.string().min(8, "Senha precisar ter no mínimo 8 caracteres"),
-    confirmPassword: z
-      .string()
-      .min(8, "Confirmação de senha precisar ter no mínimo 8 caracteres"),
+    name:            z.string().min(1, "Nome é obrigatório"),
+    email:           z.string().email("E-mail inválido"),
+    password:        z.string().min(8, "Mínimo 8 caracteres"),
+    confirmPassword: z.string().min(8, "Mínimo 8 caracteres"),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((d) => d.password === d.confirmPassword, {
     message: "As senhas não conferem",
     path: ["confirmPassword"],
   });
 
 type SignUpData = z.infer<typeof signUpSchema>;
 
-export function SignupForm({
-  className,
-  ...props
-}: React.ComponentProps<"form">) {
-  const [callbackUrl] = useQueryState("callbackUrl");
-  const [emailParam] = useQueryState("email");
+// ── Styled field wrapper ──────────────────────────────────────────────────────
+function AuthField({
+  label, icon: Icon, id, type, placeholder, error, disabled,
+  register, rightElement,
+}: {
+  label: string;
+  icon: React.ElementType;
+  id: string;
+  type: string;
+  placeholder: string;
+  error?: string;
+  disabled?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  register: any;
+  rightElement?: React.ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label htmlFor={id} style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 500 }}>
+        {label}
+      </label>
+      <div style={{ position: "relative" }}>
+        <Icon style={{
+          position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+          width: 15, height: 15, color: "rgba(255,255,255,0.3)",
+        }} />
+        <input
+          id={id}
+          type={type}
+          placeholder={placeholder}
+          disabled={disabled}
+          {...register}
+          style={{
+            width: "100%",
+            background: "rgba(255,255,255,0.06)",
+            border: error ? "1.5px solid rgba(239,68,68,0.6)" : "1.5px solid rgba(255,255,255,0.1)",
+            borderRadius: 10,
+            padding: "10px 12px 10px 36px",
+            paddingRight: rightElement ? 40 : 12,
+            color: "white",
+            fontSize: 14,
+            outline: "none",
+            transition: "border-color 0.2s, box-shadow 0.2s",
+            boxSizing: "border-box",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "rgba(124,58,237,0.7)";
+            e.currentTarget.style.boxShadow   = "0 0 0 3px rgba(124,58,237,0.12)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = error ? "rgba(239,68,68,0.6)" : "rgba(255,255,255,0.1)";
+            e.currentTarget.style.boxShadow   = "none";
+          }}
+        />
+        {rightElement && (
+          <div style={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)" }}>
+            {rightElement}
+          </div>
+        )}
+      </div>
+      {error && (
+        <p style={{ color: "rgba(239,68,68,0.85)", fontSize: 12, marginTop: -2 }}>{error}</p>
+      )}
+    </div>
+  );
+}
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<SignUpData>({
+// ── EyeToggle ─────────────────────────────────────────────────────────────────
+function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  const Icon = show ? EyeOff : Eye;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 6px", color: "rgba(255,255,255,0.35)", display: "flex" }}
+    >
+      <Icon style={{ width: 15, height: 15 }} />
+    </button>
+  );
+}
+
+// ── Main form ─────────────────────────────────────────────────────────────────
+export function SignupForm() {
+  const [callbackUrl] = useQueryState("callbackUrl");
+  const [emailParam]  = useQueryState("email");
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<SignUpData>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      email: emailParam || "",
-    },
+    defaultValues: { email: emailParam || "" },
   });
+
   const [isLoading, setIsLoading] = useTransition();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setConfirmPassword] = useState(false);
+  const [showPass,    setShowPass]    = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (emailParam) {
-      setValue("email", emailParam);
-    }
+    if (emailParam) setValue("email", emailParam);
   }, [emailParam, setValue]);
 
   const onSignUp = (data: SignUpData) => {
     setIsLoading(async () => {
-      await authClient.signUp.email(
-        {
-          email: data.email,
-          password: data.password,
-          name: data.name.trim(),
-          callbackURL: callbackUrl ? callbackUrl : "/home",
-        },
-        {
-          onSuccess: () => {
-            toast.success("Conta criada com succeso");
-            router.push(callbackUrl ? callbackUrl : "/home");
-          },
-          onError: (err) => {
-            console.log(err);
-            toast.error("Erro ao criar conta");
-          },
-        },
-      );
+      const result = await authClient.signUp.email({
+        email: data.email,
+        password: data.password,
+        name: data.name.trim(),
+        callbackURL: callbackUrl ?? "/home",
+      });
+
+      // better-auth's organizationClient plugin fires an internal request after
+      // sign-up to set the active org. For a brand-new user (no org yet) that
+      // sub-request returns an error, populating `result.error` even though the
+      // account was created successfully. We detect this by checking the session.
+      if (result.error) {
+        const errMsg  = result.error.message ?? "";
+        const isOrgFalsePositive =
+          errMsg.includes("organization") ||
+          errMsg.includes("active") ||
+          errMsg === "" ||
+          result.error.status === 404 ||
+          result.error.status === 400;
+
+        if (isOrgFalsePositive) {
+          // Account was created – verify by checking whether we now have a session
+          const session = await authClient.getSession();
+          if (session.data) {
+            toast.success("🚀 Conta criada! Bem-vindo ao NASA.ex!");
+            router.push(callbackUrl ?? "/home");
+            return;
+          }
+        }
+
+        // Real sign-up failure
+        if (errMsg.toLowerCase().includes("email") || errMsg.toLowerCase().includes("already")) {
+          toast.error("E-mail já cadastrado. Tente fazer login.");
+        } else {
+          toast.error(errMsg || "Erro ao criar conta. Tente novamente.");
+        }
+        return;
+      }
+
+      toast.success("🚀 Conta criada! Bem-vindo ao NASA.ex!");
+      router.push(callbackUrl ?? "/home");
     });
   };
 
-  const onSignInWithGoogle = async () => {
+  const onGoogle = async () => {
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: callbackUrl ? callbackUrl : "/home",
-      scopes: ["https://www.googleapis.com/auth/drive.file"],
+      callbackURL: callbackUrl ?? "/home",
     });
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSignUp)}
-      className={cn("flex flex-col gap-6", className)}
-      {...props}
-    >
-      <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Crie sua conta</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Preencha os campos abaixo para criar sua conta.
-          </p>
-        </div>
-        <Field>
-          <FieldLabel htmlFor="name">Nome</FieldLabel>
-          <Input
-            id="name"
-            type="text"
-            autoFocus
-            placeholder="John Doe"
-            {...register("name")}
-            disabled={isLoading}
-          />
-          {errors.name && (
-            <FieldError className="text-sm text-red-400">
-              {errors.name.message}
-            </FieldError>
-          )}
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="email">E-mail</FieldLabel>
-          <Input
-            id="email"
-            type="email"
-            placeholder="john@example.com"
-            {...register("email")}
-            disabled={isLoading}
-          />
-          {errors.email && (
-            <FieldError className="text-sm text-red-400">
-              {errors.email.message}
-            </FieldError>
-          )}
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="password">Senha</FieldLabel>
-          <div className="relative">
-            <Input
-              id="password"
-              placeholder="••••••••"
-              type={showPassword ? "text" : "password"}
-              {...register("password")}
-              disabled={isLoading}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent!"
-              onClick={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="sr-only">
-                {showPassword ? "Esconder senha" : "Mostrar senha"}
-              </span>
-            </Button>
-          </div>
-          {errors.password && (
-            <FieldError>{errors.password.message} </FieldError>
-          )}
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="confirm-password">Confirmar senha</FieldLabel>
-          <div className="relative">
-            <Input
-              placeholder="••••••••"
-              type={showConfirmPassword ? "text" : "password"}
-              id="confirm-password"
-              {...register("confirmPassword")}
-              disabled={isLoading}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent!"
-              onClick={() => setConfirmPassword(!showConfirmPassword)}
-              disabled={isLoading}
-            >
-              {showConfirmPassword ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="sr-only">
-                {showConfirmPassword ? "Esconder senha" : "Mostrar senha"}
-              </span>
-            </Button>
-          </div>
-          {errors.confirmPassword && (
-            <FieldError>{errors.confirmPassword.message} </FieldError>
-          )}
-        </Field>
-        <Field>
-          <Button type="submit" className="cursor-pointer" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Cadastrando...
-              </>
-            ) : (
-              "Cadastrar"
-            )}
-          </Button>
-        </Field>
-        <FieldSeparator>ou</FieldSeparator>
-        <Field>
-          <Button
-            variant="outline"
-            type="button"
-            className="cursor-pointer"
-            onClick={onSignInWithGoogle}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="200"
-              height="200"
-              viewBox="0 0 424 432"
-            >
-              <path
-                fill="currentColor"
-                d="M214 186v-1h201q3 12 3 36q0 93-56.5 150.5T213 429q-88 0-150.5-62T0 216T62 65T213 3q87 0 144 57l-57 56q-33-33-86-33q-54 0-92.5 39.5t-38.5 95t38.5 94.5t92.5 39q31 0 55-9.5t37.5-24.5t20.5-29.5t10-27.5H214v-74z"
-              />
-            </svg>
-            Entrar com Google
-          </Button>
-          <FieldDescription className="px-6 text-center">
-            Já possui uma conta?{" "}
-            <a
-              href={`/sign-in${callbackUrl ? `?callbackUrl=${callbackUrl}` : ""}`}
-            >
-              Entrar
-            </a>
-          </FieldDescription>
-        </Field>
-      </FieldGroup>
+    <form onSubmit={handleSubmit(onSignUp)} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: 4 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: "white", letterSpacing: "-0.5px", marginBottom: 6 }}>
+          Crie sua conta
+        </h1>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
+          Junte-se a centenas de times que vendem mais com NASA
+        </p>
+      </div>
+
+      {/* Google button */}
+      <button
+        type="button"
+        onClick={onGoogle}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          width: "100%", padding: "10px 16px", borderRadius: 10, cursor: "pointer",
+          background: "rgba(255,255,255,0.07)",
+          border: "1.5px solid rgba(255,255,255,0.12)",
+          color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: 500,
+          transition: "background 0.2s",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.11)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continuar com Google
+      </button>
+
+      {/* Divider */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>ou preencha</span>
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+      </div>
+
+      {/* Fields */}
+      <AuthField
+        label="Nome completo"
+        icon={User}
+        id="name"
+        type="text"
+        placeholder="João Silva"
+        error={errors.name?.message}
+        disabled={isLoading}
+        register={register("name")}
+      />
+      <AuthField
+        label="E-mail"
+        icon={Mail}
+        id="email"
+        type="email"
+        placeholder="joao@empresa.com"
+        error={errors.email?.message}
+        disabled={isLoading}
+        register={register("email")}
+      />
+      <AuthField
+        label="Senha"
+        icon={Lock}
+        id="password"
+        type={showPass ? "text" : "password"}
+        placeholder="Mínimo 8 caracteres"
+        error={errors.password?.message}
+        disabled={isLoading}
+        register={register("password")}
+        rightElement={<EyeToggle show={showPass} onToggle={() => setShowPass(!showPass)} />}
+      />
+      <AuthField
+        label="Confirmar senha"
+        icon={Lock}
+        id="confirm-password"
+        type={showConfirm ? "text" : "password"}
+        placeholder="Repita a senha"
+        error={errors.confirmPassword?.message}
+        disabled={isLoading}
+        register={register("confirmPassword")}
+        rightElement={<EyeToggle show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)} />}
+      />
+
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={isLoading}
+        style={{
+          width: "100%", padding: "12px 16px", borderRadius: 12, cursor: isLoading ? "not-allowed" : "pointer",
+          background: isLoading ? "rgba(124,58,237,0.5)" : "linear-gradient(135deg, #7c3aed, #a855f7)",
+          border: "none", color: "white", fontSize: 14, fontWeight: 700,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          boxShadow: isLoading ? "none" : "0 4px 20px rgba(124,58,237,0.4)",
+          transition: "all 0.2s", marginTop: 4,
+        }}
+        onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(124,58,237,0.55)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = isLoading ? "none" : "0 4px 20px rgba(124,58,237,0.4)"; }}
+      >
+        {isLoading ? (
+          <><Loader2 style={{ width: 15, height: 15, animation: "spin 1s linear infinite" }} /> Criando conta...</>
+        ) : (
+          <><Rocket style={{ width: 15, height: 15 }} /> Criar minha conta</>
+        )}
+      </button>
+
+      {/* Login link */}
+      <p style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
+        Já tem uma conta?{" "}
+        <a
+          href={`/sign-in${callbackUrl ? `?callbackUrl=${callbackUrl}` : ""}`}
+          style={{ color: "#a78bfa", fontWeight: 600, textDecoration: "none" }}
+          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+        >
+          Entrar
+        </a>
+      </p>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
   );
 }

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg4" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a0a3d"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="ring4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8d6e63"/>
+      <stop offset="50%" stop-color="#3e2723"/>
+      <stop offset="100%" stop-color="#8d6e63"/>
+    </linearGradient>
+    <filter id="glow4">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip4"><circle cx="100" cy="100" r="88"/></clipPath>
+  </defs>
+  <!-- Outer glow ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#8d6e63" stroke-width="1" opacity="0.3"/>
+  <!-- Main ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#ring4)" stroke-width="6"/>
+  <!-- Background -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg4)"/>
+  <!-- Stars -->
+  <g clip-path="url(#clip4)">
+    <circle cx="13.8" cy="11.8" r="0.8" fill="white" opacity="0.20"/>
+    <circle cx="156.2" cy="102.6" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="118.6" cy="13.4" r="0.5" fill="white" opacity="0.32"/>
+    <circle cx="80.9" cy="104.1" r="0.8" fill="white" opacity="0.38"/>
+    <circle cx="43.3" cy="14.9" r="0.5" fill="white" opacity="0.44"/>
+    <circle cx="185.7" cy="105.7" r="0.5" fill="white" opacity="0.50"/>
+    <circle cx="148.1" cy="16.5" r="0.8" fill="white" opacity="0.56"/>
+    <circle cx="110.4" cy="107.3" r="0.5" fill="white" opacity="0.20"/>
+    <circle cx="72.8" cy="18.1" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="35.2" cy="108.9" r="0.8" fill="white" opacity="0.32"/>
+    <circle cx="177.5" cy="19.6" r="0.5" fill="white" opacity="0.38"/>
+    <circle cx="139.9" cy="110.4" r="0.5" fill="white" opacity="0.44"/>
+  </g>
+  <!-- Planet -->
+  
+  <defs>
+    <radialGradient id="pluto4" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#bcaaa4"/><stop offset="100%" stop-color="#4e342e"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="40" fill="url(#pluto4)" filter="url(#glow4)"/>
+  <ellipse cx="103" cy="103" rx="14" ry="12" fill="#f5e6d3" opacity="0.45"/>
+  <ellipse cx="103" cy="103" rx="11" ry="9" fill="#ffd7b5" opacity="0.35"/>
+  <circle cx="87" cy="90" r="4" fill="#3e2723" opacity="0.4"/>
+  <circle cx="113" cy="95" r="3" fill="#3e2723" opacity="0.35"/>
+  <!-- Name label -->
+  <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#d7ccc8" letter-spacing="1">PLUTÃO</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">300 pts</text>
+</svg>

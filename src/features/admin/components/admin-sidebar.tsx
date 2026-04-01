@@ -9,15 +9,32 @@ import {
   CreditCard,
   Users,
   ShieldCheck,
+  UserCog,
+  Lock,
+  Wifi,
+  Puzzle,
+  Bell,
+  Rocket,
+  ImageIcon,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/admin",             icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/admin/companies",   icon: Building2,       label: "Empresas" },
-  { href: "/admin/stars",       icon: Star,            label: "Stars" },
-  { href: "/admin/plans",       icon: CreditCard,      label: "Planos" },
-  { href: "/admin/moderators",  icon: Users,           label: "Moderadores" },
+  { href: "/admin",               icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/companies",     icon: Building2,       label: "Empresas" },
+  { href: "/admin/users",         icon: Users,           label: "Usuários" },
+  { href: "/admin/roles",         icon: UserCog,         label: "Funções" },
+  { href: "/admin/permissions",   icon: Lock,            label: "Permissões" },
+  { href: "/admin/stars",         icon: Star,            label: "Stars" },
+  { href: "/admin/plans",         icon: CreditCard,      label: "Planos" },
+  { href: "/admin/instances",     icon: Wifi,            label: "Instâncias" },
+  { href: "/admin/apps",          icon: Puzzle,          label: "Apps" },
+  { href: "/admin/notifications",  icon: Bell,            label: "Notificações"  },
+  { href: "/admin/space-points",   icon: Rocket,          label: "Space Points"  },
+  { href: "/admin/assets",         icon: ImageIcon,       label: "Ativos"        },
+  { href: "/admin/payments",       icon: Landmark,        label: "Gateways"      },
+  { href: "/admin/moderators",     icon: ShieldCheck,     label: "Moderadores"   },
 ];
 
 export function AdminSidebar() {
@@ -32,7 +49,7 @@ export function AdminSidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 space-y-0.5 px-2">
+      <nav className="flex-1 py-4 space-y-0.5 px-2 overflow-y-auto">
         {NAV.map(({ href, icon: Icon, label }) => {
           const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
           return (

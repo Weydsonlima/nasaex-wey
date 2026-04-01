@@ -32,6 +32,8 @@ export interface AppCostInfo {
 
 // ─── Balance ──────────────────────────────────────────────────────────────────
 
+const WELCOME_BONUS = 100;
+
 export async function checkBalance(organizationId: string): Promise<StarBalance> {
   const org = await prisma.organization.findUniqueOrThrow({
     where: { id: organizationId },
@@ -39,14 +41,35 @@ export async function checkBalance(organizationId: string): Promise<StarBalance>
       starsBalance: true,
       starsCycleStart: true,
       plan: {
-        select: {
-          slug: true,
-          name: true,
-          monthlyStars: true,
-        },
+        select: { slug: true, name: true, monthlyStars: true },
       },
     },
   });
+
+  // ── Welcome bonus: crédito único de 100 stars no primeiro acesso ─────────
+  const hasAnyTransaction = await prisma.starTransaction.count({
+    where: { organizationId },
+  });
+  if (hasAnyTransaction === 0) {
+    const newBalance = org.starsBalance + WELCOME_BONUS;
+    await prisma.$transaction([
+      prisma.organization.update({
+        where: { id: organizationId },
+        data: { starsBalance: newBalance },
+      }),
+      prisma.starTransaction.create({
+        data: {
+          organizationId,
+          type: StarTransactionType.MANUAL_ADJUST,
+          amount: WELCOME_BONUS,
+          balanceAfter: newBalance,
+          description: "🎉 Bônus de boas-vindas ao NASA",
+        },
+      }),
+    ]);
+    org.starsBalance = newBalance;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const plan = org.plan ?? { slug: "free", name: "Gratuito", monthlyStars: 0 };
 

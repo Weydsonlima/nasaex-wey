@@ -4,12 +4,26 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
+import { AvatarUploader } from "@/features/settings/components/avatar-uploader";
 
 export default function Page() {
   const { data: session, isPending } = authClient.useSession();
 
   return (
     <div className="px-4">
+      {/* ── Avatar ── */}
+      <div className="flex items-center justify-between py-6">
+        <div>
+          <h2 className="font-medium">Foto de perfil</h2>
+          <span className="text-xs text-muted-foreground">
+            Clique na foto para trocar a imagem
+          </span>
+        </div>
+        <AvatarUploader />
+      </div>
+
+      <Separator />
+
       <div className="flex items-center justify-between py-6">
         <div>
           <h2 className="font-medium">Nome</h2>

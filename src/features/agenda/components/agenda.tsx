@@ -282,10 +282,10 @@ export const AgendaHeader = () => {
             <CalendarDays className="size-4" />
           </Button>
 
-          {/* Novo compromisso */}
+          {/* Nova agenda */}
           <Button size="sm" onClick={() => setOpen(true)}>
             <CalendarIcon className="size-4" />
-            Novo compromisso
+            Nova agenda
           </Button>
         </div>
       </div>

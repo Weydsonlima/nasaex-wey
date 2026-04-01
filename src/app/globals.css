@@ -113,6 +113,22 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* ── Auth page dark input autofill fix ─────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(20, 8, 60, 0.95) inset !important;
+  -webkit-text-fill-color: white !important;
+  caret-color: white !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Placeholder color for dark inputs */
+input::placeholder {
+  color: rgba(255, 255, 255, 0.28);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -298,4 +314,14 @@
   thead {
     display: table-header-group;
   }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  15%       { transform: rotate(-15deg); }
+  30%       { transform: rotate(15deg); }
+  45%       { transform: rotate(-10deg); }
+  60%       { transform: rotate(10deg); }
+  75%       { transform: rotate(-5deg); }
+  90%       { transform: rotate(5deg); }
 }

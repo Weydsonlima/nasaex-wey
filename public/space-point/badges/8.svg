@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg8" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a0a3d"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="ring8" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4dd0e1"/>
+      <stop offset="50%" stop-color="#004d40"/>
+      <stop offset="100%" stop-color="#4dd0e1"/>
+    </linearGradient>
+    <filter id="glow8">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip8"><circle cx="100" cy="100" r="88"/></clipPath>
+  </defs>
+  <!-- Outer glow ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#4dd0e1" stroke-width="1" opacity="0.3"/>
+  <!-- Main ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#ring8)" stroke-width="6"/>
+  <!-- Background -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg8)"/>
+  <!-- Stars -->
+  <g clip-path="url(#clip8)">
+    <circle cx="16.1" cy="13.0" r="0.8" fill="white" opacity="0.20"/>
+    <circle cx="158.5" cy="103.8" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="120.8" cy="14.6" r="0.5" fill="white" opacity="0.32"/>
+    <circle cx="83.2" cy="105.4" r="0.8" fill="white" opacity="0.38"/>
+    <circle cx="45.6" cy="16.2" r="0.5" fill="white" opacity="0.44"/>
+    <circle cx="187.9" cy="106.9" r="0.5" fill="white" opacity="0.50"/>
+    <circle cx="150.3" cy="17.7" r="0.8" fill="white" opacity="0.56"/>
+    <circle cx="112.7" cy="108.5" r="0.5" fill="white" opacity="0.20"/>
+    <circle cx="75.0" cy="19.3" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="37.4" cy="110.1" r="0.8" fill="white" opacity="0.32"/>
+    <circle cx="179.8" cy="20.9" r="0.5" fill="white" opacity="0.38"/>
+    <circle cx="142.1" cy="111.7" r="0.5" fill="white" opacity="0.44"/>
+  </g>
+  <!-- Planet -->
+  
+  <defs>
+    <radialGradient id="ura8" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#80deea"/><stop offset="100%" stop-color="#006064"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="100" rx="12" ry="50" fill="none" stroke="#4dd0e1" stroke-width="2.5" opacity="0.35"/>
+  <ellipse cx="100" cy="100" rx="10" ry="47" fill="none" stroke="#80deea" stroke-width="1.5" opacity="0.25"/>
+  <circle cx="100" cy="100" r="34" fill="url(#ura8)" filter="url(#glow8)"/>
+  <ellipse cx="100" cy="92" rx="26" ry="5" fill="#b2ebf2" opacity="0.25"/>
+  <ellipse cx="100" cy="108" rx="22" ry="4" fill="#4dd0e1" opacity="0.2"/>
+  <!-- Name label -->
+  <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#e0f7fa" letter-spacing="1">URANO</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">700 pts</text>
+</svg>

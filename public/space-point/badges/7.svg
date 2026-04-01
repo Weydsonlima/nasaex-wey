@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bg7" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a0a3d"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="ring7" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd600"/>
+      <stop offset="50%" stop-color="#e65100"/>
+      <stop offset="100%" stop-color="#ffd600"/>
+    </linearGradient>
+    <filter id="glow7">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip7"><circle cx="100" cy="100" r="88"/></clipPath>
+  </defs>
+  <!-- Outer glow ring -->
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#ffd600" stroke-width="1" opacity="0.3"/>
+  <!-- Main ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#ring7)" stroke-width="6"/>
+  <!-- Background -->
+  <circle cx="100" cy="100" r="88" fill="url(#bg7)"/>
+  <!-- Stars -->
+  <g clip-path="url(#clip7)">
+    <circle cx="15.5" cy="12.7" r="0.8" fill="white" opacity="0.20"/>
+    <circle cx="157.9" cy="103.5" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="120.3" cy="14.3" r="0.5" fill="white" opacity="0.32"/>
+    <circle cx="82.6" cy="105.1" r="0.8" fill="white" opacity="0.38"/>
+    <circle cx="45.0" cy="15.8" r="0.5" fill="white" opacity="0.44"/>
+    <circle cx="187.4" cy="106.6" r="0.5" fill="white" opacity="0.50"/>
+    <circle cx="149.7" cy="17.4" r="0.8" fill="white" opacity="0.56"/>
+    <circle cx="112.1" cy="108.2" r="0.5" fill="white" opacity="0.20"/>
+    <circle cx="74.5" cy="19.0" r="0.5" fill="white" opacity="0.26"/>
+    <circle cx="36.8" cy="109.8" r="0.8" fill="white" opacity="0.32"/>
+    <circle cx="179.2" cy="20.6" r="0.5" fill="white" opacity="0.38"/>
+    <circle cx="141.6" cy="111.3" r="0.5" fill="white" opacity="0.44"/>
+  </g>
+  <!-- Planet -->
+  
+  <defs>
+    <radialGradient id="sat7" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffe082"/><stop offset="100%" stop-color="#f57f17"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="100" rx="55" ry="12" fill="#c8a000" opacity="0.25"/>
+  <ellipse cx="100" cy="100" rx="50" ry="10" fill="none" stroke="#d4a017" stroke-width="3" opacity="0.4"/>
+  <ellipse cx="100" cy="100" rx="47" ry="9" fill="none" stroke="#f0c040" stroke-width="2" opacity="0.3"/>
+  <circle cx="100" cy="100" r="32" fill="url(#sat7)" filter="url(#glow7)"/>
+  <ellipse cx="100" cy="95" rx="28" ry="5" fill="#ffca28" opacity="0.3"/>
+  <ellipse cx="100" cy="105" rx="26" ry="4" fill="#ff8f00" opacity="0.25"/>
+  <!-- Name label -->
+  <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#fff8e1" letter-spacing="1">SATURNO</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">600 pts</text>
+</svg>

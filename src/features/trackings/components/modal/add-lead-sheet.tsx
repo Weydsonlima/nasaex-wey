@@ -62,6 +62,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useSpacePointCtx } from "@/features/space-point/components/space-point-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +100,7 @@ export default function AddLeadSheet({
   trackingId,
 }: AddLeadSheetProps) {
   const queryClient = useQueryClient();
+  const { earn } = useSpacePointCtx();
   const { status, isLoadingStatus } = useStatus(trackingId ?? "");
   const [selectedCountry, setSelectedCountry] = useState(countries[0]);
   const [validateNumber, setValidateNumber] = useState(true);
@@ -142,6 +144,7 @@ export default function AddLeadSheet({
         });
 
         toast.success("Lead criado com sucesso");
+        earn("create_lead", "Lead criado 🎯");
         reset();
         onOpenChange(false);
       },

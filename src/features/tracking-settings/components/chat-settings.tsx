@@ -38,10 +38,57 @@ import { useParams } from "next/navigation";
 import { DeleteInstanceModal } from "./delet-instance-modal";
 import { ConnectModal } from "./conect-instance-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
+import { Lock } from "lucide-react";
+
+// ── Popup plano necessário ────────────────────────────────────────────────────
+function NoPlanPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center">
+            <Lock className="w-6 h-6 text-yellow-500" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold">Plano necessário</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Para conectar instâncias de WhatsApp é necessário ter um plano ativo. Fale com o administrador da plataforma para contratar um plano.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
+        >
+          Entendi
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ChatSettings() {
   const baseUrl = process.env.NEXT_PUBLIC_UAZAPI_BASE_URL;
   const { trackingId } = useParams<{ trackingId: string }>();
+
+  // Plan check
+  const { data: balance } = useQuery({
+    ...orpc.stars.getBalance.queryOptions(),
+    staleTime: 60_000,
+  });
+  const hasPlan = balance ? balance.planSlug !== "free" && balance.planMonthlyStars > 0 : true; // optimistic while loading
+  const [showNoPlan, setShowNoPlan] = useState(false);
+
+  const handleCreateClick = () => {
+    if (!hasPlan) { setShowNoPlan(true); return; }
+    setIsCreateOpen(true);
+  };
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -105,6 +152,8 @@ export function ChatSettings() {
 
   return (
     <div className="space-y-8 pb-10">
+      <NoPlanPopup open={showNoPlan} onClose={() => setShowNoPlan(false)} />
+
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 rounded-2xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -117,7 +166,8 @@ export function ChatSettings() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button disabled={!!instance} onClick={() => setIsCreateOpen(true)}>
+          <Button disabled={!!instance} onClick={handleCreateClick}>
+            {!hasPlan && <Lock className="size-3.5" />}
             <Plus className="size-4" />
             Nova Instância
           </Button>
@@ -157,8 +207,9 @@ export function ChatSettings() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsCreateOpen(true)}
+              onClick={handleCreateClick}
             >
+              {!hasPlan && <Lock className="size-3.5" />}
               Criar primeira instância
             </Button>
           </div>

@@ -21,7 +21,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
         members: {
           orderBy: { createdAt: "asc" },
           select: {
-            id: true, role: true, createdAt: true,
+            id: true, role: true, cargo: true, createdAt: true,
             user: { select: { id: true, name: true, email: true, image: true, isSystemAdmin: true } },
           },
         },
@@ -74,7 +74,7 @@ export default async function OrgDetailPage({ params }: { params: Promise<{ orgI
       </div>
 
       {/* Members */}
-      <OrgMembersTable members={org.members} orgId={org.id} />
+      <OrgMembersTable members={org.members} orgId={org.id} orgName={org.name} />
 
       {/* Transaction history */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">

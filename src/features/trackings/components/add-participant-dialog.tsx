@@ -113,7 +113,7 @@ export function AddParticipantDialog({
             />
           </InputGroup>
 
-          <div className="space-y-2">
+          <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
             {filteredMembers?.length === 0 && (
               <Empty>
                 <EmptyHeader>
@@ -159,14 +159,29 @@ export function AddParticipantDialog({
               ))}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          {filteredMembers.length > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={addParticipants.isPending}
+              onClick={() =>
+                setSelectedMember(filteredMembers.map((m) => m.user.id))
+              }
+            >
+              Adicionar todos ({filteredMembers.length})
+            </Button>
+          )}
           <Button
             type="button"
             className="w-full"
             disabled={addParticipants.isPending || selectedMember.length === 0}
             onClick={onSubmit}
           >
-            Adicionar
+            {selectedMember.length > 1
+              ? `Adicionar ${selectedMember.length} membros`
+              : "Adicionar"}
           </Button>
         </DialogFooter>
       </DialogContent>

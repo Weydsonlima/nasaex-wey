@@ -661,6 +661,7 @@ export function AstroAgent() {
     <>
       {/* Floating button */}
       <button
+        data-tour="astro-button"
         onClick={() => setAstroOpen(!astroOpen)}
         className={cn(
           "fixed bottom-6 right-6 z-50 size-14 rounded-full shadow-lg transition-all duration-300",

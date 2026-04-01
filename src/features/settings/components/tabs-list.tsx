@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2Icon, SettingsIcon, UsersIcon, ShieldCheck, FileInput, Clock } from "lucide-react";
+import { Building2Icon, SettingsIcon, UsersIcon, ShieldCheck, FileInput, Clock, Bell } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useOrgRole } from "@/hooks/use-org-role";
@@ -41,6 +41,12 @@ const tabsLink = [
     href: "/integration",
     icon: FileInput,
     singleAllowed: false,
+  },
+  {
+    label: "Notificações",
+    href: "/notifications",
+    icon: Bell,
+    singleAllowed: true,
   },
 ];
 

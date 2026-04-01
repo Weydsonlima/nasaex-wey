@@ -63,6 +63,7 @@ import {
   BoxIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useSpacePointCtx } from "@/features/space-point/components/space-point-provider";
 import { NBoxItemType } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { useConstructUrl } from "@/hooks/use-construct-url";
@@ -338,6 +339,7 @@ function UploadModal({
   folderId: string | null;
 }) {
   const createItem = useCreateNBoxItem();
+  const { earn } = useSpacePointCtx();
   const [uploading, setUploading] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -378,8 +380,9 @@ function UploadModal({
       }
     }
     setUploading(false);
+    earn("upload_nbox", "Upload de arquivo no N.Box 📁");
     onClose();
-  }, [createItem, folderId]);
+  }, [createItem, folderId, earn]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

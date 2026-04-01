@@ -11,8 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { ExternalLink, Users, Package, Link2, Clock, Rocket, Flame } from "lucide-react";
+import { ExternalLink, Users, Package, Link2, Clock, Rocket, Flame, PanelLeft } from "lucide-react";
 import { StarsWidget } from "@/features/stars";
+import { SpacePointWidget } from "@/features/space-point";
+import { useSidebarPrefs, useSetSidebarPref, isItemVisible } from "@/hooks/use-sidebar-prefs";
+import { SIDEBAR_NAV_ITEMS, APP_TO_SIDEBAR_KEY } from "@/lib/sidebar-items";
+import { useSuspenseWokspaces } from "@/features/workspace/hooks/use-workspace";
+import { Suspense } from "react";
 
 // ─── App Status ───────────────────────────────────────────────────────────────
 
@@ -208,6 +213,7 @@ interface AppDef {
   href?: string;
   activeUsers?: number | null;
   theme: "purple" | "dark";
+  sidebarKey?: string; // chave no SIDEBAR_NAV_ITEMS
 }
 
 const APPS: AppDef[] = [
@@ -245,14 +251,17 @@ const APPS: AppDef[] = [
     id: "cosmic",
     name: "COSMIC",
     byline: "by NASA®",
-    status: "development",
+    status: "installed",
     icon: CosmicIcon,
     shortDesc: "Formulários inteligentes que viram dados estratégicos no CRM",
     fullDesc: "Sistema de formulários inteligentes. Cada resposta do cliente vira informação estratégica. O sistema entende o interesse e organiza automaticamente no CRM.",
     category: "CRM",
     integration: "—",
-    action: "modal",
+    action: "internal",
+    href: "/form",
+    activeUsers: null,
     theme: "purple",
+    sidebarKey: "cosmic",
   },
   {
     id: "nasachat",
@@ -268,6 +277,7 @@ const APPS: AppDef[] = [
     href: "/tracking-chat",
     activeUsers: null,
     theme: "purple",
+    sidebarKey: "nasachat",
   },
   {
     id: "spacetime",
@@ -283,6 +293,7 @@ const APPS: AppDef[] = [
     href: "/agendas",
     activeUsers: null,
     theme: "purple",
+    sidebarKey: "spacetime",
   },
   {
     id: "forge",
@@ -298,6 +309,7 @@ const APPS: AppDef[] = [
     href: "/forge",
     activeUsers: null,
     theme: "purple",
+    sidebarKey: "forge",
   },
   {
     id: "linnker",
@@ -329,39 +341,44 @@ const APPS: AppDef[] = [
     id: "stars",
     name: "STARS",
     byline: "by NASA®",
-    status: "development",
+    status: "installed",
     icon: StarsIcon,
     shortDesc: "Programa de pontos e fidelidade direto no atendimento",
     fullDesc: "Cliente lembrado, cliente que volta. Crie programas de pontos direto no atendimento. O cliente acompanha tudo em um painel próprio.",
     category: "Fidelização",
     integration: "—",
     action: "modal",
+    activeUsers: null,
     theme: "purple",
   },
   {
     id: "demand",
     name: "DEMAND",
     byline: "by NASA®",
-    status: "development",
+    status: "installed",
     icon: DemandIcon,
     shortDesc: "Painel de controle com tarefas, equipe, clientes e treinamentos",
     fullDesc: "O painel de controle da sua operação. Organize tarefas, equipe, clientes e treinamentos em um único lugar. Kanban, listas, automações e mensagens integradas.",
     category: "Gestão",
     integration: "—",
-    action: "modal",
+    action: "internal",
+    href: "/workspaces",
+    activeUsers: null,
     theme: "purple",
+    sidebarKey: "workspaces",
   },
   {
     id: "astro",
     name: "ASTRO",
     byline: "by NASA®",
-    status: "development",
+    status: "installed",
     icon: AstroIcon,
     shortDesc: "IA treinada para informar, preparar e quebrar objeções",
     fullDesc: "IA treinada para informar, preparar, quebrar objeções e sair de cena. Sem invadir a venda do humano. Sem parecer robô.",
     category: "Inteligência Artificial",
     integration: "—",
     action: "modal",
+    activeUsers: null,
     theme: "purple",
   },
   {
@@ -391,6 +408,7 @@ const APPS: AppDef[] = [
     href: "/nbox",
     activeUsers: null,
     theme: "purple",
+    sidebarKey: "nbox",
   },
   {
     id: "nasa-planner",
@@ -406,6 +424,7 @@ const APPS: AppDef[] = [
     href: "/nasa-planner",
     activeUsers: null,
     theme: "purple",
+    sidebarKey: "nasa-planner",
   },
   {
     id: "tracking",
@@ -421,12 +440,13 @@ const APPS: AppDef[] = [
     href: "/tracking",
     activeUsers: null,
     theme: "purple",
+    sidebarKey: "tracking",
   },
 ];
 
 // ─── Status Helpers ───────────────────────────────────────────────────────────
 
-type Filter = "all" | "installed" | "development" | "available";
+type Filter = "all" | "installed" | "development" | "available" | "personalizar";
 
 function StatusBadge({ status }: { status: AppStatus }) {
   if (status === "installed")
@@ -451,8 +471,36 @@ function StatusBadge({ status }: { status: AppStatus }) {
 
 // ─── App Card ─────────────────────────────────────────────────────────────────
 
+function SidebarToggle({ sidebarKey, defaultVisible }: { sidebarKey: string; defaultVisible: boolean }) {
+  const { data: prefs } = useSidebarPrefs();
+  const setPref = useSetSidebarPref();
+  const visible = isItemVisible(prefs, `app:${sidebarKey}`, defaultVisible);
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setPref.mutate({ itemKey: `app:${sidebarKey}`, visible: !visible });
+      }}
+      title={visible ? "Ocultar do menu lateral" : "Mostrar no menu lateral"}
+      className={cn(
+        "flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors",
+        visible
+          ? "bg-violet-500/10 text-violet-400 border-violet-500/30 hover:bg-violet-500/20"
+          : "bg-muted text-muted-foreground border-border hover:border-violet-500/30 hover:text-violet-400",
+      )}
+    >
+      <PanelLeft className="size-2.5" />
+      {visible ? "No menu" : "Oculto"}
+    </button>
+  );
+}
+
 function AppCard({ app, onAction }: { app: AppDef; onAction: (app: AppDef) => void }) {
   const Icon = app.icon;
+  const sidebarItem = app.sidebarKey
+    ? SIDEBAR_NAV_ITEMS.find((i) => i.key === app.sidebarKey)
+    : null;
 
   return (
     <div
@@ -514,7 +562,7 @@ function AppCard({ app, onAction }: { app: AppDef; onAction: (app: AppDef) => vo
       </div>
 
       {/* Action Button */}
-      <div className="px-5 pb-5">
+      <div className="px-5 pb-5 flex flex-col gap-2">
         {app.status === "installed" ? (
           <Button
             size="sm"
@@ -534,6 +582,9 @@ function AppCard({ app, onAction }: { app: AppDef; onAction: (app: AppDef) => vo
             <Clock className="size-3.5" />
             Em Breve
           </Button>
+        )}
+        {sidebarItem && (
+          <SidebarToggle sidebarKey={app.sidebarKey!} defaultVisible={sidebarItem.defaultVisible} />
         )}
       </div>
     </div>
@@ -574,9 +625,15 @@ function ComingSoonModal({
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium">
             <Package className="size-3" /> {app.category}
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7C3AED]/10 text-[#7C3AED] text-xs font-medium">
-            🔧 Em construção
-          </div>
+          {app.status === "development" ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7C3AED]/10 text-[#7C3AED] text-xs font-medium">
+              🔧 Em construção
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
+              ✦ Em breve nesta tela
+            </div>
+          )}
         </div>
         <Button onClick={onClose} className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white">
           Entendido
@@ -593,7 +650,83 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "installed", label: "Instalados" },
   { value: "development", label: "Em Construção" },
   { value: "available", label: "Disponíveis" },
+  { value: "personalizar", label: "Personalizar" },
 ];
+
+// ─── Personalizar Menu ────────────────────────────────────────────────────────
+
+function WorkspaceToggles() {
+  const { data } = useSuspenseWokspaces();
+  const { data: prefs } = useSidebarPrefs();
+  const setPref = useSetSidebarPref();
+
+  if (data.workspaces.length === 0)
+    return <p className="text-sm text-muted-foreground">Nenhum projeto encontrado.</p>;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {data.workspaces.map((ws) => {
+        const visible = isItemVisible(prefs, `workspace:${ws.id}`, true);
+        return (
+          <div key={ws.id} className="flex items-center justify-between p-3 rounded-xl border bg-card gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="shrink-0 text-base">{ws.icon}</span>
+              <span className="text-sm font-medium truncate">{ws.name}</span>
+            </div>
+            <button
+              onClick={() => setPref.mutate({ itemKey: `workspace:${ws.id}`, visible: !visible })}
+              title={visible ? "Ocultar da barra lateral" : "Mostrar na barra lateral"}
+              className={cn(
+                "flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors shrink-0",
+                visible
+                  ? "bg-violet-500/10 text-violet-400 border-violet-500/30 hover:bg-violet-500/20"
+                  : "bg-muted text-muted-foreground border-border hover:border-violet-500/30 hover:text-violet-400",
+              )}
+            >
+              <PanelLeft className="size-2.5" />
+              {visible ? "No menu" : "Oculto"}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PersonalizarMenu() {
+  const configurableItems = SIDEBAR_NAV_ITEMS.filter((item) => !item.alwaysVisible);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-sm font-semibold mb-1 text-foreground">Apps no menu lateral</h3>
+        <p className="text-xs text-muted-foreground mb-4">Escolha quais apps aparecem na sua barra lateral.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {configurableItems.map((item) => {
+            const Icon = item.icon as React.ElementType;
+            return (
+              <div key={item.key} className="flex items-center justify-between p-3 rounded-xl border bg-card gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Icon className="size-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium">{item.title}</span>
+                </div>
+                <SidebarToggle sidebarKey={item.key} defaultVisible={item.defaultVisible} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold mb-1 text-foreground">Projetos no menu lateral</h3>
+        <p className="text-xs text-muted-foreground mb-4">Escolha quais projetos (workspaces) aparecem na sua barra lateral.</p>
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Carregando projetos...</p>}>
+          <WorkspaceToggles />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -636,7 +769,8 @@ export function AppsPage() {
         </div>
 
         <div className="relative px-6 py-10 max-w-5xl mx-auto">
-          <div className="flex items-center justify-end mb-4">
+          <div className="flex items-center justify-end gap-2 mb-4">
+            <SpacePointWidget />
             <StarsWidget />
           </div>
           <div className="flex items-center gap-2 mb-1">
@@ -697,21 +831,25 @@ export function AppsPage() {
                 )}
               >
                 {f.label}
-                <span className={cn(
-                  "text-[11px] px-1.5 py-0.5 rounded-full",
-                  filter === f.value ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
-                )}>
-                  {count}
-                </span>
+                {f.value !== "personalizar" && (
+                  <span className={cn(
+                    "text-[11px] px-1.5 py-0.5 rounded-full",
+                    filter === f.value ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
+                  )}>
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid / Personalizar */}
       <div className="px-6 pb-10 max-w-5xl mx-auto">
-        {filteredApps.length === 0 ? (
+        {filter === "personalizar" ? (
+          <PersonalizarMenu />
+        ) : filteredApps.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
               <Package className="size-8 text-muted-foreground" />

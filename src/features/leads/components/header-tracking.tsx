@@ -7,6 +7,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StarsWidget } from "@/features/stars";
+import { SpacePointWidget } from "@/features/space-point";
 
 interface HeaderTrackingProps {
   title?: string;
@@ -46,9 +47,10 @@ export function HeaderTracking({ title }: HeaderTrackingProps) {
         </Breadcrumb>
       </div>
 
-      {/* ── Right: stars widget ── */}
-      <div className="flex items-center px-4 shrink-0">
-        <StarsWidget />
+      {/* ── Right: space point + stars widget ── */}
+      <div className="flex items-center gap-2 px-4 shrink-0">
+        <div data-tour="space-points"><SpacePointWidget /></div>
+        <div data-tour="stars"><StarsWidget /></div>
       </div>
     </header>
   );

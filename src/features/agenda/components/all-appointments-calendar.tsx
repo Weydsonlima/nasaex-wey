@@ -314,7 +314,7 @@ function CalendarToolbar({ date, onNavigate, onNewAppointment }: CalendarToolbar
         className="flex items-center gap-1"
       >
         <PlusIcon className="size-4" />
-        Novo Agendamento
+        Novo compromisso
       </Button>
     </div>
   );

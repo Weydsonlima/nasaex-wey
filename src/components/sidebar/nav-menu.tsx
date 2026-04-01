@@ -1,18 +1,6 @@
 "use client";
 
 import {
-  Calendar,
-  ChartColumnDecreasingIcon,
-  CircleCheckIcon,
-  ClipboardType,
-  Kanban,
-  LayoutGrid,
-  MessageSquareTextIcon,
-  Plug2,
-  Users,
-} from "lucide-react";
-
-import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
@@ -22,6 +10,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { SIDEBAR_NAV_ITEMS } from "@/lib/sidebar-items";
+import { useSidebarPrefs, isItemVisible } from "@/hooks/use-sidebar-prefs";
 
 function AstroNavIcon({ className }: { className?: string }) {
   return (
@@ -33,48 +23,57 @@ function AstroNavIcon({ className }: { className?: string }) {
   );
 }
 
-const items = [
-  { title: "Início", url: "/home", icon: AstroNavIcon },
-  { title: "Trackings", url: "/tracking", icon: Kanban },
-  {
-    title: "Workspaces",
-    url: "/workspaces",
-    icon: CircleCheckIcon,
-  },
-  { title: "Formulários", url: "/form", icon: ClipboardType },
-  { title: "Chats", url: "/tracking-chat", icon: MessageSquareTextIcon },
-  { title: "Agenda", url: "/agendas", icon: Calendar },
-  { title: "Contatos", url: "/contatos", icon: Users },
-  { title: "Insights", url: "/insights", icon: ChartColumnDecreasingIcon },
-  { title: "Integrações", url: "/integrations", icon: Plug2 },
-  { title: "Apps", url: "/apps", icon: LayoutGrid },
-];
-
 export function NavMenu() {
   const pathname = usePathname();
+  const { data: prefs } = useSidebarPrefs();
+
+  const visibleItems = SIDEBAR_NAV_ITEMS.filter(
+    (item) => item.alwaysVisible || isItemVisible(prefs, `app:${item.key}`, item.defaultVisible)
+  );
+
+  // Map sidebar keys → data-tour attribute names
+  const TOUR_ATTRS: Record<string, string> = {
+    tracking:     "nav-tracking",
+    nasachat:     "nav-chat",
+    integrations: "nav-integrations",
+    spacetime:    "nav-agenda",
+  };
 
   return (
-    <SidebarGroup>
+    <SidebarGroup data-tour="sidebar-menu">
       <SidebarGroupLabel>Menu</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item, index) => {
+        {/* Início — always visible */}
+        <SidebarMenuItem key="home">
+          <SidebarMenuButton
+            tooltip="Início"
+            asChild
+            className={cn(pathname === "/home" && "bg-sidebar-accent text-sidebar-accent-foreground")}
+          >
+            <Link href="/home">
+              <AstroNavIcon />
+              <span>Início</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+
+        {visibleItems.map((item) => {
           const isActive =
             pathname === item.url ||
             (item.url !== "/home" && pathname.startsWith(item.url + "/"));
+          const Icon = item.icon as React.ElementType;
+          const tourAttr = TOUR_ATTRS[item.key];
 
           return (
-            <SidebarMenuItem key={`${item.title}-${index}`}>
+            <SidebarMenuItem key={item.key} {...(tourAttr ? { "data-tour": tourAttr } : {})}>
               <SidebarMenuButton
                 tooltip={item.title}
                 asChild
-                className={cn(
-                  isActive &&
-                    "bg-sidebar-accent text-sidebar-accent-foreground",
-                )}
+                className={cn(isActive && "bg-sidebar-accent text-sidebar-accent-foreground")}
               >
                 <Link href={item.url}>
-                  <item.icon />
-                  <span> {item.title} </span>
+                  <Icon />
+                  <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

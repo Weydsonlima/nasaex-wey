@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,6 @@ import {
   useQueryAgendasByTracking,
   useAdminCreateAppointment,
 } from "@/features/agenda/hooks/use-agenda";
-import { useQueryTrackings } from "@/features/trackings/hooks/use-trackings";
 import { DayOfWeek } from "@/generated/prisma/enums";
 import { countries } from "@/types/some";
 import { normalizePhone, phoneMask } from "@/utils/format-phone";
@@ -51,6 +51,10 @@ import {
   CalendarIcon,
   ClockIcon,
   CheckIcon,
+  UserIcon,
+  PhoneIcon,
+  MailIcon,
+  StickyNoteIcon,
 } from "lucide-react";
 import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
@@ -59,206 +63,170 @@ import { zodResolver } from "@hookform/resolvers/zod";
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** Quando omitido, exibe step 0 para seleção de tracking */
   trackingId?: string;
   initialDate?: Date;
 }
 
 const formSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  code: z.string().optional(),
+  name:  z.string().min(1, "Nome é obrigatório"),
+  code:  z.string().optional(),
   phone: z.string().min(1, "Telefone é obrigatório"),
-  email: z.email("Email inválido").optional().or(z.literal("")),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
   notes: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 const dayMap: DayOfWeek[] = [
-  DayOfWeek.SUNDAY,
-  DayOfWeek.MONDAY,
-  DayOfWeek.TUESDAY,
-  DayOfWeek.WEDNESDAY,
-  DayOfWeek.THURSDAY,
-  DayOfWeek.FRIDAY,
-  DayOfWeek.SATURDAY,
+  DayOfWeek.SUNDAY, DayOfWeek.MONDAY, DayOfWeek.TUESDAY,
+  DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY,
 ];
 
-export function CreateAppointmentModal({
-  open,
-  onClose,
-  trackingId,
-  initialDate,
-}: Props) {
+export function CreateAppointmentModal({ open, onClose, trackingId, initialDate }: Props) {
+  // Load agendas (all org agendas when trackingId is absent)
   const { data: agendasData, isLoading: isLoadingAgendas } =
-    useQueryAgendasByTracking(trackingId || "");
+    useQueryAgendasByTracking(trackingId || undefined);
   const agendas = agendasData?.agendas ?? [];
 
-  // When no trackingId is provided (e.g. from the global calendar),
-  // the user doesn't need to pick a tracking — we load all org agendas instead.
-  const needsTrackingPick = false; // step 0 removed: agendas load by org when trackingId is absent
-  const [resolvedTrackingId, setResolvedTrackingId] = useState<string>(trackingId ?? "");
-
-  const [selectedAgendaId, setSelectedAgendaId] = useState<string>("");
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [selectedAgendaId, setSelectedAgendaId] = useState("");
   const [selectedDate, setSelectedDate] = useState<CalendarDate>(() =>
-    initialDate
-      ? parseDate(dayjs(initialDate).format("YYYY-MM-DD"))
-      : today(getLocalTimeZone()),
+    initialDate ? parseDate(dayjs(initialDate).format("YYYY-MM-DD")) : today(getLocalTimeZone()),
   );
-  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [manualTime, setManualTime]     = useState(""); // fallback when no slots
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", phone: "", code: "55", email: "", notes: "" },
   });
 
-  const selectedCode = form.watch("code");
-  const countrySelected =
-    countries.find((c) => c.code === selectedCode) || countries[0];
+  const selectedCode    = form.watch("code");
+  const countrySelected = countries.find((c) => c.code === selectedCode) ?? countries[0];
 
+  // Reset on open
   useEffect(() => {
     if (open) {
       setSelectedTime("");
-      setSelectedAgendaId("");
+      setManualTime("");
       form.reset({ name: "", phone: "", code: "55", email: "", notes: "" });
       if (initialDate)
         setSelectedDate(parseDate(dayjs(initialDate).format("YYYY-MM-DD")));
     }
-  }, [open, initialDate, trackingId]);
+  }, [open, initialDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-select when only 1 agenda available
   useEffect(() => {
     if (agendas.length === 1) setSelectedAgendaId(agendas[0].id);
   }, [agendas]);
 
+  // ── Derived ────────────────────────────────────────────────────────────────
   const selectedAgenda = agendas.find((a) => a.id === selectedAgendaId);
-  const dateStr = selectedDate.toString();
+  const dateStr        = selectedDate.toString();
 
-  const { timeSlots, isLoading: isLoadingSlots } =
-    useQueryPublicAgendaTimeSlots(
-      selectedAgenda
-        ? {
-            orgSlug: selectedAgenda.organization.slug,
-            agendaSlug: selectedAgenda.slug,
-            date: dateStr,
-          }
-        : { orgSlug: "", agendaSlug: "", date: dateStr },
-    );
-
-  const availabilityMap: Partial<Record<DayOfWeek, boolean>> =
-    Object.fromEntries(
-      (selectedAgenda?.availabilities ?? []).map((a: any) => [
-        a.dayOfWeek,
-        a.isActive,
-      ]),
-    );
-  const blockedDatesSet = new Set(
-    (selectedAgenda?.dateOverrides ?? [])
-      .filter((d: any) => d.isBlocked)
-      .map((d: any) => d.date),
+  // Availability logic (for greying out dates)
+  const availabilityMap: Partial<Record<DayOfWeek, boolean>> = Object.fromEntries(
+    (selectedAgenda?.availabilities ?? []).map((a: any) => [a.dayOfWeek, a.isActive]),
   );
-
+  const blockedDatesSet = new Set(
+    (selectedAgenda?.dateOverrides ?? []).filter((d: any) => d.isBlocked).map((d: any) => d.date),
+  );
   const isDateUnavailable = (date: DateValue): boolean => {
     if (!selectedAgenda) return false;
     if (blockedDatesSet.has(date.toString())) return true;
     const jsDay = date.toDate(getLocalTimeZone()).getDay();
     const isActive = availabilityMap[dayMap[jsDay]];
-    if (isActive === undefined) return true;
-    return !isActive;
+    return isActive === undefined ? true : !isActive;
   };
 
+  // Time slots from agenda
+  const { timeSlots, isLoading: isLoadingSlots } = useQueryPublicAgendaTimeSlots(
+    selectedAgenda
+      ? { orgSlug: selectedAgenda.organization.slug, agendaSlug: selectedAgenda.slug, date: dateStr }
+      : { orgSlug: "", agendaSlug: "", date: dateStr },
+  );
+
+  // Effective time: selected slot OR manual input
+  const effectiveTime = selectedTime || manualTime;
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const createAdminAppointment = useAdminCreateAppointment();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const onSubmit = (data: FormData) => {
-    if (!selectedAgendaId || !selectedTime) return;
+    if (!selectedAgendaId) { form.setError("name", { message: "" }); return; }
+    if (!effectiveTime)    return;
     const phone = normalizePhone(countrySelected.ddi + data.phone);
     createAdminAppointment.mutate(
-      {
-        agendaId: selectedAgendaId,
-        date: dateStr,
-        time: selectedTime,
-        name: data.name,
-        phone,
-        email: data.email,
-        notes: data.notes,
-        timeZone,
-      },
-      { onSuccess: () => onClose() },
+      { agendaId: selectedAgendaId, date: dateStr, time: effectiveTime,
+        name: data.name, phone, email: data.email, notes: data.notes, timeZone },
+      { onSuccess: onClose },
     );
   };
 
-  const isSubmitting = createAdminAppointment.isPending;
-  const showCalendar = !!selectedAgendaId;
-  const showForm = showCalendar && !!selectedTime;
+  const isSubmitting  = createAdminAppointment.isPending;
+  const canSubmit     = !!selectedAgendaId && !!effectiveTime;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[92vh] sm:max-w-4xl overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-lg font-semibold">
-            Novo Agendamento
+      <DialogContent className="max-h-[92vh] sm:max-w-2xl overflow-y-auto p-0">
+        <DialogHeader className="px-6 pt-5 pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+            <CalendarIcon className="size-4" />
+            Novo compromisso
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 py-5 flex flex-col gap-6">
-          {/* ── Step 1: Agenda ── */}
-          {/* {(!needsTrackingPick ) && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                1
-              </span>
-              <span className="text-sm font-semibold">Selecione a agenda</span>
-            </div>
-            {isLoadingAgendas ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                <Spinner className="size-4" /> Carregando agendas...
-              </div>
-            ) : (
-              <Select
-                value={selectedAgendaId}
-                onValueChange={(v) => {
-                  setSelectedAgendaId(v);
-                  setSelectedTime("");
-                }}
-              >
-                <SelectTrigger className="w-full sm:max-w-xs">
-                  <SelectValue placeholder="Escolha uma agenda..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {agendas.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                  {agendas.length === 0 && (
-                    <p className="p-2 text-sm text-muted-foreground">
-                      Nenhuma agenda ativa
-                    </p>
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          )} */}
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="px-6 py-5 space-y-6">
 
-          {/* ── Step 2: Date + Time ── */}
-          {showCalendar && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                  2
-                </span>
-                <span className="text-sm font-semibold">
-                  Escolha data e horário
-                </span>
-              </div>
+            {/* ── Seção 1: Agenda + Data + Horário ─────────────────────────── */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Quando
+              </p>
 
+              {/* Agenda selector */}
+              {isLoadingAgendas ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner className="size-4" /> Carregando agendas…
+                </div>
+              ) : agendas.length === 0 ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed text-sm text-muted-foreground">
+                  <CalendarIcon className="size-4 shrink-0" />
+                  Nenhuma agenda disponível. Crie uma agenda antes de agendar.
+                </div>
+              ) : agendas.length > 1 ? (
+                <Field className="gap-y-1.5">
+                  <FieldLabel>Agenda <span className="text-destructive">*</span></FieldLabel>
+                  <Select
+                    value={selectedAgendaId}
+                    onValueChange={(v) => { setSelectedAgendaId(v); setSelectedTime(""); }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione uma agenda…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agendas.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : (
+                /* Single agenda — show as read-only label */
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border text-sm">
+                  <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
+                  <span className="font-medium">{agendas[0]?.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">agenda selecionada</span>
+                </div>
+              )}
+
+              {/* Calendar + time slots side by side */}
               <div className="border rounded-xl overflow-hidden">
-                {/* Always side-by-side: calendar LEFT | timeslots RIGHT */}
-                <div className="flex flex-row">
-                  {/* ── Calendar (fixed width) ── */}
-                  <div className=" p-4 border-r flex flex-col">
+                <div className="flex flex-col sm:flex-row">
+                  {/* Calendar */}
+                  <div className="p-4 sm:border-r flex flex-col items-start border-b sm:border-b-0">
                     <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-3">
                       <CalendarIcon className="size-3.5" /> Data
                     </p>
@@ -266,33 +234,37 @@ export function CreateAppointmentModal({
                       minValue={today(getLocalTimeZone())}
                       isDateUnavailable={isDateUnavailable}
                       value={selectedDate}
-                      onChange={(d) => {
-                        setSelectedDate(d as CalendarDate);
-                        setSelectedTime("");
-                      }}
+                      onChange={(d) => { setSelectedDate(d as CalendarDate); setSelectedTime(""); }}
                     />
                   </div>
 
-                  {/* ── Time slots (fills remaining width) ── */}
+                  {/* Time slots or manual time input */}
                   <div className="flex-1 p-4 flex flex-col min-w-0">
                     <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-3">
                       <ClockIcon className="size-3.5" />
-                      {dayjs(selectedDate.toDate(getLocalTimeZone())).format(
-                        "DD/MM/YYYY",
-                      )}
+                      {dayjs(selectedDate.toDate(getLocalTimeZone())).format("DD/MM/YYYY")}
                     </p>
 
-                    {isLoadingSlots ? (
+                    {!selectedAgendaId ? (
+                      /* No agenda selected yet */
+                      <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
+                        <CalendarIcon className="size-8 text-muted-foreground/30 mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          {agendas.length > 1 ? "Selecione uma agenda para ver os horários" : "Selecione uma data"}
+                        </p>
+                      </div>
+                    ) : isLoadingSlots ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                        <Spinner className="size-4" /> Carregando...
+                        <Spinner className="size-4" /> Carregando horários…
                       </div>
                     ) : timeSlots && timeSlots.length > 0 ? (
-                      <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[280px] pr-1">
+                      /* Agenda time slots */
+                      <div className="flex flex-col gap-1.5 overflow-y-auto max-h-64 pr-1">
                         {timeSlots.map((slot) => (
                           <button
                             key={slot.id}
                             type="button"
-                            onClick={() => setSelectedTime(slot.startTime)}
+                            onClick={() => { setSelectedTime(slot.startTime); setManualTime(""); }}
                             className={cn(
                               "flex items-center gap-3 rounded-lg border text-sm font-medium py-2.5 px-3 transition-all text-left w-full",
                               selectedTime === slot.startTime
@@ -300,197 +272,180 @@ export function CreateAppointmentModal({
                                 : "border-border bg-card hover:border-primary hover:bg-primary/5 text-foreground",
                             )}
                           >
-                            <ClockIcon
-                              className={cn(
-                                "size-4 shrink-0",
-                                selectedTime === slot.startTime
-                                  ? "text-primary-foreground"
-                                  : "text-muted-foreground",
-                              )}
-                            />
+                            <ClockIcon className={cn("size-4 shrink-0", selectedTime === slot.startTime ? "text-primary-foreground" : "text-muted-foreground")} />
                             <span className="flex-1">{slot.startTime}</span>
-                            {selectedTime === slot.startTime && (
-                              <CheckIcon className="size-4 shrink-0" />
-                            )}
+                            {selectedTime === slot.startTime && <CheckIcon className="size-4 shrink-0" />}
                           </button>
                         ))}
                       </div>
                     ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
-                        <ClockIcon className="size-8 text-muted-foreground/30 mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Sem horários disponíveis.
+                      /* No slots — manual time input */
+                      <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          Nenhum horário configurado para esta data. Informe o horário manualmente:
                         </p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">
-                          Escolha outra data.
-                        </p>
+                        <Input
+                          type="time"
+                          value={manualTime}
+                          onChange={(e) => { setManualTime(e.target.value); setSelectedTime(""); }}
+                          className="w-36"
+                        />
                       </div>
                     )}
 
-                    {selectedTime && (
+                    {effectiveTime && (
                       <div className="mt-3 pt-3 border-t flex items-center gap-1.5 text-xs text-primary font-medium">
                         <CheckIcon className="size-3.5" />
-                        Selecionado: <strong>{selectedTime}</strong>
+                        Horário selecionado: <strong>{effectiveTime}</strong>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* ── Step 3: Contact form ── */}
-          {showForm && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                  3
-                </span>
-                <span className="text-sm font-semibold">Dados do cliente</span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {dayjs(selectedDate.toDate(getLocalTimeZone())).format(
-                    "DD/MM/YYYY",
-                  )}{" "}
-                  às {selectedTime}
-                </span>
+            {/* ── Seção 2: Dados do cliente ─────────────────────────────────── */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Dados do cliente
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Nome */}
+                <Field className="gap-y-1.5">
+                  <FieldLabel htmlFor="name" className="flex items-center gap-1.5">
+                    <UserIcon className="size-3.5 text-muted-foreground" />
+                    Nome <span className="text-destructive">*</span>
+                  </FieldLabel>
+                  <Input
+                    id="name"
+                    placeholder="Nome completo"
+                    disabled={isSubmitting}
+                    {...form.register("name")}
+                  />
+                  {form.formState.errors.name?.message && (
+                    <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                  )}
+                </Field>
+
+                {/* Email */}
+                <Field className="gap-y-1.5">
+                  <FieldLabel htmlFor="email" className="flex items-center gap-1.5">
+                    <MailIcon className="size-3.5 text-muted-foreground" />
+                    Email
+                  </FieldLabel>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="cliente@email.com"
+                    disabled={isSubmitting}
+                    {...form.register("email")}
+                  />
+                  {form.formState.errors.email?.message && (
+                    <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+                  )}
+                </Field>
               </div>
 
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="border rounded-xl p-4 flex flex-col gap-4"
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field className="gap-y-1.5">
-                    <FieldLabel htmlFor="name" className="gap-1">
-                      Nome <span className="text-destructive">*</span>
-                    </FieldLabel>
-                    <Input
-                      id="name"
-                      placeholder="Nome completo"
-                      disabled={isSubmitting}
-                      {...form.register("name")}
-                    />
-                    {form.formState.errors.name && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.name.message}
-                      </p>
-                    )}
-                  </Field>
-
-                  <Field className="gap-y-1.5">
-                    <FieldLabel htmlFor="email">Email</FieldLabel>
-                    <Input
-                      id="email"
-                      placeholder="cliente@email.com"
-                      disabled={isSubmitting}
-                      {...form.register("email")}
-                    />
-                  </Field>
-                </div>
-
-                <Field className="gap-y-1.5">
-                  <FieldLabel htmlFor="phone" className="gap-1">
-                    Telefone <span className="text-destructive">*</span>
-                  </FieldLabel>
-                  <Controller
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <InputGroup className="px-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              disabled={isSubmitting}
-                              type="button"
-                              className={cn(
-                                "text-xs flex items-center hover:bg-accent transition-all px-1 rounded-sm py-1 gap-x-1",
-                                countrySelected && "bg-accent",
-                              )}
-                            >
-                              <img
-                                src={countrySelected.flag}
-                                alt={countrySelected.country}
-                                className="size-4 rounded-sm"
-                              />
-                              <span>{countrySelected.ddi}</span>
-                              <ChevronDownIcon className="size-3" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="max-h-40 overflow-y-auto"
+              {/* Telefone */}
+              <Field className="gap-y-1.5">
+                <FieldLabel htmlFor="phone" className="flex items-center gap-1.5">
+                  <PhoneIcon className="size-3.5 text-muted-foreground" />
+                  Telefone <span className="text-destructive">*</span>
+                </FieldLabel>
+                <Controller
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <InputGroup className="px-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            disabled={isSubmitting}
+                            type="button"
+                            className={cn(
+                              "text-xs flex items-center hover:bg-accent transition-all px-1 rounded-sm py-1 gap-x-1",
+                              countrySelected && "bg-accent",
+                            )}
                           >
-                            <DropdownMenuGroup>
-                              {countries.map((country) => (
-                                <DropdownMenuItem
-                                  key={country.code}
-                                  onClick={() =>
-                                    form.setValue("code" as any, country.code)
-                                  }
-                                  className="cursor-pointer"
-                                >
-                                  <img
-                                    src={country.flag}
-                                    alt={country.country}
-                                    className="size-5 rounded-sm"
-                                  />
-                                  <span>{country.ddi}</span>
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuGroup>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <InputGroupInput
-                          placeholder="(00) 0000-0000"
-                          className="pl-2"
-                          disabled={isSubmitting}
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(phoneMask(e.target.value))
-                          }
-                        />
-                      </InputGroup>
-                    )}
-                  />
-                  <FieldDescription>
-                    {form.formState.errors.phone?.message ??
-                      "Formato (00) 0000-0000, sem o 9"}
-                  </FieldDescription>
-                </Field>
+                            <img src={countrySelected.flag} alt={countrySelected.country} className="size-4 rounded-sm" />
+                            <span>{countrySelected.ddi}</span>
+                            <ChevronDownIcon className="size-3" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="max-h-40 overflow-y-auto">
+                          <DropdownMenuGroup>
+                            {countries.map((country) => (
+                              <DropdownMenuItem
+                                key={country.code}
+                                onClick={() => form.setValue("code" as any, country.code)}
+                                className="cursor-pointer"
+                              >
+                                <img src={country.flag} alt={country.country} className="size-5 rounded-sm" />
+                                <span>{country.ddi}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <InputGroupInput
+                        placeholder="(00) 0000-0000"
+                        className="pl-2"
+                        disabled={isSubmitting}
+                        {...field}
+                        onChange={(e) => field.onChange(phoneMask(e.target.value))}
+                      />
+                    </InputGroup>
+                  )}
+                />
+                <FieldDescription>
+                  {form.formState.errors.phone?.message ?? "Formato (00) 0000-0000, sem o 9"}
+                </FieldDescription>
+              </Field>
 
-                <Field className="gap-y-1.5">
-                  <FieldLabel htmlFor="notes">Observações</FieldLabel>
-                  <Textarea
-                    id="notes"
-                    disabled={isSubmitting}
-                    placeholder="Observações sobre o agendamento..."
-                    rows={3}
-                    {...form.register("notes")}
-                  />
-                </Field>
-
-                <div className="flex gap-3 justify-end pt-2 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="min-w-[160px]"
-                  >
-                    {isSubmitting && <Spinner className="mr-2 size-4" />}
-                    Confirmar Agendamento
-                  </Button>
-                </div>
-              </form>
+              {/* Observações */}
+              <Field className="gap-y-1.5">
+                <FieldLabel htmlFor="notes" className="flex items-center gap-1.5">
+                  <StickyNoteIcon className="size-3.5 text-muted-foreground" />
+                  Observações
+                </FieldLabel>
+                <Textarea
+                  id="notes"
+                  disabled={isSubmitting}
+                  placeholder="Observações sobre o compromisso…"
+                  rows={3}
+                  {...form.register("notes")}
+                />
+              </Field>
             </div>
-          )}
-        </div>
+          </div>
+
+          {/* ── Footer ─────────────────────────────────────────────────────── */}
+          <DialogFooter className="px-6 py-4 border-t gap-2">
+            {/* Summary pill */}
+            {canSubmit && (
+              <span className="mr-auto text-xs text-muted-foreground hidden sm:flex items-center gap-1">
+                <CheckIcon className="size-3.5 text-primary" />
+                {dayjs(selectedDate.toDate(getLocalTimeZone())).format("DD/MM/YYYY")} às {effectiveTime}
+                {selectedAgenda && <> &mdash; {selectedAgenda.name}</>}
+              </span>
+            )}
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !canSubmit}
+              className="min-w-[160px]"
+            >
+              {isSubmitting ? (
+                <><Spinner className="mr-2 size-4" /> Salvando…</>
+              ) : (
+                "Confirmar compromisso"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -17,8 +17,10 @@ model User {
   nickname        String?
   image           String?
   isSystemAdmin   Boolean   @default(false) @map("is_system_admin")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
+  isActive              Boolean    @default(true)   @map("is_active")
+  onboardingCompletedAt DateTime?                   @map("onboarding_completed_at")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
 
@@ -49,6 +51,10 @@ model User {
   actionSharesRequested   ActionShare[]     @relation("ShareRequester")
   workspacesCreated     Workspace[]
   workspacesMembers     WorkspaceMember[]
+  userNotifications     UserNotification[]
+  notificationPrefs     UserNotificationPreference[]
+  sidebarPrefs          UserSidebarPreference[]
+  spacePoints           UserSpacePoint[]
 
   @@unique([email])
   @@map("user")
@@ -149,6 +155,9 @@ model Organization {
   workspaceFolders WorkspaceFolder[]
   sentShares       ActionShare[]     @relation("SentShares")
   receivedShares   ActionShare[]     @relation("ReceivedShares")
+  spacePointRules  SpacePointRule[]
+  spacePoints      UserSpacePoint[]
+  spacePointPrizes SpacePointRankingPrize[]
 
   @@unique([slug])
   @@map("organization")
@@ -161,6 +170,7 @@ model Member {
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   role           String
+  cargo          String?  @map("cargo")
   createdAt      DateTime
 
   @@unique([userId, organizationId])
@@ -1925,4 +1935,258 @@ model ActionShare {
   @@index([targetOrgId])
   @@index([status])
   @@map("action_shares")
+}
+
+// ─── Sidebar Preferences ─────────────────────────────────────────────────────
+
+model UserSidebarPreference {
+  id       String  @id @default(cuid())
+  userId   String  @map("user_id")
+  itemKey  String  @map("item_key") // "app:nasachat" | "workspace:{id}"
+  visible  Boolean @default(true)
+
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemKey])
+  @@index([userId])
+  @@map("user_sidebar_preference")
+}
+
+// ─── User Notifications ───────────────────────────────────────────────────────
+
+model UserNotification {
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  organizationId String?   @map("organization_id")
+  type           String    // NEW_LEAD | AI_TOKEN_ALERT | STARS_ALERT | CARD_EDIT | APPOINTMENT_REMINDER | INSIGHTS_MOVEMENT | PLAN_EXPIRY | ADMIN_MESSAGE | CUSTOM
+  title          String
+  body           String
+  appKey         String?   @map("app_key")
+  actionUrl      String?   @map("action_url")
+  metadata       Json?
+  isRead         Boolean   @default(false) @map("is_read")
+  readAt         DateTime? @map("read_at")
+  sentWhatsApp   Boolean   @default(false) @map("sent_whatsapp")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([organizationId])
+  @@map("user_notification")
+}
+
+model UserNotificationPreference {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  organizationId String   @map("organization_id")
+  notifType      String   @map("notif_type")
+  inApp          Boolean  @default(true)  @map("in_app")
+  whatsApp       Boolean  @default(false) @map("whats_app")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt      @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, notifType])
+  @@index([userId])
+  @@map("user_notification_preference")
+}
+
+// ─── Admin Notifications ──────────────────────────────────────────────────────
+
+model AdminNotification {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  type        String   @default("info")   // info | warning | success | error
+  targetType  String   @default("all")    // all | org | user
+  targetId    String?  @map("target_id") // orgId ou userId
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  reads       AdminNotificationRead[]
+
+  @@index([targetType])
+  @@index([createdAt])
+  @@map("admin_notification")
+}
+
+model AdminNotificationRead {
+  id             String             @id @default(cuid())
+  notificationId String             @map("notification_id")
+  notification   AdminNotification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String             @map("user_id")
+  readAt         DateTime           @default(now()) @map("read_at")
+
+  @@unique([notificationId, userId])
+  @@index([userId])
+  @@map("admin_notification_read")
+}
+
+// ─────────────────────────────────────────────
+// SPACE POINT — Gamification System
+// ─────────────────────────────────────────────
+
+/// Predefined level thresholds (seeded once, global for all orgs)
+model SpacePointLevel {
+  id             String   @id @default(cuid())
+  order          Int      @unique
+  name           String   // "Terra", "Lua", "Marte", "Saturno"…
+  requiredPoints Int      @map("required_points")
+  badgeNumber    Int      @map("badge_number")   // 1-24 → /public/space-point/badges/{n}.svg
+  planetEmoji    String   @default("🪐")          @map("planet_emoji")
+
+  seals          UserSpacePointSeal[]
+
+  @@map("space_point_level")
+}
+
+/// Per-org configurable rules: which actions earn how many points
+model SpacePointRule {
+  id            String   @id @default(cuid())
+  orgId         String   @map("org_id")
+  action        String   // "lead_won" | "create_event" | "create_agenda" | "create_workspace_card" …
+  label         String   // human-readable, shown in settings
+  points        Int      @default(0)
+  cooldownHours Int?     @map("cooldown_hours") // null = unlimited
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt      @map("updated_at")
+
+  org          Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  transactions SpacePointTransaction[]
+
+  @@unique([orgId, action])
+  @@index([orgId])
+  @@map("space_point_rule")
+}
+
+/// Prizes/awards per ranking position per org
+model SpacePointRankingPrize {
+  id          String   @id @default(cuid())
+  orgId       String   @map("org_id")
+  rank        Int      // 1 = 1st place, 2 = 2nd, etc.
+  period      String   @default("monthly") // "weekly" | "biweekly" | "monthly" | "annual" | "alltime"
+  title       String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, rank, period])
+  @@index([orgId])
+  @@map("space_point_ranking_prize")
+}
+
+/// Accumulated points + level tracking per user-per-org
+model UserSpacePoint {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  orgId        String    @map("org_id")
+  totalPoints  Int       @default(0)  @map("total_points")
+  weeklyPoints Int       @default(0)  @map("weekly_points")
+  weekStart    DateTime? @map("week_start")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt      @map("updated_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  transactions SpacePointTransaction[]
+  seals        UserSpacePointSeal[]
+
+  @@unique([userId, orgId])
+  @@index([orgId, totalPoints])
+  @@map("user_space_point")
+}
+
+/// Audit log of every point event
+model SpacePointTransaction {
+  id          String   @id @default(cuid())
+  userPointId String   @map("user_point_id")
+  ruleId      String?  @map("rule_id")
+  points      Int
+  description String
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  userPoint   UserSpacePoint  @relation(fields: [userPointId], references: [id], onDelete: Cascade)
+  rule        SpacePointRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  @@index([userPointId])
+  @@index([userPointId, createdAt])
+  @@map("space_point_transaction")
+}
+
+/// Which level seals the user has unlocked
+model UserSpacePointSeal {
+  id          String   @id @default(cuid())
+  userPointId String   @map("user_point_id")
+  levelId     String   @map("level_id")
+  earnedAt    DateTime @default(now()) @map("earned_at")
+
+  userPoint   UserSpacePoint  @relation(fields: [userPointId], references: [id], onDelete: Cascade)
+  level       SpacePointLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@unique([userPointId, levelId])
+  @@index([userPointId])
+  @@map("user_space_point_seal")
+}
+
+/// Key→URL store for all configurable platform assets (badges, app icons, integration icons, branding)
+model PlatformAsset {
+  id        String   @id @default(cuid())
+  key       String   @unique   // "badge:1", "app:tracking", "integration:whatsapp-business", "platform:logo"
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt       @map("updated_at")
+
+  @@map("platform_asset")
+}
+
+/// Platform-level payment gateway configurations (Stripe, Asaas, etc.)
+model PaymentGatewayConfig {
+  id            String   @id @default(cuid())
+  provider      String   // "stripe" | "asaas"
+  label         String?
+  secretKey     String
+  publicKey     String?  // Stripe publishable key
+  webhookSecret String?  // Stripe webhook signing secret
+  environment   String   @default("production") // "sandbox" | "production"
+  isActive      Boolean  @default(true)          @map("is_active")
+  isDefault     Boolean  @default(false)         @map("is_default")
+  createdAt     DateTime @default(now())          @map("created_at")
+  updatedAt     DateTime @updatedAt               @map("updated_at")
+
+  payments      StarsPayment[]
+
+  @@map("payment_gateway_config")
+}
+
+/// Tracks individual Stars purchase payment attempts
+model StarsPayment {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  organizationId String   @map("organization_id")
+  packageId      String   @map("package_id")
+  starsAmount    Int      @map("stars_amount")
+  amountBrl      Decimal  @map("amount_brl")
+  provider       String
+  externalId     String?  @map("external_id")
+  status         String   @default("pending") // pending | paid | failed | expired
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  gatewayConfig  PaymentGatewayConfig? @relation(fields: [gatewayId], references: [id])
+  gatewayId      String?               @map("gateway_id")
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([externalId])
+  @@index([status])
+  @@map("stars_payment")
 }

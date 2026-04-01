@@ -12,6 +12,7 @@ import { CreateWorkspaceModal } from "@/features/workspace/components/modals/cre
 import { useSuspenseWokspaces } from "@/features/workspace/hooks/use-workspace";
 import Link from "next/link";
 import { Skeleton } from "../ui/skeleton";
+import { useSidebarPrefs, isItemVisible } from "@/hooks/use-sidebar-prefs";
 
 export function WorkspacesItems() {
   const [open, setOpne] = useState(false);
@@ -51,8 +52,13 @@ export function WorkspacesItems() {
 
 export function WoksapcesList() {
   const { data } = useSuspenseWokspaces();
+  const { data: prefs } = useSidebarPrefs();
 
-  const workspaces = data.workspaces;
+  const workspaces = data.workspaces.filter((ws) =>
+    isItemVisible(prefs, `workspace:${ws.id}`, true)
+  );
+
+  if (workspaces.length === 0) return null;
 
   return (
     <>

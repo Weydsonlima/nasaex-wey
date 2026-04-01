@@ -16,15 +16,12 @@ export const listActionByWorkspace = base
   )
 
   .handler(async ({ input }) => {
-    const where = {
-      workspaceId: input.workspaceId,
-    };
-
-    console.log("Innput", input);
-
     const [actions, total] = await Promise.all([
       prisma.action.findMany({
-        where,
+        where: {
+          workspaceId: input.workspaceId,
+          isArchived: false,
+        },
         orderBy: {
           createdAt: "desc",
         },
@@ -40,6 +37,9 @@ export const listActionByWorkspace = base
           createdBy: true,
           priority: true,
           isDone: true,
+          isArchived: true,
+          isFavorited: true,
+          workspaceId: true,
           column: {
             select: {
               id: true,
@@ -68,7 +68,10 @@ export const listActionByWorkspace = base
         },
       }),
       prisma.action.count({
-        where,
+        where: {
+          workspaceId: input.workspaceId,
+          isArchived: false,
+        },
       }),
     ]);
 

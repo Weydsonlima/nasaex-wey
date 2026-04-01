@@ -94,7 +94,11 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
 
   const handleUpdateSubAction = (
     subActionId: string,
-    data: { description?: string | null; finishDate?: Date | null },
+    data: {
+      title?: string;
+      description?: string | null;
+      finishDate?: Date | null;
+    },
   ) => {
     updateSubAction.mutate(
       { subActionId, ...data },

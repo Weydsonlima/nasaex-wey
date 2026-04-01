@@ -64,7 +64,9 @@ export function CardActionsMenu({
 
   const handleToggleFavorite = () => {
     updateFields.mutate({ actionId, isFavorited: !isFavorited });
-    toast.success(isFavorited ? "Removido dos favoritos" : "Adicionado aos favoritos");
+    toast.success(
+      isFavorited ? "Removido dos favoritos" : "Adicionado aos favoritos",
+    );
   };
 
   const handleToggleArchive = () => {
@@ -74,7 +76,9 @@ export function CardActionsMenu({
   };
 
   const handleShareLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/actions/${actionId}`);
+    navigator.clipboard.writeText(
+      `${window.location.origin}/actions/${actionId}`,
+    );
     toast.success("Link copiado!");
   };
 
@@ -85,14 +89,21 @@ export function CardActionsMenu({
           <Button
             variant="ghost"
             size="icon"
-            className={cn("size-7 text-muted-foreground hover:text-foreground", className)}
+            className={cn(
+              "size-7 text-muted-foreground hover:text-foreground",
+              className,
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontalIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuContent
+          align="end"
+          className="w-52"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Move to column */}
           {columns.length > 0 && (
             <DropdownMenuSub>
@@ -107,7 +118,10 @@ export function CardActionsMenu({
                     onClick={() => handleMoveTo(col.id)}
                     className="gap-2"
                   >
-                    <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: col.color || "#888" }} />
+                    <span
+                      className="size-2 rounded-full shrink-0"
+                      style={{ backgroundColor: col.color || "#888" }}
+                    />
                     {col.name}
                   </DropdownMenuItem>
                 ))}
@@ -116,7 +130,11 @@ export function CardActionsMenu({
           )}
 
           {/* Copy */}
-          <DropdownMenuItem onClick={handleCopy} disabled={copyAction.isPending} className="gap-2">
+          <DropdownMenuItem
+            onClick={handleCopy}
+            disabled={copyAction.isPending}
+            className="gap-2"
+          >
             <CopyIcon className="size-3.5" />
             Copiar ação
           </DropdownMenuItem>
@@ -139,8 +157,17 @@ export function CardActionsMenu({
           </DropdownMenuItem>
 
           {/* Favorite */}
-          <DropdownMenuItem onClick={handleToggleFavorite} disabled={updateFields.isPending} className="gap-2">
-            <StarIcon className={cn("size-3.5", isFavorited && "fill-yellow-400 text-yellow-400")} />
+          <DropdownMenuItem
+            onClick={handleToggleFavorite}
+            disabled={updateFields.isPending}
+            className="gap-2"
+          >
+            <StarIcon
+              className={cn(
+                "size-3.5",
+                isFavorited && "fill-yellow-400 text-yellow-400",
+              )}
+            />
             {isFavorited ? "Remover favorito" : "Favoritar"}
           </DropdownMenuItem>
 
@@ -150,9 +177,14 @@ export function CardActionsMenu({
           <DropdownMenuItem
             onClick={handleToggleArchive}
             disabled={updateFields.isPending}
-            className={cn("gap-2", !isArchived && "text-destructive focus:text-destructive")}
+            className={cn(
+              "gap-2",
+              !isArchived && "text-destructive focus:text-destructive",
+            )}
           >
-            <ArchiveIcon className="size-3.5" />
+            <ArchiveIcon
+              className={cn("size-3.5", !isArchived && "text-destructive")}
+            />
             {isArchived ? "Restaurar" : "Arquivar"}
           </DropdownMenuItem>
         </DropdownMenuContent>

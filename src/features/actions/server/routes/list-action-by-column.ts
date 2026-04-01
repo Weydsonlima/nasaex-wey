@@ -19,6 +19,7 @@ export const listActionByColumn = base
     const action = await prisma.action.findMany({
       where: {
         columnId: input.columnId,
+        isArchived: false,
       },
       take: limit + 1,
       cursor: input.cursor ? { id: input.cursor } : undefined,
@@ -34,6 +35,7 @@ export const listActionByColumn = base
         columnId: true,
         createdBy: true,
         order: true,
+        coverImage: true,
         isDone: true,
         priority: true,
         user: {
@@ -58,6 +60,17 @@ export const listActionByColumn = base
           select: {
             id: true,
             isDone: true,
+          },
+        },
+        tags: {
+          select: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
         createdAt: true,

@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /c/Users/Dev/Desktop/nasa.ex/src -type f \\\\\\(-name *kanban* -o -name *column* \\\\\\))"
-    ]
-  }
-}

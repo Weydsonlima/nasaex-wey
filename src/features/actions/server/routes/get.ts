@@ -71,6 +71,9 @@ export const getAction = base
               },
             },
           },
+          orderBy: {
+            createdAt: "desc",
+          },
         },
         user: {
           select: {

@@ -153,6 +153,25 @@ export const useUpdateColumn = () => {
   );
 };
 
+export const useUpdateColumnOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    orpc.column.updateNewOrder.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(
+          orpc.workspace.getColumnsByWorkspace.queryOptions({
+            input: { workspaceId: data.workspaceId },
+          }),
+        );
+      },
+      onError: () => {
+        toast.error("Erro ao reordenar coluna!");
+      },
+    }),
+  );
+};
+
 export const useDeleteColumn = () => {
   const queryClient = useQueryClient();
 

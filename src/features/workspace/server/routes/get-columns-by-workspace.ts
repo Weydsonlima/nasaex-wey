@@ -24,10 +24,15 @@ export const getColumnsByWorkspace = base
         id: true,
         name: true,
         color: true,
+        order: true,
         workspaceId: true,
         _count: {
           select: {
-            actions: true,
+            actions: {
+              where: {
+                isArchived: false,
+              },
+            },
           },
         },
       },

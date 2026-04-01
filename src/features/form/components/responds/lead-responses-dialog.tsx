@@ -105,7 +105,8 @@ export function LeadResponsesDialog({
 
           let responseText = `--- Resposta em ${dateStr} ---\n`;
           responseText += `Nome: ${name}\n`;
-          if (parsed.user_email) responseText += `Email: ${parsed.user_email}\n`;
+          if (parsed.user_email)
+            responseText += `Email: ${parsed.user_email}\n`;
           if (parsed.user_phone)
             responseText += `Telefone: ${parsed.user_phone}\n`;
 
@@ -240,7 +241,7 @@ export function LeadResponsesDialog({
                           // Check if value is a string or has a responseValue property
                           const displayValue =
                             typeof value === "object" && value !== null
-                              ? value.responseValue
+                              ? value.value
                               : value;
 
                           return (

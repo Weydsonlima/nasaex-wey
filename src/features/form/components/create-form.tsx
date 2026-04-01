@@ -69,6 +69,8 @@ export function CreateForm() {
     );
   };
 
+  const isLoading = mutate.isPending || form.formState.isSubmitting;
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -126,12 +128,10 @@ export function CreateForm() {
 
               <Button
                 type="submit"
-                disabled={form.formState.isSubmitting}
+                disabled={isLoading}
                 className="px-5 flex place-self-end bg-primary!"
               >
-                {form.formState.isSubmitting && (
-                  <Loader className="w-4 h-4 animate-spin" />
-                )}
+                {isLoading && <Loader className="w-4 h-4 animate-spin" />}
                 Criar
               </Button>
             </form>

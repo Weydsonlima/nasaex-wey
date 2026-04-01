@@ -19,6 +19,7 @@ import {
   Clock,
   Rocket,
   Flame,
+  PanelLeft,
 } from "lucide-react";
 import { StarsWidget } from "@/features/stars";
 import { SpacePointWidget } from "@/features/space-point";
@@ -949,6 +950,33 @@ function StatusBadge({ status }: { status: AppStatus }) {
     <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-[11px] gap-1">
       + Disponível
     </Badge>
+  );
+}
+
+// ─── Sidebar Toggle ───────────────────────────────────────────────────────────
+
+function SidebarToggle({ sidebarKey, defaultVisible }: { sidebarKey: string; defaultVisible: boolean }) {
+  const { data: prefs } = useSidebarPrefs();
+  const setPref = useSetSidebarPref();
+  const visible = isItemVisible(prefs, `app:${sidebarKey}`, defaultVisible);
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setPref.mutate({ itemKey: `app:${sidebarKey}`, visible: !visible });
+      }}
+      title={visible ? "Ocultar do menu lateral" : "Mostrar no menu lateral"}
+      className={cn(
+        "flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors",
+        visible
+          ? "bg-violet-500/10 text-violet-400 border-violet-500/30 hover:bg-violet-500/20"
+          : "bg-muted text-muted-foreground border-border hover:border-violet-500/30 hover:text-violet-400",
+      )}
+    >
+      <PanelLeft className="size-2.5" />
+      {visible ? "No menu" : "Oculto"}
+    </button>
   );
 }
 

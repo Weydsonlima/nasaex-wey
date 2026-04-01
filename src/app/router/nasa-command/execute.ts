@@ -43,7 +43,9 @@ function normaliseCommand(raw: string): string {
     // lead variants
     .replace(/\bl[ie][ae]d[sz]?\b/g, "lead")
     // mover variants
-    .replace(/\bm[ou]v[ae]r?\b/g, "mover");
+    .replace(/\bm[ou]v[ae]r?\b/g, "mover")
+    // demanda/demand variants
+    .replace(/\bdemand[aã][s]?\b/g, "demanda");
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -95,7 +97,7 @@ export const execute = base
               ? "nbox"
               : cmd.includes("#contatos")
                 ? "contatos"
-                : cmd.includes("#task")
+                : cmd.includes("#task") || cmd.includes("#demand")
                   ? "task"
                   : cmd.includes("#cosmic")
                     ? "cosmic"
@@ -120,8 +122,8 @@ export const execute = base
     const hasAgenda      = /\b(agenda[s]?|agendamento[s]?|reuni[aã]o|reuniões|compromisso[s]?)\b/.test(cmd);
     const hasPost        = /\b(post[s]?|conte[úu]do|story|reel|carrossel|legenda|publicaç[aã]o)\b/.test(cmd);
     const hasProduct     = /\b(produto[s]?|product[s]?|servi[çc]o[s]?)\b/.test(cmd);
-    const hasWorkspace   = /\b(workspace[s]?|quadro[s]?|board[s]?|painel[s]?)\b/.test(cmd);
-    const hasTask        = /\b(tarefa[s]?|task[s]?|ação|ações|acao|acoes|atividade[s]?)\b/.test(cmd);
+    const hasWorkspace   = /\b(workspace[s]?|quadro[s]?|board[s]?|painel[s]?|demand[s]?|demanda[s]?)\b/.test(cmd);
+    const hasTask        = /\b(tarefa[s]?|task[s]?|ação|ações|acao|acoes|atividade[s]?|card[s]?|etiqueta[s]?|tag[s]?|demanda[s]?|demand[s]?)\b/.test(cmd);
     const hasNBox        = /\b(nbox|n-box|arquivo[s]?|documento[s]?|file[s]?|pasta[s]?|folder[s]?)\b/.test(cmd);
     const hasCosmic      = /\b(formulário[s]?|formulario[s]?|form[s]?|cosmic)\b/.test(cmd);
     const hasChat        = /\b(chat[s]?|conversa[s]?|whatsapp|mensage[nm][s]?)\b/.test(cmd);
@@ -1579,7 +1581,7 @@ CTA: [chamada para ação]`;
             ? "Clique em uma tarefa para abrir o workspace:"
             : "Nenhuma tarefa encontrada com os filtros aplicados.",
           url: "/workspaces",
-          appName: "Task",
+          appName: "Demand",
           starsSpent: cost,
           resultLinks: tasks.length > 0 ? resultLinks : undefined,
           extraData: { tasks },
@@ -1609,7 +1611,7 @@ CTA: [chamada para ação]`;
             type: "needs_input" as const,
             title: "Informação necessária",
             description: "Qual é o título da tarefa?",
-            appName: "Task",
+            appName: "Demand",
             missingFields: [{ key: "tarefa", label: "Título da tarefa" }],
           } satisfies ExecuteOutput;
         }
@@ -1626,7 +1628,7 @@ CTA: [chamada para ação]`;
             type: "error" as const,
             title: "Sem workspace",
             description: "Crie um workspace primeiro para poder adicionar tarefas.",
-            appName: "Task",
+            appName: "Demand",
           } satisfies ExecuteOutput;
         }
 
@@ -1654,7 +1656,7 @@ CTA: [chamada para ação]`;
           title: "Tarefa criada!",
           description: `Tarefa "${finalTitle}" adicionada ao workspace "${workspace.name}".${dueDate ? ` Prazo: ${dueDate.toLocaleDateString("pt-BR")}.` : ""}`,
           url: `/workspaces/${workspace.id}`,
-          appName: "Task",
+          appName: "Demand",
           starsSpent: cost,
         } satisfies ExecuteOutput;
       } catch (err) {

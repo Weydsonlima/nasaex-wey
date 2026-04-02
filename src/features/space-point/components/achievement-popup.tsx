@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 export interface AchievementData {
   type: "level_up" | "achievement";
-  title: string;          // e.g. "Nível desbloqueado!"
-  message: string;        // e.g. "Você chegou a Marte 🔴"
-  badgeNumber?: number;   // 1-24 for level-up
-  badgeUrl?: string;      // custom S3 URL if configured
+  title: string; // e.g. "Nível desbloqueado!"
+  message: string; // e.g. "Você chegou a Marte 🔴"
+  badgeNumber?: number; // 1-24 for level-up
+  badgeUrl?: string; // custom S3 URL if configured
   planetEmoji?: string;
 }
 
@@ -36,7 +36,14 @@ function Particle({ delay, color }: { delay: number; color: string }) {
   );
 }
 
-const CONFETTI_COLORS = ["#7a1fe7", "#a855f7", "#ec4899", "#fbbf24", "#34d399", "#60a5fa"];
+const CONFETTI_COLORS = [
+  "#7a1fe7",
+  "#a855f7",
+  "#ec4899",
+  "#fbbf24",
+  "#34d399",
+  "#60a5fa",
+];
 
 export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
   const [visible, setVisible] = useState(false);
@@ -56,22 +63,34 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
 
     // Play chime sound via Web Audio API (no external file needed)
     try {
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const ctx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext
+      )();
       const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
       notes.forEach((freq, i) => {
-        const osc  = ctx.createOscillator();
+        const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = "sine";
         osc.frequency.value = freq;
         gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
-        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.15 + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.35);
+        gain.gain.linearRampToValueAtTime(
+          0.18,
+          ctx.currentTime + i * 0.15 + 0.05,
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.001,
+          ctx.currentTime + i * 0.15 + 0.35,
+        );
         osc.start(ctx.currentTime + i * 0.15);
         osc.stop(ctx.currentTime + i * 0.15 + 0.4);
       });
-    } catch { /* silently skip if audio not available */ }
+    } catch {
+      /* silently skip if audio not available */
+    }
 
     // Auto-dismiss after 5s
     timerRef.current = setTimeout(() => {
@@ -81,7 +100,7 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const handleDismiss = () => {
@@ -137,13 +156,17 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
         <div
           className={cn(
             "relative z-10 w-80 flex flex-col items-center rounded-3xl border border-[#7a1fe7]/50 overflow-hidden pointer-events-auto",
-            "bg-gradient-to-b from-[#1a0a3d] via-[#0d0720] to-[#050510]",
-            exiting ? "animate-[popup-out_0.4s_ease-in_forwards]" : "animate-[popup-in_0.6s_cubic-bezier(0.34,1.56,0.64,1)_forwards]",
+            "bg-linear-to-b from-[#1a0a3d] via-[#0d0720] to-[#050510]",
+            exiting
+              ? "animate-[popup-out_0.4s_ease-in_forwards]"
+              : "animate-[popup-in_0.6s_cubic-bezier(0.34,1.56,0.64,1)_forwards]",
           )}
-          style={{ animation: exiting
-            ? "popup-out 0.4s ease-in forwards"
-            : "popup-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards",
-            boxShadow: "0 0 40px rgba(122,31,231,0.5), 0 0 80px rgba(122,31,231,0.2)",
+          style={{
+            animation: exiting
+              ? "popup-out 0.4s ease-in forwards"
+              : "popup-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards",
+            boxShadow:
+              "0 0 40px rgba(122,31,231,0.5), 0 0 80px rgba(122,31,231,0.2)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -161,9 +184,10 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
                 key={i}
                 className="absolute rounded-full bg-white"
                 style={{
-                  width: 1, height: 1,
-                  left:  `${((i * 1_234_567) % 9_973) / 9_973 * 100}%`,
-                  top:   `${((i * 7_654_321) % 9_973) / 9_973 * 100}%`,
+                  width: 1,
+                  height: 1,
+                  left: `${(((i * 1_234_567) % 9_973) / 9_973) * 100}%`,
+                  top: `${(((i * 7_654_321) % 9_973) / 9_973) * 100}%`,
                   opacity: 0.2 + (i % 5) * 0.08,
                 }}
               />
@@ -189,7 +213,10 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
             <div className="relative z-10 -mt-4 mb-1">
               <div className="relative w-20 h-20">
                 <Image
-                  src={data.badgeUrl ?? `/space-point/badges/${data.badgeNumber}.svg`}
+                  src={
+                    data.badgeUrl ??
+                    `/space-point/badges/${data.badgeNumber}.svg`
+                  }
                   alt="Badge"
                   fill
                   className="object-contain drop-shadow-[0_0_20px_rgba(122,31,231,0.9)]"
@@ -213,7 +240,7 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
             {/* CTA */}
             <button
               onClick={handleDismiss}
-              className="mt-4 w-full bg-gradient-to-r from-[#7a1fe7] to-[#a855f7] text-white text-sm font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+              className="mt-4 w-full bg-linear-to-r from-[#7a1fe7] to-[#a855f7] text-white text-sm font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity"
             >
               Incrível! 🚀
             </button>

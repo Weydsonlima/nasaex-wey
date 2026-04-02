@@ -13,6 +13,7 @@ import {
   Cpu, BrainCircuit, Layers, RefreshCw, Lock, Bolt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PlanDetailModal, type PlanDetail } from "@/components/plan-detail-modal";
 
 // ─── CSS Animations ───────────────────────────────────────────────────────────
 const STYLES = `
@@ -1620,8 +1621,32 @@ const PUBLIC_PLANS = [
 // PlanCard público — espelha o padrão do /admin > Planos
 function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number]; isLoggedIn: boolean }) {
   const [showBenefits, setShowBenefits] = useState(false);
+  const [detailOpen,   setDetailOpen]   = useState(false);
+
+  const planDetail: PlanDetail = {
+    id:          plan.id,
+    name:        plan.name,
+    slogan:      plan.slogan,
+    price:       plan.price,
+    stars:       plan.stars,
+    rollover:    plan.rollover,
+    highlighted: plan.highlighted,
+    badge:       plan.badge,
+    benefits:    plan.benefits,
+    ctaLabel:    plan.ctaLabel,
+    ctaHref:     plan.ctaHref,
+    starPerUser: STAR_PER_USER,
+  };
 
   return (
+    <>
+      <PlanDetailModal
+        plan={planDetail}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        isLoggedIn={isLoggedIn}
+      />
+
     <div className={cn(
       "relative flex flex-col rounded-xl border p-5 space-y-4 transition-all card-hover",
       plan.highlighted
@@ -1650,7 +1675,13 @@ function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-bold text-white text-lg">{plan.name}</p>
+            <button
+              type="button"
+              onClick={() => setDetailOpen(true)}
+              className="font-bold text-white text-lg hover:text-violet-300 transition-colors cursor-pointer underline-offset-2 hover:underline"
+            >
+              {plan.name}
+            </button>
             {plan.highlighted && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-600/30 text-violet-300 border border-violet-700/50">
                 ⭐ Destaque
@@ -1752,6 +1783,7 @@ function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number
         </Link>
       </Button>
     </div>
+    </>
   );
 }
 

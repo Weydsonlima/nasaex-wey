@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { PlanDetailModal, type PlanDetail } from "@/components/plan-detail-modal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -479,6 +480,8 @@ export function PlansManager() {
 
 // ── Plan Card ─────────────────────────────────────────────────────────────────
 
+const STAR_PER_USER = 30;
+
 function PlanCard({
   plan, onEdit, onDelete, onToggle,
 }: {
@@ -488,8 +491,31 @@ function PlanCard({
   onToggle: () => void;
 }) {
   const [showBenefits, setShowBenefits] = useState(false);
+  const [detailOpen,   setDetailOpen]   = useState(false);
+
+  const planDetail: PlanDetail = {
+    id:          plan.id,
+    name:        plan.name,
+    slogan:      plan.slogan,
+    price:       Number(plan.priceMonthly),
+    stars:       plan.monthlyStars,
+    rollover:    plan.rolloverPct,
+    highlighted: plan.highlighted,
+    badge:       plan.highlighted ? "MAIS POPULAR" : null,
+    benefits:    plan.benefits,
+    ctaLabel:    plan.ctaLabel,
+    ctaHref:     plan.ctaLink ?? "/sign-up",
+    starPerUser: STAR_PER_USER,
+  };
 
   return (
+    <>
+      <PlanDetailModal
+        plan={planDetail}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+      />
+
     <div className={cn(
       "rounded-xl border p-4 space-y-3 transition-opacity",
       plan.highlighted ? "border-violet-500/50 bg-violet-950/20" : "border-zinc-700/50 bg-zinc-900",
@@ -499,7 +525,13 @@ function PlanCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-bold text-white">{plan.name}</p>
+            <button
+              type="button"
+              onClick={() => setDetailOpen(true)}
+              className="font-bold text-white hover:text-violet-300 transition-colors cursor-pointer underline-offset-2 hover:underline text-left"
+            >
+              {plan.name}
+            </button>
             {plan.highlighted && (
               <Badge className="bg-violet-600/30 text-violet-300 border-violet-700/50 text-[10px]">
                 ⭐ Destaque
@@ -612,5 +644,6 @@ function PlanCard({
         <div className="ml-auto text-[10px] text-zinc-600 font-mono">{plan.slug.slice(0, 16)}</div>
       </div>
     </div>
+    </>
   );
 }

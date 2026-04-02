@@ -28,6 +28,11 @@ import {
   useSetSidebarPref,
   isItemVisible,
 } from "@/hooks/use-sidebar-prefs";
+import {
+  useSidebarPrefs,
+  useSetSidebarPref,
+  isItemVisible,
+} from "@/hooks/use-sidebar-prefs";
 import { SIDEBAR_NAV_ITEMS, APP_TO_SIDEBAR_KEY } from "@/lib/sidebar-items";
 import { useSuspenseWokspaces } from "@/features/workspace/hooks/use-workspace";
 import { Suspense } from "react";
@@ -1219,7 +1224,7 @@ function WorkspaceToggles() {
                   : "bg-muted text-muted-foreground border-border hover:border-violet-500/30 hover:text-violet-400",
               )}
             >
-              <PanelLeft className="size-2.5" />
+              <PanelLeftIcon className="size-2.5" />
               {visible ? "No menu" : "Oculto"}
             </button>
           </div>

@@ -1,5 +1,6 @@
 import { orpc } from "@/lib/orpc";
 import {
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -45,6 +46,13 @@ export const useCreateWorkspace = () => {
   );
 };
 
+interface ColumnFilters {
+  participantIds?: string[];
+  tagIds?: string[];
+  dueDateFrom?: Date | null;
+  dueDateTo?: Date | null;
+}
+
 export const useSuspenseColumnsByWorkspace = (workspaceId: string) => {
   return useSuspenseQuery(
     orpc.workspace.getColumnsByWorkspace.queryOptions({
@@ -53,11 +61,21 @@ export const useSuspenseColumnsByWorkspace = (workspaceId: string) => {
   );
 };
 
-export const useColumnsByWorkspace = (workspaceId: string) => {
+export const useColumnsByWorkspace = (
+  workspaceId: string,
+  filters?: ColumnFilters,
+) => {
   const { data, isLoading } = useQuery(
     orpc.workspace.getColumnsByWorkspace.queryOptions({
-      input: { workspaceId },
+      input: {
+        workspaceId,
+        participantIds: filters?.participantIds ?? [],
+        tagIds: filters?.tagIds ?? [],
+        ...(filters?.dueDateFrom != null && { dueDateFrom: filters.dueDateFrom }),
+        ...(filters?.dueDateTo != null && { dueDateTo: filters.dueDateTo }),
+      },
       enabled: !!workspaceId,
+      placeholderData: keepPreviousData,
     }),
   );
 
@@ -306,8 +324,12 @@ export const useAddTagToAction = () => {
   const queryClient = useQueryClient();
   return useMutation(
     orpc.workspace.addTagToAction.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["action.get"] });
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({
+            input: { actionId: variables.actionId },
+          }),
+        );
         queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
       },
       onError: () => toast.error("Erro ao adicionar tag!"),
@@ -319,8 +341,12 @@ export const useRemoveTagFromAction = () => {
   const queryClient = useQueryClient();
   return useMutation(
     orpc.workspace.removeTagFromAction.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["action.get"] });
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({
+            input: { actionId: variables.actionId },
+          }),
+        );
         queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
       },
       onError: () => toast.error("Erro ao remover tag!"),

@@ -1457,6 +1457,11 @@ model AppStarCost {
   monthlyCost  Int      @default(0) @map("monthly_cost") // stars/mês
   setupCost    Int      @default(0) @map("setup_cost")   // stars na ativação
   priceBrl     Decimal? @db.Decimal(10, 2) @map("price_brl") // exibição R$
+  displayName  String?  @map("display_name")
+  description  String?
+  category     String?
+  iconEmoji    String?  @map("icon_emoji")
+  isPublic     Boolean  @default(true) @map("is_public")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt       @map("updated_at")
 

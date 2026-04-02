@@ -9,7 +9,7 @@ import {
   Clock, Bot, ChevronRight, Sparkles, Play, Zap,
   MessageSquare, Calendar, Plug2, LayoutGrid, Target, Trophy,
   BarChart2, TrendingUp, FileText, Flame,
-  Coins, Crown, Medal, Gift, TrendingDown, ChevronUp, Infinity,
+  Coins, Crown, Medal, Gift, TrendingDown, ChevronUp, ChevronDown, Infinity,
   Cpu, BrainCircuit, Layers, RefreshCw, Lock, Bolt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -1180,7 +1180,7 @@ function StarsInfoSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   );
 }
 
-// ─── Plans Public Section ─────────────────────────────────────────────────────
+// ─── Plans Public Section (estilo admin PlanCard) ────────────────────────────
 
 const PUBLIC_PLANS = [
   {
@@ -1248,6 +1248,136 @@ const PUBLIC_PLANS = [
   },
 ];
 
+// PlanCard público — espelha o padrão do /admin > Planos
+function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number]; isLoggedIn: boolean }) {
+  const [showBenefits, setShowBenefits] = useState(false);
+
+  return (
+    <div className={cn(
+      "relative flex flex-col rounded-xl border p-5 space-y-4 transition-all card-hover",
+      plan.highlighted
+        ? "border-violet-500/50 bg-violet-950/20 shadow-[0_0_40px_rgba(124,58,237,.15)]"
+        : plan.id === "constellation"
+        ? "border-yellow-500/30 bg-yellow-950/10"
+        : plan.price === 0
+        ? "border-emerald-700/30 bg-emerald-950/10"
+        : "border-zinc-700/50 bg-zinc-900/80"
+    )}>
+      {/* Badges */}
+      {plan.badge && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+          <span className={cn(
+            "text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap",
+            plan.highlighted
+              ? "bg-violet-600 text-white shadow-lg shadow-violet-500/40"
+              : "bg-gradient-to-r from-yellow-500 to-orange-500 text-black"
+          )}>
+            {plan.badge}
+          </span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-bold text-white text-lg">{plan.name}</p>
+            {plan.highlighted && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-600/30 text-violet-300 border border-violet-700/50">
+                ⭐ Destaque
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-white/40 mt-0.5">{plan.slogan}</p>
+        </div>
+        <div className="text-right shrink-0">
+          {plan.price === 0 ? (
+            <p className="text-xl font-bold text-emerald-400">Grátis</p>
+          ) : (
+            <p className="text-xl font-bold text-white">
+              R$ {plan.price.toLocaleString("pt-BR")}
+            </p>
+          )}
+          <p className="text-[10px] text-white/30">por mês</p>
+        </div>
+      </div>
+
+      {/* Stats — igual ao admin PlanCard */}
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="flex flex-col items-center p-2 rounded-lg bg-white/5 border border-white/5">
+          <Star className="w-3.5 h-3.5 text-yellow-400 mb-0.5" />
+          <span className="font-semibold text-white">
+            {plan.stars === 0 ? "—" : plan.stars >= 1000 ? `${plan.stars / 1000}K` : plan.stars}
+          </span>
+          <span className="text-white/30 text-[9px]">Stars/mês</span>
+        </div>
+        <div className="flex flex-col items-center p-2 rounded-lg bg-white/5 border border-white/5">
+          <Users className="w-3.5 h-3.5 text-blue-400 mb-0.5" />
+          <span className="font-semibold text-white">{plan.maxUsers >= 999 ? "∞" : plan.maxUsers}</span>
+          <span className="text-white/30 text-[9px]">Usuários</span>
+        </div>
+        <div className="flex flex-col items-center p-2 rounded-lg bg-white/5 border border-white/5">
+          <span className="text-base mb-0.5">🔁</span>
+          <span className="font-semibold text-white">{plan.rollover}%</span>
+          <span className="text-white/30 text-[9px]">Rollover</span>
+        </div>
+      </div>
+
+      {/* Benefits colapsável — igual ao admin */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowBenefits(!showBenefits)}
+          className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors"
+        >
+          {showBenefits
+            ? <ChevronUp className="w-3 h-3" />
+            : <ChevronDown className="w-3 h-3" />}
+          {plan.benefits.length} benefício(s) incluídos
+        </button>
+        {showBenefits && (
+          <ul className="mt-2 space-y-1.5">
+            {plan.benefits.map((b, i) => (
+              <li key={i} className={cn(
+                "flex items-start gap-1.5 text-xs",
+                b.startsWith("Tudo do") ? "text-white/30 font-semibold" : "text-white/55"
+              )}>
+                {b.startsWith("Tudo do")
+                  ? <ChevronUp className="w-3 h-3 shrink-0 mt-0.5 text-white/20" />
+                  : <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" />}
+                {b}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Divisor */}
+      <div className="border-t border-white/8" />
+
+      {/* CTA */}
+      <Button
+        asChild
+        className={cn(
+          "w-full font-bold text-sm rounded-xl",
+          plan.highlighted
+            ? "bg-violet-600 hover:bg-violet-700 text-white"
+            : plan.id === "constellation"
+            ? "bg-gradient-to-r from-yellow-500/80 to-orange-500/80 hover:from-yellow-500 hover:to-orange-500 text-black"
+            : plan.price === 0
+            ? "bg-emerald-700 hover:bg-emerald-600 text-white"
+            : "bg-zinc-700/80 hover:bg-zinc-700 text-white border border-zinc-600/50"
+        )}
+      >
+        <Link href={isLoggedIn ? "/tracking" : plan.ctaHref}>
+          {plan.ctaLabel}
+          <ArrowRight className="size-3.5 ml-1.5" />
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <section id="planos" className="py-28 px-4 relative overflow-hidden">
@@ -1255,7 +1385,7 @@ function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#7C3AED]/5 blur-3xl rounded-full" />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-6xl mx-auto relative z-10">
         <div className="flex justify-center mb-6">
           <div className="inline-flex items-center gap-2 bg-[#7C3AED]/15 border border-[#7C3AED]/30 rounded-full px-5 py-2">
             <Sparkles className="size-3.5 text-violet-400" />
@@ -1266,126 +1396,216 @@ function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
         <h2 className="text-4xl sm:text-5xl font-black text-white text-center mb-3 leading-tight">
           Escolha seu <span className="text-nasa">ponto de partida</span>
         </h2>
-        <p className="text-white/40 text-center text-lg mb-4 max-w-xl mx-auto">
+        <p className="text-white/40 text-center text-lg mb-2 max-w-xl mx-auto">
           De startups a operações enterprise — escale flexível com o Método N.A.S.A.®
         </p>
-        <p className="text-center text-white/20 text-sm mb-14">★ Um em cada plano</p>
+        <p className="text-center text-white/20 text-sm mb-14">
+          Todos os apps e integrações disponíveis em qualquer plano — pagando apenas em Stars ★
+        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           {PUBLIC_PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={cn(
-                "relative flex flex-col rounded-2xl border p-6 transition-all card-hover",
-                plan.highlighted
-                  ? "plan-card-highlight"
-                  : "nasa-glass border-white/8"
-              )}
-            >
-              {/* Badge */}
-              {plan.badge && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className={cn(
-                    "text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap",
-                    plan.highlighted
-                      ? "bg-[#7C3AED] text-white shadow-lg shadow-violet-500/40"
-                      : "bg-gradient-to-r from-yellow-500 to-orange-500 text-black"
-                  )}>
-                    {plan.badge}
-                  </span>
-                </div>
-              )}
-
-              {/* Header */}
-              <div className="mb-5">
-                <p className="text-white font-black text-xl">{plan.name}</p>
-                <p className="text-white/35 text-xs mt-0.5 leading-snug">{plan.slogan}</p>
-              </div>
-
-              {/* Price */}
-              <div className="mb-5">
-                {plan.price === 0 ? (
-                  <div>
-                    <span className="text-4xl font-black text-emerald-400">R$ 0</span>
-                    <span className="text-white/30 text-sm">/mês</span>
-                    <p className="text-emerald-500/70 text-[11px] mt-1">Grátis para sempre</p>
-                  </div>
-                ) : (
-                  <div>
-                    <span className="text-white/30 text-sm align-top mt-2 inline-block">R$</span>
-                    <span className="text-4xl font-black text-white mx-1">
-                      {plan.price.toLocaleString("pt-BR")}
-                    </span>
-                    <span className="text-white/30 text-sm">{plan.billingLabel}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Stats */}
-              <div className="flex gap-2 mb-5">
-                <div className="flex-1 bg-white/4 rounded-xl p-2.5 text-center">
-                  <div className="text-yellow-400 font-black text-sm">
-                    {plan.stars === 0 ? "—" : plan.stars >= 1000
-                      ? `${plan.stars / 1000}K`
-                      : plan.stars}
-                  </div>
-                  <div className="text-white/30 text-[10px]">Stars/mês</div>
-                </div>
-                <div className="flex-1 bg-white/4 rounded-xl p-2.5 text-center">
-                  <div className="text-blue-400 font-black text-sm">
-                    {plan.maxUsers >= 999 ? "∞" : plan.maxUsers}
-                  </div>
-                  <div className="text-white/30 text-[10px]">Usuários</div>
-                </div>
-                <div className="flex-1 bg-white/4 rounded-xl p-2.5 text-center">
-                  <div className="text-violet-400 font-black text-sm">{plan.rollover}%</div>
-                  <div className="text-white/30 text-[10px]">Rollover</div>
-                </div>
-              </div>
-
-              {/* Benefits */}
-              <ul className="space-y-2 flex-1 mb-6">
-                {plan.benefits.map((b, i) => (
-                  <li key={i} className={cn(
-                    "flex items-start gap-2 text-xs",
-                    b.startsWith("Tudo do") ? "text-white/30 font-semibold" : "text-white/60"
-                  )}>
-                    {b.startsWith("Tudo do") ? (
-                      <ChevronUp className="size-3 shrink-0 mt-0.5 text-white/20" />
-                    ) : (
-                      <CheckCircle2 className="size-3 shrink-0 mt-0.5 text-emerald-500" />
-                    )}
-                    {b}
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <Button
-                asChild
-                className={cn(
-                  "w-full font-bold text-sm rounded-xl",
-                  plan.highlighted
-                    ? "bg-[#7C3AED] hover:bg-[#6D28D9] text-white"
-                    : plan.id === "constellation"
-                    ? "bg-gradient-to-r from-yellow-500/80 to-orange-500/80 hover:from-yellow-500 hover:to-orange-500 text-black"
-                    : plan.price === 0
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                    : "bg-white/8 hover:bg-white/12 text-white border border-white/10"
-                )}
-              >
-                <Link href={isLoggedIn ? "/tracking" : plan.ctaHref}>
-                  {plan.ctaLabel}
-                  <ArrowRight className="size-3.5 ml-1.5" />
-                </Link>
-              </Button>
-            </div>
+            <PublicPlanCard key={plan.id} plan={plan} isLoggedIn={isLoggedIn} />
           ))}
         </div>
 
         <p className="text-center text-white/15 text-xs mt-8">
           🔒 Pagamento seguro via Stripe e PIX (Asaas) · Cancele quando quiser · LGPD Compliant
         </p>
+      </div>
+    </section>
+  );
+}
+
+// ─── Apps Showcase Section ────────────────────────────────────────────────────
+
+const ALL_APPS: { slug: string; name: string; icon: string; category: string; cost: number; desc: string }[] = [
+  // Mensageiros
+  { slug: "whatsapp-business",  name: "WhatsApp Business",  icon: "💬", category: "Mensageiros",   cost: 80,  desc: "Capture leads e gerencie conversas WA no CRM" },
+  { slug: "instagram-dm",       name: "Instagram DM",       icon: "📸", category: "Mensageiros",   cost: 60,  desc: "DMs do Instagram integradas ao pipeline" },
+  { slug: "telegram",           name: "Telegram",           icon: "✈️",  category: "Mensageiros",   cost: 40,  desc: "Bots e canais Telegram → leads automáticos" },
+  { slug: "facebook-messenger", name: "Facebook Messenger", icon: "💙", category: "Mensageiros",   cost: 60,  desc: "Messenger do Facebook integrado ao CRM" },
+  { slug: "tiktok",             name: "TikTok",             icon: "🎵", category: "Mensageiros",   cost: 50,  desc: "Leads e mensagens TikTok Business no NASA" },
+  { slug: "linkedin",           name: "LinkedIn",           icon: "💼", category: "Mensageiros",   cost: 50,  desc: "Conexões e DMs do LinkedIn no pipeline" },
+  { slug: "slack",              name: "Slack",              icon: "🟦", category: "Mensageiros",   cost: 30,  desc: "Alertas e notificações no workspace Slack" },
+  { slug: "discord",            name: "Discord",            icon: "🎮", category: "Mensageiros",   cost: 30,  desc: "Servidores Discord → captura de leads" },
+  // CRM
+  { slug: "kommo",              name: "Kommo",              icon: "🤝", category: "CRM & Vendas",  cost: 60,  desc: "Sincronize leads entre Kommo e NASA" },
+  { slug: "hubspot",            name: "HubSpot",            icon: "🟠", category: "CRM & Vendas",  cost: 80,  desc: "Contatos, pipelines e automações HubSpot" },
+  { slug: "salesforce",         name: "Salesforce",         icon: "☁️",  category: "CRM & Vendas",  cost: 100, desc: "Sync em tempo real Salesforce ↔ NASA" },
+  { slug: "pipedrive",          name: "Pipedrive",          icon: "🔵", category: "CRM & Vendas",  cost: 60,  desc: "Negócios do Pipedrive no pipeline NASA" },
+  { slug: "rd-station",         name: "RD Station CRM",    icon: "🟢", category: "CRM & Vendas",  cost: 60,  desc: "Leads e funil RD Station sincronizados" },
+  { slug: "agendor",            name: "Agendor",            icon: "📋", category: "CRM & Vendas",  cost: 40,  desc: "Migre dados do Agendor para o NASA" },
+  { slug: "piperun",            name: "Piperun",            icon: "🔄", category: "CRM & Vendas",  cost: 40,  desc: "Negócios Piperun integrados ao NASA" },
+  // Marketing
+  { slug: "meta-ads",           name: "Meta Ads",           icon: "📢", category: "Marketing",     cost: 40,  desc: "Leads Facebook/Instagram Ads → pipeline" },
+  { slug: "google-ads",         name: "Google Ads",         icon: "🎯", category: "Marketing",     cost: 40,  desc: "Leads Google Ads com rastreamento NASA" },
+  { slug: "rd-station-mkt",     name: "RD Station Mkt",     icon: "📣", category: "Marketing",     cost: 50,  desc: "Fluxos de automação de marketing" },
+  { slug: "active-campaign",    name: "ActiveCampaign",     icon: "📬", category: "Marketing",     cost: 50,  desc: "E-mail marketing e segmentação integrada" },
+  { slug: "mailchimp",          name: "Mailchimp",          icon: "🐒", category: "Marketing",     cost: 30,  desc: "Campanhas Mailchimp → leads NASA" },
+  { slug: "leadlovers",         name: "Leadlovers",         icon: "🎣", category: "Marketing",     cost: 40,  desc: "Funis Leadlovers no CRM e pipeline" },
+  // IA
+  { slug: "openai",             name: "OpenAI / ChatGPT",   icon: "🤖", category: "IA & Automação",cost: 60,  desc: "GPT-4 potencializando o ASTRO" },
+  { slug: "google-gemini",      name: "Google Gemini",      icon: "✨", category: "IA & Automação",cost: 50,  desc: "Gemini para análises multimodais" },
+  { slug: "anthropic",          name: "Anthropic Claude",   icon: "🧠", category: "IA & Automação",cost: 60,  desc: "Claude para contextos profundos" },
+  { slug: "zapier",             name: "Zapier",             icon: "⚡", category: "IA & Automação",cost: 50,  desc: "Automatize entre NASA e +5.000 apps" },
+  { slug: "make",               name: "Make",               icon: "🔧", category: "IA & Automação",cost: 50,  desc: "Fluxos complexos entre NASA e centenas de tools" },
+  { slug: "n8n",                name: "n8n",                icon: "🔀", category: "IA & Automação",cost: 40,  desc: "Automações self-hosted ilimitadas" },
+  // Pagamentos
+  { slug: "stripe",             name: "Stripe",             icon: "💳", category: "Pagamentos",    cost: 30,  desc: "Pagamentos internacionais e assinaturas" },
+  { slug: "asaas",              name: "Asaas",              icon: "🏦", category: "Pagamentos",    cost: 30,  desc: "PIX, boleto e cartão integrado ao FORGE" },
+  { slug: "mercado-pago",       name: "Mercado Pago",       icon: "💰", category: "Pagamentos",    cost: 40,  desc: "Pagamentos Mercado Pago no CRM" },
+  { slug: "hotmart",            name: "Hotmart",            icon: "🔥", category: "Pagamentos",    cost: 40,  desc: "Compras Hotmart → leads automáticos" },
+  { slug: "pagseguro",          name: "PagSeguro",          icon: "💵", category: "Pagamentos",    cost: 40,  desc: "Cobranças PagSeguro no pipeline NASA" },
+  // Formulários
+  { slug: "typeform",           name: "Typeform",           icon: "📝", category: "Formulários",   cost: 20,  desc: "Formulários Typeform → leads qualificados" },
+  { slug: "google-forms",       name: "Google Forms",       icon: "📋", category: "Formulários",   cost: 20,  desc: "Google Forms → leads no CRM" },
+  { slug: "jotform",            name: "JotForm",            icon: "📄", category: "Formulários",   cost: 20,  desc: "Respostas JotForm → funil de vendas" },
+  { slug: "tally",              name: "Tally",              icon: "🗂️",  category: "Formulários",   cost: 15,  desc: "Forms Tally → leads automáticos" },
+  // Analytics
+  { slug: "google-analytics",   name: "Google Analytics",   icon: "📊", category: "Analytics",     cost: 20,  desc: "GA4 correlacionado ao funil de vendas" },
+  { slug: "hotjar",             name: "Hotjar",             icon: "🔥", category: "Analytics",     cost: 30,  desc: "Comportamento de usuários × leads gerados" },
+  { slug: "looker-studio",      name: "Looker Studio",      icon: "🔭", category: "Analytics",     cost: 20,  desc: "Dashboards NASA no Looker Studio" },
+  // E-Commerce
+  { slug: "shopify",            name: "Shopify",            icon: "🛍️",  category: "E-Commerce",    cost: 80,  desc: "Pedidos Shopify → leads no CRM" },
+  { slug: "woocommerce",        name: "WooCommerce",        icon: "🛒", category: "E-Commerce",    cost: 60,  desc: "Compras WooCommerce no pipeline" },
+  { slug: "nuvemshop",          name: "Nuvemshop",          icon: "☁️",  category: "E-Commerce",    cost: 60,  desc: "Pedidos Nuvemshop → funil NASA" },
+  { slug: "mercado-livre",      name: "Mercado Livre",      icon: "🟡", category: "E-Commerce",    cost: 60,  desc: "Compradores ML → CRM automático" },
+  // Assinatura Digital
+  { slug: "docusign",           name: "DocuSign",           icon: "✍️",  category: "Doc. Digital",  cost: 40,  desc: "Contratos DocuSign pelo FORGE" },
+  { slug: "clicksign",          name: "ClickSign",          icon: "✅", category: "Doc. Digital",  cost: 40,  desc: "Assinatura digital brasileira no FORGE" },
+  { slug: "d4sign",             name: "D4Sign",             icon: "📜", category: "Doc. Digital",  cost: 30,  desc: "Documentos com validade jurídica" },
+  { slug: "google-drive",       name: "Google Drive",       icon: "📁", category: "Doc. Digital",  cost: 20,  desc: "Drive sincronizado com o N.Box" },
+  // Produtividade
+  { slug: "google-workspace",   name: "Google Workspace",   icon: "🏢", category: "Produtividade", cost: 30,  desc: "Gmail, Calendar e Drive integrados" },
+  { slug: "microsoft-365",      name: "Microsoft 365",      icon: "💻", category: "Produtividade", cost: 30,  desc: "Outlook, Teams e OneDrive no NASA" },
+  { slug: "zoom",               name: "Zoom",               icon: "📹", category: "Produtividade", cost: 30,  desc: "Reuniões Zoom vinculadas a leads" },
+  { slug: "calendly",           name: "Calendly",           icon: "📅", category: "Produtividade", cost: 20,  desc: "Agendamentos Calendly na Agenda NASA" },
+];
+
+const APP_CATEGORIES = [...new Set(ALL_APPS.map((a) => a.category))];
+
+function AppsShowcaseSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const [activeCategory, setActiveCategory] = useState<string>("Mensageiros");
+  const [showAll,        setShowAll]         = useState(false);
+
+  const filtered  = ALL_APPS.filter((a) => a.category === activeCategory);
+  const displayed = showAll ? filtered : filtered.slice(0, 8);
+
+  const totalApps = ALL_APPS.length;
+  const cheapest  = Math.min(...ALL_APPS.map((a) => a.cost));
+  const mostPop   = ALL_APPS.find((a) => a.slug === "whatsapp-business")!;
+
+  return (
+    <section className="py-24 px-4 relative overflow-hidden border-t border-white/5">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-[#7C3AED]/4 blur-3xl rounded-full" />
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
+        {/* Header */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/25 rounded-full px-5 py-2">
+            <Plug2 className="size-3.5 text-blue-400" />
+            <span className="text-blue-300 text-sm font-semibold tracking-wide">{totalApps}+ integrações disponíveis</span>
+          </div>
+        </div>
+
+        <h2 className="text-4xl sm:text-5xl font-black text-white text-center mb-3 leading-tight">
+          Todos os apps disponíveis<br />
+          <span className="text-nasa">em qualquer plano</span>
+        </h2>
+        <p className="text-white/40 text-center text-lg mb-4 max-w-2xl mx-auto leading-relaxed">
+          Não existe app bloqueado por plano. O único critério é ter Stars suficientes para ativá-los.
+          Quanto mais Stars, mais você pode conectar.
+        </p>
+
+        {/* Key stats */}
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          {[
+            { label: "Apps disponíveis", value: `${totalApps}+`, color: "text-violet-400" },
+            { label: "Menor custo", value: `${cheapest} ★/mês`, color: "text-yellow-400" },
+            { label: "Bloqueados por plano", value: "0", color: "text-emerald-400" },
+            { label: "Categorias", value: `${APP_CATEGORIES.length}`, color: "text-blue-400" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="nasa-glass border border-white/8 rounded-xl px-5 py-3 text-center min-w-[120px]">
+              <p className={cn("text-xl font-black", color)}>{value}</p>
+              <p className="text-white/30 text-[11px] mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex flex-wrap gap-2 justify-center mb-8">
+          {APP_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => { setActiveCategory(cat); setShowAll(false); }}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                activeCategory === cat
+                  ? "bg-violet-600 border-violet-600 text-white"
+                  : "border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
+              )}
+            >
+              {cat}
+              <span className="ml-1.5 text-[10px] opacity-60">
+                ({ALL_APPS.filter((a) => a.category === cat).length})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Apps grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {displayed.map((app) => (
+            <div
+              key={app.slug}
+              className="nasa-glass rounded-xl border border-white/8 p-4 flex items-start gap-3 hover:border-violet-500/30 transition-all group"
+            >
+              <span className="text-2xl shrink-0">{app.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/85 font-semibold text-xs group-hover:text-white transition-colors">{app.name}</p>
+                <p className="text-white/30 text-[10px] leading-relaxed mt-0.5 line-clamp-2">{app.desc}</p>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <Star className="size-2.5 text-yellow-400 fill-yellow-400" />
+                  <span className="text-yellow-400/80 text-[10px] font-bold">{app.cost} ★/mês</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Show more */}
+        {filtered.length > 8 && (
+          <div className="text-center mb-10">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-white/40 hover:text-white/70 text-sm border border-white/10 hover:border-white/20 rounded-full px-5 py-2 transition-all"
+            >
+              {showAll
+                ? "Mostrar menos"
+                : `Ver mais ${filtered.length - 8} apps de ${activeCategory}`}
+            </button>
+          </div>
+        )}
+
+        {/* Banner: all plans unlocked */}
+        <div className="nasa-glass rounded-2xl border border-violet-500/20 p-6 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+          <div className="text-4xl shrink-0">🔓</div>
+          <div className="flex-1">
+            <p className="text-white font-bold text-base">Nenhum app bloqueado por plano</p>
+            <p className="text-white/40 text-sm mt-0.5">
+              No Suit (grátis) você ainda pode comprar Stars avulsas e ativar qualquer integração.
+              Upgrade de plano = mais Stars mensais, não mais acesso.
+            </p>
+          </div>
+          <Button asChild className="bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shrink-0">
+            <Link href={isLoggedIn ? "/tracking" : "/sign-up"}>
+              Começar agora <ArrowRight className="size-4 ml-1" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </section>
   );
@@ -1400,16 +1620,12 @@ const SIM_PLANS = [
   { id: "constellation",label: "Constellation", min: 4001,  max: 20000,stars: 20000, price: 797, color: "#f59e0b", bgClass: "bg-yellow-500/10",  border: "border-yellow-500/30" },
 ];
 
-const APP_COSTS: { name: string; cost: number; icon: string }[] = [
-  { name: "WhatsApp Business",  cost: 120, icon: "💬" },
-  { name: "Instagram DM",       cost: 80,  icon: "📸" },
-  { name: "IA ASTRO",           cost: 200, icon: "🤖" },
-  { name: "Gmail Integration",  cost: 60,  icon: "📧" },
-  { name: "Relatórios Avançados", cost: 150, icon: "📊" },
-  { name: "NASA Planner",       cost: 100, icon: "🗺️" },
-  { name: "Space Points",       cost: 80,  icon: "🏆" },
-  { name: "Automações",         cost: 180, icon: "⚡" },
-];
+// Top 8 apps mais populares para o simulador
+const APP_COSTS: { name: string; cost: number; icon: string }[] = ALL_APPS
+  .filter((a) => ["whatsapp-business","instagram-dm","openai","meta-ads","google-ads","stripe","zapier","shopify"].includes(a.slug))
+  .sort((a, b) => ["whatsapp-business","instagram-dm","openai","meta-ads","google-ads","stripe","zapier","shopify"].indexOf(a.slug) -
+                  ["whatsapp-business","instagram-dm","openai","meta-ads","google-ads","stripe","zapier","shopify"].indexOf(b.slug))
+  .map((a) => ({ name: a.name, cost: a.cost, icon: a.icon }));
 
 function SimulatorSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [starsNeeded, setStarsNeeded] = useState(2000);
@@ -1978,6 +2194,7 @@ export default function HomePage() {
       <IntegrationsMarquee />
       <StarsInfoSection isLoggedIn={isLoggedIn} />
       <PlansPublicSection isLoggedIn={isLoggedIn} />
+      <AppsShowcaseSection isLoggedIn={isLoggedIn} />
       <SimulatorSection isLoggedIn={isLoggedIn} />
       <GamifiedRankingSection isLoggedIn={isLoggedIn} />
       <FinalCTASection isLoggedIn={isLoggedIn} />

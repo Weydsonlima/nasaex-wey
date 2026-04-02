@@ -324,8 +324,12 @@ export const useAddTagToAction = () => {
   const queryClient = useQueryClient();
   return useMutation(
     orpc.workspace.addTagToAction.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["action.get"] });
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({
+            input: { actionId: variables.actionId },
+          }),
+        );
         queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
       },
       onError: () => toast.error("Erro ao adicionar tag!"),
@@ -337,8 +341,12 @@ export const useRemoveTagFromAction = () => {
   const queryClient = useQueryClient();
   return useMutation(
     orpc.workspace.removeTagFromAction.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["action.get"] });
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({
+            input: { actionId: variables.actionId },
+          }),
+        );
         queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
       },
       onError: () => toast.error("Erro ao remover tag!"),

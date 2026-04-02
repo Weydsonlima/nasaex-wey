@@ -107,13 +107,20 @@ export const useKanbanStore = create<KanbanStore>()(
         // Se ambos forem iguais por referência, não faz nada
         if (currentLeads === leads) return;
 
-        // Se a quantidade for a mesma, verifica se os leads são os mesmos (mesmo se em ordem diferente)
+        // Se a quantidade for a mesma, verifica se os leads são os mesmos (inclusive conteúdo)
         if (currentLeads && leads && currentLeads.length === leads.length) {
-          // Verifica se todos os objetos de lead na store estão presentes nos leads vindos da query
-          // Isso permite que reordenações otimistas sejam preservadas enquanto a query ainda tem os dados antigos
-          const isSameContent = currentLeads.every((l) =>
-            leads.some((incoming) => incoming.id === l.id),
-          );
+          // Verifica se todos os objetos de lead na store estão exatamente iguais aos que vieram da query
+          // Isso permite que reordenações otimistas sejam preservadas se o conteúdo e a ordem forem os mesmos
+          const isSameContent = currentLeads.every((l, index) => {
+            const incoming = leads[index];
+            return (
+              incoming &&
+              incoming.id === l.id &&
+              incoming.description === l.description &&
+              incoming.name === l.name &&
+              incoming.updatedAt === (incoming as any).updatedAt // caso tenha updatedAt
+            );
+          });
 
           if (isSameContent) {
             return;

@@ -23,7 +23,11 @@ import {
 } from "lucide-react";
 import { StarsWidget } from "@/features/stars";
 import { SpacePointWidget } from "@/features/space-point";
-import { useSidebarPrefs, useSetSidebarPref, isItemVisible } from "@/hooks/use-sidebar-prefs";
+import {
+  useSidebarPrefs,
+  useSetSidebarPref,
+  isItemVisible,
+} from "@/hooks/use-sidebar-prefs";
 import { SIDEBAR_NAV_ITEMS, APP_TO_SIDEBAR_KEY } from "@/lib/sidebar-items";
 import { useSuspenseWokspaces } from "@/features/workspace/hooks/use-workspace";
 import { Suspense } from "react";
@@ -930,7 +934,12 @@ const APPS: AppDef[] = [
 
 // ─── Status Helpers ───────────────────────────────────────────────────────────
 
-type Filter = "all" | "installed" | "development" | "available" | "personalizar";
+type Filter =
+  | "all"
+  | "installed"
+  | "development"
+  | "available"
+  | "personalizar";
 
 function StatusBadge({ status }: { status: AppStatus }) {
   if (status === "installed")
@@ -955,7 +964,13 @@ function StatusBadge({ status }: { status: AppStatus }) {
 
 // ─── Sidebar Toggle ───────────────────────────────────────────────────────────
 
-function SidebarToggle({ sidebarKey, defaultVisible }: { sidebarKey: string; defaultVisible: boolean }) {
+function SidebarToggle({
+  sidebarKey,
+  defaultVisible,
+}: {
+  sidebarKey: string;
+  defaultVisible: boolean;
+}) {
   const { data: prefs } = useSidebarPrefs();
   const setPref = useSetSidebarPref();
   const visible = isItemVisible(prefs, `app:${sidebarKey}`, defaultVisible);
@@ -1083,7 +1098,10 @@ function AppCard({
           </Button>
         )}
         {sidebarItem && (
-          <SidebarToggle sidebarKey={app.sidebarKey!} defaultVisible={sidebarItem.defaultVisible} />
+          <SidebarToggle
+            sidebarKey={app.sidebarKey!}
+            defaultVisible={sidebarItem.defaultVisible}
+          />
         )}
       </div>
     </div>
@@ -1163,21 +1181,37 @@ function WorkspaceToggles() {
   const setPref = useSetSidebarPref();
 
   if (data.workspaces.length === 0)
-    return <p className="text-sm text-muted-foreground">Nenhum projeto encontrado.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nenhum projeto encontrado.
+      </p>
+    );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {data.workspaces.map((ws) => {
         const visible = isItemVisible(prefs, `workspace:${ws.id}`, true);
         return (
-          <div key={ws.id} className="flex items-center justify-between p-3 rounded-xl border bg-card gap-3">
+          <div
+            key={ws.id}
+            className="flex items-center justify-between p-3 rounded-xl border bg-card gap-3"
+          >
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="shrink-0 text-base">{ws.icon}</span>
               <span className="text-sm font-medium truncate">{ws.name}</span>
             </div>
             <button
-              onClick={() => setPref.mutate({ itemKey: `workspace:${ws.id}`, visible: !visible })}
-              title={visible ? "Ocultar da barra lateral" : "Mostrar na barra lateral"}
+              onClick={() =>
+                setPref.mutate({
+                  itemKey: `workspace:${ws.id}`,
+                  visible: !visible,
+                })
+              }
+              title={
+                visible
+                  ? "Ocultar da barra lateral"
+                  : "Mostrar na barra lateral"
+              }
               className={cn(
                 "flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors shrink-0",
                 visible
@@ -1196,23 +1230,35 @@ function WorkspaceToggles() {
 }
 
 function PersonalizarMenu() {
-  const configurableItems = SIDEBAR_NAV_ITEMS.filter((item) => !item.alwaysVisible);
+  const configurableItems = SIDEBAR_NAV_ITEMS.filter(
+    (item) => !item.alwaysVisible,
+  );
 
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-sm font-semibold mb-1 text-foreground">Apps no menu lateral</h3>
-        <p className="text-xs text-muted-foreground mb-4">Escolha quais apps aparecem na sua barra lateral.</p>
+        <h3 className="text-sm font-semibold mb-1 text-foreground">
+          Apps no menu lateral
+        </h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Escolha quais apps aparecem na sua barra lateral.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {configurableItems.map((item) => {
             const Icon = item.icon as React.ElementType;
             return (
-              <div key={item.key} className="flex items-center justify-between p-3 rounded-xl border bg-card gap-3">
+              <div
+                key={item.key}
+                className="flex items-center justify-between p-3 rounded-xl border bg-card gap-3"
+              >
                 <div className="flex items-center gap-2.5">
                   <Icon className="size-4 text-muted-foreground shrink-0" />
                   <span className="text-sm font-medium">{item.title}</span>
                 </div>
-                <SidebarToggle sidebarKey={item.key} defaultVisible={item.defaultVisible} />
+                <SidebarToggle
+                  sidebarKey={item.key}
+                  defaultVisible={item.defaultVisible}
+                />
               </div>
             );
           })}
@@ -1220,9 +1266,19 @@ function PersonalizarMenu() {
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold mb-1 text-foreground">Projetos no menu lateral</h3>
-        <p className="text-xs text-muted-foreground mb-4">Escolha quais projetos (workspaces) aparecem na sua barra lateral.</p>
-        <Suspense fallback={<p className="text-sm text-muted-foreground">Carregando projetos...</p>}>
+        <h3 className="text-sm font-semibold mb-1 text-foreground">
+          Projetos no menu lateral
+        </h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Escolha quais projetos (workspaces) aparecem na sua barra lateral.
+        </p>
+        <Suspense
+          fallback={
+            <p className="text-sm text-muted-foreground">
+              Carregando projetos...
+            </p>
+          }
+        >
           <WorkspaceToggles />
         </Suspense>
       </div>
@@ -1261,7 +1317,7 @@ export function AppsPage() {
   const devCount = APPS.filter((a) => a.status === "development").length;
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-background w-full">
       {/* Hero Header */}
       <div className="relative overflow-hidden border-b bg-linear-to-br from-[#7C3AED]/5 via-background to-background">
         {/* Background decoration */}
@@ -1270,7 +1326,7 @@ export function AppsPage() {
           <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-[#7C3AED]/3 blur-2xl" />
         </div>
 
-        <div className="relative px-6 py-10 max-w-5xl mx-auto">
+        <div className="relative px-6 py-10 mx-auto">
           <div className="flex items-center justify-end gap-2 mb-4">
             <SpacePointWidget />
             <StarsWidget />
@@ -1320,7 +1376,7 @@ export function AppsPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="px-6 py-4 max-w-5xl mx-auto">
+      <div className="px-6 py-4 mx-auto">
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((f) => {
             const count =
@@ -1360,7 +1416,7 @@ export function AppsPage() {
       </div>
 
       {/* Grid / Personalizar */}
-      <div className="px-6 pb-10 max-w-5xl mx-auto">
+      <div className="px-6 pb-10  mx-auto">
         {filter === "personalizar" ? (
           <PersonalizarMenu />
         ) : filteredApps.length === 0 ? (

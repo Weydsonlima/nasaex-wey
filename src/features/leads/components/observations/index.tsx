@@ -44,7 +44,7 @@ export function ObservationLead({
         },
       },
     );
-  }, [debouncedEditor, leadId]); // ❗ não precisa do mutation aqui
+  }, [debouncedEditor, leadId]);
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 space-y-4">

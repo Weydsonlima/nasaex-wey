@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import {
   Clock, Bot, ChevronRight, Sparkles, Play, Zap,
   MessageSquare, Calendar, Plug2, LayoutGrid, Target, Trophy,
   BarChart2, TrendingUp, FileText, Flame,
+  Coins, Crown, Medal, Gift, TrendingDown, ChevronUp, Infinity,
+  Cpu, BrainCircuit, Layers, RefreshCw, Lock, Bolt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -115,6 +118,70 @@ const STYLES = `
   .card-hover:hover {
     transform: translateY(-4px);
     box-shadow: 0 20px 60px rgba(124,58,237,.2);
+  }
+
+  @keyframes nasaBar {
+    from { width: 0; }
+    to   { width: var(--bar-w); }
+  }
+  @keyframes nasaCountUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes nasaRankIn {
+    from { opacity: 0; transform: translateX(-16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes nasaStarPop {
+    0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+    60%  { transform: scale(1.2) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes nasaLevelUp {
+    0%,100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); }
+    50%     { box-shadow: 0 0 0 8px rgba(250,204,21,0); }
+  }
+  @keyframes nasaSliderGlow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,.4); }
+    50%     { box-shadow: 0 0 14px 4px rgba(124,58,237,.25); }
+  }
+
+  .nasa-bar        { animation: nasaBar 1s ease-out forwards; }
+  .nasa-rank-in    { animation: nasaRankIn .5s ease-out forwards; }
+  .nasa-star-pop   { animation: nasaStarPop .6s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .nasa-level-up   { animation: nasaLevelUp 2.5s ease-in-out infinite; }
+  .nasa-slider-glow{ animation: nasaSliderGlow 3s ease-in-out infinite; }
+
+  .plan-card-highlight {
+    background: linear-gradient(145deg, rgba(124,58,237,.12) 0%, rgba(168,85,247,.06) 100%);
+    border-color: rgba(124,58,237,.5) !important;
+    box-shadow: 0 0 40px rgba(124,58,237,.2), 0 0 80px rgba(124,58,237,.08);
+  }
+  .stars-card {
+    background: linear-gradient(135deg, rgba(250,204,21,.07) 0%, rgba(124,58,237,.05) 100%);
+    border: 1px solid rgba(250,204,21,.15);
+  }
+  .rank-row:nth-child(1) { animation-delay: 0s; }
+  .rank-row:nth-child(2) { animation-delay: .06s; }
+  .rank-row:nth-child(3) { animation-delay: .12s; }
+  .rank-row:nth-child(4) { animation-delay: .18s; }
+  .rank-row:nth-child(5) { animation-delay: .24s; }
+  .rank-row:nth-child(6) { animation-delay: .30s; }
+  .rank-row:nth-child(7) { animation-delay: .36s; }
+  .rank-row:nth-child(8) { animation-delay: .42s; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #7C3AED;
+    cursor: pointer;
+    border: 3px solid #fff;
+    box-shadow: 0 0 12px rgba(124,58,237,.6);
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 99px;
+    background: linear-gradient(to right, #7C3AED var(--track-pct, 50%), rgba(255,255,255,.1) var(--track-pct, 50%));
   }
 `;
 
@@ -968,6 +1035,857 @@ function IntegrationsMarquee() {
   );
 }
 
+// ─── Stars Info Section ───────────────────────────────────────────────────────
+
+const STARS_CARDS = [
+  {
+    icon: Gift,
+    color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20",
+    title: "Plano Suit — Gratuito para sempre",
+    desc: "Comece sem pagar nada. O plano Suit inclui o CRM completo, pipeline de vendas e gestão de contatos sem expiração.",
+  },
+  {
+    icon: RefreshCw,
+    color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/20",
+    title: "Stars nunca se perdem",
+    desc: "30% das suas Stars não utilizadas rolam automaticamente para o próximo mês. Seu esforço acumula.",
+  },
+  {
+    icon: Layers,
+    color: "text-violet-400", bg: "bg-violet-400/10", border: "border-violet-400/20",
+    title: "Acumule e escale no seu ritmo",
+    desc: "Compre pacotes avulsos de Stars quando precisar ativar uma integração específica. Sem comprometimento de plano.",
+  },
+  {
+    icon: Bolt,
+    color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20",
+    title: "Cada Star tem poder real",
+    desc: "Stars ativam integrações (WhatsApp, Instagram, IA), automações e relatórios avançados conforme você cresce.",
+  },
+  {
+    icon: BrainCircuit,
+    color: "text-pink-400", bg: "bg-pink-400/10", border: "border-pink-400/20",
+    title: "IA inclusa em todo plano pago",
+    desc: "O ASTRO, assistente de IA da plataforma, está disponível em todos os planos pagos para acelerar seu processo comercial.",
+  },
+  {
+    icon: Lock,
+    color: "text-orange-400", bg: "bg-orange-400/10", border: "border-orange-400/20",
+    title: "Seus dados, sua empresa",
+    desc: "LGPD Compliant, hospedagem 100% no Brasil, backups diários. Seu negócio protegido do começo ao fim.",
+  },
+];
+
+function StarsInfoSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  return (
+    <section className="py-28 px-4 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-yellow-400/4 blur-3xl" />
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
+        {/* Badge */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/25 rounded-full px-5 py-2">
+            <Star className="size-3.5 text-yellow-400 fill-yellow-400" />
+            <span className="text-yellow-300 text-sm font-semibold tracking-wide">★ Stars — A moeda do crescimento</span>
+          </div>
+        </div>
+
+        <h2 className="text-4xl sm:text-5xl font-black text-white text-center mb-4 leading-tight">
+          Para quem está começando,<br />
+          <span className="text-nasa">tudo começa de graça</span>
+        </h2>
+        <p className="text-white/40 text-center text-lg mb-16 max-w-2xl mx-auto leading-relaxed">
+          Stars são a moeda interna do NASA. Cada plano inclui um crédito mensal para ativar integrações,
+          automações e funcionalidades avançadas. E o melhor: você começa sem gastar nada.
+        </p>
+
+        {/* How Stars work visual */}
+        <div className="nasa-glass rounded-2xl border border-white/8 p-6 mb-12 max-w-4xl mx-auto">
+          <p className="text-white/30 text-xs font-medium uppercase tracking-widest text-center mb-6">Como Stars funcionam</p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {[
+              { emoji: "📋", label: "Assine um plano", sub: "ou use o Suit grátis" },
+              { emoji: "→", label: "", sub: "" },
+              { emoji: "⭐", label: "Receba Stars mensais", sub: "créditos automáticos" },
+              { emoji: "→", label: "", sub: "" },
+              { emoji: "🔌", label: "Ative integrações", sub: "WhatsApp, IA, CRM..." },
+              { emoji: "→", label: "", sub: "" },
+              { emoji: "📈", label: "Escale seu negócio", sub: "com dados e automações" },
+            ].map((step, i) => (
+              step.label === "" ? (
+                <div key={i} className="text-white/15 text-2xl hidden sm:block">→</div>
+              ) : (
+                <div key={i} className="text-center flex-1">
+                  <div className="text-3xl mb-1">{step.emoji}</div>
+                  <p className="text-white/80 text-xs font-semibold">{step.label}</p>
+                  <p className="text-white/30 text-[10px] mt-0.5">{step.sub}</p>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+
+        {/* Benefit cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-14">
+          {STARS_CARDS.map(({ icon: Icon, color, bg, border, title, desc }) => (
+            <div key={title} className={cn("nasa-glass rounded-xl p-5 border transition-all card-hover", border)}>
+              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", bg)}>
+                <Icon className={cn("size-4.5", color)} />
+              </div>
+              <p className="text-white font-bold text-sm mb-1.5">{title}</p>
+              <p className="text-white/45 text-xs leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Rollover visual */}
+        <div className="stars-card rounded-2xl p-8 max-w-3xl mx-auto text-center">
+          <div className="text-5xl mb-3">♻️</div>
+          <h3 className="text-white font-black text-xl mb-2">Stars não utilizadas <span className="text-yellow-400">não desaparecem</span></h3>
+          <p className="text-white/50 text-sm mb-6 max-w-lg mx-auto leading-relaxed">
+            Uma parte das suas Stars inutilizadas rolam para o próximo ciclo. Quanto melhor seu plano,
+            maior o rollover — recompensando quem planeja com inteligência.
+          </p>
+          <div className="flex justify-center gap-6 flex-wrap">
+            {[
+              { plan: "Suit",         pct: "0%",  color: "text-zinc-400",   badge: "bg-zinc-700" },
+              { plan: "Earth",        pct: "20%", color: "text-blue-400",   badge: "bg-blue-500/20" },
+              { plan: "Explore",      pct: "25%", color: "text-violet-400", badge: "bg-violet-500/20" },
+              { plan: "Constellation",pct: "30%", color: "text-yellow-400", badge: "bg-yellow-500/20" },
+            ].map(({ plan, pct, color, badge }) => (
+              <div key={plan} className="text-center">
+                <div className={cn("text-2xl font-black mb-1", color)}>{pct}</div>
+                <div className={cn("text-xs px-2 py-0.5 rounded-full font-semibold text-white/70", badge)}>{plan}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center mt-12">
+          <Button asChild size="lg"
+            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-black px-10 py-6 text-base rounded-2xl nasa-glow-sm">
+            <Link href={isLoggedIn ? "/tracking" : "/sign-up"}>
+              Começar com Suit — Grátis
+              <Gift className="size-4 ml-2" />
+            </Link>
+          </Button>
+          <p className="text-white/25 text-xs mt-3">Sem cartão de crédito · Cancele quando quiser</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Plans Public Section ─────────────────────────────────────────────────────
+
+const PUBLIC_PLANS = [
+  {
+    id: "suit", name: "Suit", slogan: "Para quem está dando os primeiros passos",
+    price: 0, billingLabel: "/mês", stars: 0, maxUsers: 3, rollover: 0,
+    highlighted: false, ctaLabel: "Começar grátis", ctaHref: "/sign-up",
+    badge: null,
+    benefits: [
+      "CRM completo e pipeline de vendas",
+      "Gestão de até 3 usuários",
+      "Agenda e agendamentos",
+      "Proposta e contratos (FORGE)",
+      "N.Box — gerenciamento de arquivos",
+      "Suporte por e-mail",
+    ],
+  },
+  {
+    id: "earth", name: "Earth", slogan: "Primeiros resultados com automação",
+    price: 197, billingLabel: "/mês", stars: 1000, maxUsers: 5, rollover: 20,
+    highlighted: false, ctaLabel: "Assinar Earth", ctaHref: "/sign-up",
+    badge: null,
+    benefits: [
+      "Tudo do Suit, mais:",
+      "1.000 Stars mensais",
+      "20% de rollover de Stars",
+      "Até 5 usuários",
+      "3 integrações ativas",
+      "Relatórios básicos",
+      "Suporte prioritário",
+    ],
+  },
+  {
+    id: "explore", name: "Explore", slogan: "Para empresas que automatizam e crescem",
+    price: 397, billingLabel: "/mês", stars: 3000, maxUsers: 15, rollover: 25,
+    highlighted: true, ctaLabel: "Assinar Explore", ctaHref: "/sign-up",
+    badge: "MAIS POPULAR",
+    benefits: [
+      "Tudo do Earth, mais:",
+      "3.000 Stars mensais",
+      "25% de rollover de Stars",
+      "Até 15 usuários",
+      "Integrações ilimitadas",
+      "IA ASTRO completo",
+      "NASA Planner + Mind Maps",
+      "Space Points gamificado",
+      "Suporte dedicado",
+    ],
+  },
+  {
+    id: "constellation", name: "Constellation", slogan: "Para empresas sem limites",
+    price: 797, billingLabel: "/mês", stars: 20000, maxUsers: 999, rollover: 30,
+    highlighted: false, ctaLabel: "Falar com vendas", ctaHref: "mailto:vendas@nasaex.com.br",
+    badge: "ENTERPRISE",
+    benefits: [
+      "Tudo do Explore, mais:",
+      "20.000 Stars mensais",
+      "30% de rollover de Stars",
+      "Usuários ilimitados",
+      "Gerente de conta dedicado",
+      "SLA customizado",
+      "Onboarding personalizado",
+      "Integrações exclusivas",
+      "Relatórios avançados",
+    ],
+  },
+];
+
+function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  return (
+    <section id="planos" className="py-28 px-4 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#7C3AED]/5 blur-3xl rounded-full" />
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-[#7C3AED]/15 border border-[#7C3AED]/30 rounded-full px-5 py-2">
+            <Sparkles className="size-3.5 text-violet-400" />
+            <span className="text-violet-300 text-sm font-semibold tracking-wide">Planos NASA</span>
+          </div>
+        </div>
+
+        <h2 className="text-4xl sm:text-5xl font-black text-white text-center mb-3 leading-tight">
+          Escolha seu <span className="text-nasa">ponto de partida</span>
+        </h2>
+        <p className="text-white/40 text-center text-lg mb-4 max-w-xl mx-auto">
+          De startups a operações enterprise — escale flexível com o Método N.A.S.A.®
+        </p>
+        <p className="text-center text-white/20 text-sm mb-14">★ Um em cada plano</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          {PUBLIC_PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className={cn(
+                "relative flex flex-col rounded-2xl border p-6 transition-all card-hover",
+                plan.highlighted
+                  ? "plan-card-highlight"
+                  : "nasa-glass border-white/8"
+              )}
+            >
+              {/* Badge */}
+              {plan.badge && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                  <span className={cn(
+                    "text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap",
+                    plan.highlighted
+                      ? "bg-[#7C3AED] text-white shadow-lg shadow-violet-500/40"
+                      : "bg-gradient-to-r from-yellow-500 to-orange-500 text-black"
+                  )}>
+                    {plan.badge}
+                  </span>
+                </div>
+              )}
+
+              {/* Header */}
+              <div className="mb-5">
+                <p className="text-white font-black text-xl">{plan.name}</p>
+                <p className="text-white/35 text-xs mt-0.5 leading-snug">{plan.slogan}</p>
+              </div>
+
+              {/* Price */}
+              <div className="mb-5">
+                {plan.price === 0 ? (
+                  <div>
+                    <span className="text-4xl font-black text-emerald-400">R$ 0</span>
+                    <span className="text-white/30 text-sm">/mês</span>
+                    <p className="text-emerald-500/70 text-[11px] mt-1">Grátis para sempre</p>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="text-white/30 text-sm align-top mt-2 inline-block">R$</span>
+                    <span className="text-4xl font-black text-white mx-1">
+                      {plan.price.toLocaleString("pt-BR")}
+                    </span>
+                    <span className="text-white/30 text-sm">{plan.billingLabel}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="flex gap-2 mb-5">
+                <div className="flex-1 bg-white/4 rounded-xl p-2.5 text-center">
+                  <div className="text-yellow-400 font-black text-sm">
+                    {plan.stars === 0 ? "—" : plan.stars >= 1000
+                      ? `${plan.stars / 1000}K`
+                      : plan.stars}
+                  </div>
+                  <div className="text-white/30 text-[10px]">Stars/mês</div>
+                </div>
+                <div className="flex-1 bg-white/4 rounded-xl p-2.5 text-center">
+                  <div className="text-blue-400 font-black text-sm">
+                    {plan.maxUsers >= 999 ? "∞" : plan.maxUsers}
+                  </div>
+                  <div className="text-white/30 text-[10px]">Usuários</div>
+                </div>
+                <div className="flex-1 bg-white/4 rounded-xl p-2.5 text-center">
+                  <div className="text-violet-400 font-black text-sm">{plan.rollover}%</div>
+                  <div className="text-white/30 text-[10px]">Rollover</div>
+                </div>
+              </div>
+
+              {/* Benefits */}
+              <ul className="space-y-2 flex-1 mb-6">
+                {plan.benefits.map((b, i) => (
+                  <li key={i} className={cn(
+                    "flex items-start gap-2 text-xs",
+                    b.startsWith("Tudo do") ? "text-white/30 font-semibold" : "text-white/60"
+                  )}>
+                    {b.startsWith("Tudo do") ? (
+                      <ChevronUp className="size-3 shrink-0 mt-0.5 text-white/20" />
+                    ) : (
+                      <CheckCircle2 className="size-3 shrink-0 mt-0.5 text-emerald-500" />
+                    )}
+                    {b}
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA */}
+              <Button
+                asChild
+                className={cn(
+                  "w-full font-bold text-sm rounded-xl",
+                  plan.highlighted
+                    ? "bg-[#7C3AED] hover:bg-[#6D28D9] text-white"
+                    : plan.id === "constellation"
+                    ? "bg-gradient-to-r from-yellow-500/80 to-orange-500/80 hover:from-yellow-500 hover:to-orange-500 text-black"
+                    : plan.price === 0
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                    : "bg-white/8 hover:bg-white/12 text-white border border-white/10"
+                )}
+              >
+                <Link href={isLoggedIn ? "/tracking" : plan.ctaHref}>
+                  {plan.ctaLabel}
+                  <ArrowRight className="size-3.5 ml-1.5" />
+                </Link>
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-white/15 text-xs mt-8">
+          🔒 Pagamento seguro via Stripe e PIX (Asaas) · Cancele quando quiser · LGPD Compliant
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ─── Simulator Section ────────────────────────────────────────────────────────
+
+const SIM_PLANS = [
+  { id: "suit",         label: "Suit",          min: 0,     max: 0,    stars: 0,     price: 0,   color: "#10b981", bgClass: "bg-emerald-500/10", border: "border-emerald-500/30" },
+  { id: "earth",        label: "Earth",         min: 1,     max: 1500, stars: 1000,  price: 197, color: "#3b82f6", bgClass: "bg-blue-500/10",    border: "border-blue-500/30" },
+  { id: "explore",      label: "Explore",       min: 1501,  max: 4000, stars: 3000,  price: 397, color: "#7C3AED", bgClass: "bg-violet-500/10",  border: "border-violet-500/30" },
+  { id: "constellation",label: "Constellation", min: 4001,  max: 20000,stars: 20000, price: 797, color: "#f59e0b", bgClass: "bg-yellow-500/10",  border: "border-yellow-500/30" },
+];
+
+const APP_COSTS: { name: string; cost: number; icon: string }[] = [
+  { name: "WhatsApp Business",  cost: 120, icon: "💬" },
+  { name: "Instagram DM",       cost: 80,  icon: "📸" },
+  { name: "IA ASTRO",           cost: 200, icon: "🤖" },
+  { name: "Gmail Integration",  cost: 60,  icon: "📧" },
+  { name: "Relatórios Avançados", cost: 150, icon: "📊" },
+  { name: "NASA Planner",       cost: 100, icon: "🗺️" },
+  { name: "Space Points",       cost: 80,  icon: "🏆" },
+  { name: "Automações",         cost: 180, icon: "⚡" },
+];
+
+function SimulatorSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const [starsNeeded, setStarsNeeded] = useState(2000);
+  const MAX = 20000;
+
+  const pct = (starsNeeded / MAX) * 100;
+
+  const recommended = SIM_PLANS.reduce((acc, p) => {
+    if (starsNeeded >= p.min) return p;
+    return acc;
+  }, SIM_PLANS[0]);
+
+  const appsActive = APP_COSTS.filter((_, i) => {
+    let used = 0;
+    for (let j = 0; j <= i; j++) { used += APP_COSTS[j].cost; }
+    return used <= (recommended.stars || starsNeeded);
+  });
+
+  const starsRemaining = Math.max(0, (recommended.stars || 0) - APP_COSTS.slice(0, appsActive.length).reduce((s, a) => s + a.cost, 0));
+  const rolloverNext   = Math.floor(starsRemaining * (recommended.id === "constellation" ? .30 : recommended.id === "explore" ? .25 : recommended.id === "earth" ? .20 : 0));
+
+  const costPerContact = recommended.price === 0 ? 0 : +(recommended.price / 50).toFixed(2);
+
+  return (
+    <section className="py-28 px-4 relative overflow-hidden border-t border-white/5">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-violet-600/5 blur-3xl rounded-full" />
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-[#7C3AED]/15 border border-[#7C3AED]/30 rounded-full px-5 py-2">
+            <BarChart2 className="size-3.5 text-violet-400" />
+            <span className="text-violet-300 text-sm font-semibold tracking-wide">Simulador de Plano</span>
+          </div>
+        </div>
+
+        <h2 className="text-4xl sm:text-5xl font-black text-white text-center mb-4 leading-tight">
+          Descubra qual plano <span className="text-nasa">faz sentido para você</span>
+        </h2>
+        <p className="text-white/40 text-center text-lg mb-16 max-w-xl mx-auto">
+          Arraste o slider para simular quantas Stars você precisa e veja qual plano é mais vantajoso.
+        </p>
+
+        {/* Slider */}
+        <div className="nasa-glass rounded-2xl border border-white/8 p-8 mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-white/50 text-sm font-medium">Stars necessárias por mês</p>
+            <div className="flex items-center gap-1.5">
+              <Star className="size-4 text-yellow-400 fill-yellow-400" />
+              <span className="text-white font-black text-xl">
+                {starsNeeded >= 1000
+                  ? `${(starsNeeded / 1000).toFixed(starsNeeded % 1000 === 0 ? 0 : 1)}K`
+                  : starsNeeded}
+              </span>
+              <span className="text-white/30 text-sm">stars</span>
+            </div>
+          </div>
+
+          <div className="relative mb-4">
+            <input
+              type="range"
+              min={0} max={MAX} step={100}
+              value={starsNeeded}
+              onChange={(e) => setStarsNeeded(Number(e.target.value))}
+              style={{ "--track-pct": `${pct}%` } as React.CSSProperties}
+              className="w-full h-1.5 appearance-none rounded-full cursor-pointer outline-none nasa-slider-glow"
+            />
+          </div>
+
+          {/* Plan markers */}
+          <div className="flex justify-between text-[10px] text-white/25 mt-1">
+            <span>Suit (0)</span>
+            <span>Earth (1K)</span>
+            <span>Explore (3K)</span>
+            <span>Constellation (20K)</span>
+          </div>
+        </div>
+
+        {/* Result */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Recommended plan card */}
+          <div className={cn("rounded-2xl border p-6 transition-all", recommended.bgClass, recommended.border)}>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-white/40 text-xs font-medium uppercase tracking-wider mb-1">Plano recomendado</p>
+                <p className="text-white font-black text-2xl">{recommended.label}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white font-black text-2xl">
+                  {recommended.price === 0 ? (
+                    <span className="text-emerald-400">Grátis</span>
+                  ) : (
+                    <>R$ {recommended.price}<span className="text-white/30 text-sm font-normal">/mês</span></>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { label: "Stars/mês", value: recommended.stars >= 1000 ? `${recommended.stars / 1000}K` : recommended.stars === 0 ? "—" : recommended.stars, icon: Star },
+                { label: "Custo/contato", value: costPerContact === 0 ? "R$ 0" : `R$ ${costPerContact}`, icon: Users },
+                { label: "Rollover", value: recommended.id === "constellation" ? "30%" : recommended.id === "explore" ? "25%" : recommended.id === "earth" ? "20%" : "0%", icon: RefreshCw },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-white font-black text-base">{value}</div>
+                  <div className="text-white/30 text-[10px] mt-0.5">{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {recommended.price > 0 && (
+              <div className="bg-black/20 rounded-xl p-3 text-center">
+                <p className="text-white/40 text-[11px]">
+                  Stars restantes no fim do mês:
+                  <span className="text-yellow-400 font-bold ml-1">{starsRemaining.toLocaleString("pt-BR")} ★</span>
+                  {" "}→ rollover de
+                  <span className="text-emerald-400 font-bold ml-1">{rolloverNext.toLocaleString("pt-BR")} ★</span>
+                  {" "}para o próximo ciclo
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Apps you can activate */}
+          <div className="nasa-glass rounded-2xl border border-white/8 p-6">
+            <p className="text-white/40 text-xs font-medium uppercase tracking-wider mb-4">
+              Integrações ativáveis com {recommended.label}
+            </p>
+            <div className="space-y-2">
+              {APP_COSTS.map((app, i) => {
+                const active = appsActive.find((a) => a.name === app.name);
+                return (
+                  <div
+                    key={app.name}
+                    className={cn(
+                      "flex items-center justify-between rounded-xl px-3 py-2 text-xs transition-all",
+                      active ? "bg-white/5 border border-white/8" : "opacity-30"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{app.icon}</span>
+                      <span className={active ? "text-white/70" : "text-white/30"}>{app.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-yellow-400/70">{app.cost} ★/mês</span>
+                      {active ? (
+                        <CheckCircle2 className="size-3.5 text-emerald-400" />
+                      ) : (
+                        <Lock className="size-3 text-white/20" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* All plans comparison mini */}
+        <div className="nasa-glass rounded-2xl border border-white/8 p-6">
+          <p className="text-white/30 text-xs font-medium uppercase tracking-widest mb-5 text-center">Comparativo rápido</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {SIM_PLANS.map((p) => {
+              const isRec = p.id === recommended.id;
+              return (
+                <div key={p.id} className={cn(
+                  "rounded-xl p-4 text-center border transition-all",
+                  isRec ? `${p.bgClass} ${p.border} scale-[1.03]` : "border-white/5 opacity-50"
+                )}>
+                  <p className="text-white font-bold text-sm mb-1">{p.label}</p>
+                  <p className="text-white font-black text-lg">
+                    {p.price === 0 ? <span className="text-emerald-400">Grátis</span> : `R$ ${p.price}`}
+                  </p>
+                  <p className="text-white/30 text-[10px]">
+                    {p.stars === 0 ? "sem stars" : `${p.stars >= 1000 ? p.stars / 1000 + "K" : p.stars} stars/mês`}
+                  </p>
+                  {isRec && (
+                    <div className="mt-2 text-[10px] font-bold" style={{ color: p.color }}>
+                      ← Recomendado
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="text-center mt-10">
+          <Button asChild size="lg"
+            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-black px-10 py-6 text-base rounded-2xl nasa-glow-sm">
+            <Link href={isLoggedIn ? "/tracking" : "/sign-up"}>
+              Começar com o plano {recommended.label}
+              <ArrowRight className="size-4 ml-2" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Gamified Ranking Section ─────────────────────────────────────────────────
+
+const FAKE_USERS = [
+  { initials: "MF", name: "Mariana F.",     company: "Studio MF Design",        stars: 18_420, pts: 9_810, level: "Orbital",     plan: "Explore",       color: "#a855f7" },
+  { initials: "RL", name: "Rafael Lima",    company: "Lima Consultoria",         stars: 15_880, pts: 8_340, level: "Satélite",    plan: "Constellation", color: "#f59e0b" },
+  { initials: "AC", name: "Ana Carvalho",   company: "AC Imóveis",               stars: 12_300, pts: 7_120, level: "Astronauta",  plan: "Explore",       color: "#3b82f6" },
+  { initials: "JM", name: "João Mendes",    company: "Mendes & Cia",             stars: 10_750, pts: 6_900, level: "Astronauta",  plan: "Explore",       color: "#10b981" },
+  { initials: "PS", name: "Patrícia S.",    company: "PS Educação",              stars: 9_200,  pts: 5_600, level: "Explorador",  plan: "Earth",         color: "#f97316" },
+  { initials: "GT", name: "Guilherme T.",   company: "GTech Soluções",           stars: 7_800,  pts: 4_920, level: "Explorador",  plan: "Earth",         color: "#ec4899" },
+  { initials: "VN", name: "Vitória Nunes",  company: "VN Marketing",             stars: 6_100,  pts: 3_870, level: "Lunar",       plan: "Earth",         color: "#06b6d4" },
+  { initials: "BS", name: "Bruno Silva",    company: "Silva Advocacia",          stars: 4_950,  pts: 3_200, level: "Lunar",       plan: "Suit",          color: "#84cc16" },
+];
+
+const LEVEL_COLORS: Record<string, string> = {
+  "Orbital":     "text-violet-400 bg-violet-400/15 border-violet-400/30",
+  "Satélite":    "text-yellow-400 bg-yellow-400/15 border-yellow-400/30",
+  "Astronauta":  "text-blue-400   bg-blue-400/15   border-blue-400/30",
+  "Explorador":  "text-orange-400 bg-orange-400/15 border-orange-400/30",
+  "Lunar":       "text-cyan-400   bg-cyan-400/15   border-cyan-400/30",
+  "Terra":       "text-emerald-400 bg-emerald-400/15 border-emerald-400/30",
+};
+
+const SPACE_LEVELS = [
+  { level: 1,  name: "Terra",       pts: 0,      color: "#10b981", emoji: "🌍" },
+  { level: 3,  name: "Lunar",       pts: 1_000,  color: "#06b6d4", emoji: "🌙" },
+  { level: 5,  name: "Explorador",  pts: 3_000,  color: "#f97316", emoji: "🚀" },
+  { level: 8,  name: "Astronauta",  pts: 6_000,  color: "#3b82f6", emoji: "👨‍🚀" },
+  { level: 12, name: "Orbital",     pts: 10_000, color: "#a855f7", emoji: "🛸" },
+  { level: 16, name: "Satélite",    pts: 18_000, color: "#f59e0b", emoji: "🛰️" },
+  { level: 20, name: "Galáxia",     pts: 30_000, color: "#ff6b6b", emoji: "✨" },
+];
+
+const MISSIONS = [
+  { icon: "🎯", title: "Primeiro Lead",     desc: "Cadastre seu primeiro lead",         pts: 50  },
+  { icon: "📊", title: "Analista Espacial", desc: "Visualize 10 relatórios",            pts: 200 },
+  { icon: "🤝", title: "Negociador Estelar",desc: "Feche 5 negócios no FORGE",          pts: 500 },
+  { icon: "🤖", title: "Piloto de IA",      desc: "Use o ASTRO 20 vezes",               pts: 300 },
+  { icon: "⚡", title: "Mestre das Flows",  desc: "Crie 3 automações ativas",           pts: 400 },
+  { icon: "👥", title: "Comandante",        desc: "Adicione 5 membros à organização",   pts: 250 },
+];
+
+function GamifiedRankingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const topUser  = FAKE_USERS[0];
+  const maxPts   = FAKE_USERS[0].pts;
+
+  return (
+    <section className="py-28 px-4 relative overflow-hidden border-t border-white/5">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/4 w-[500px] h-[500px] bg-violet-600/4 blur-3xl rounded-full" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-yellow-400/3 blur-3xl rounded-full" />
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
+        {/* Header */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/25 rounded-full px-5 py-2">
+            <Trophy className="size-3.5 text-yellow-400" />
+            <span className="text-yellow-300 text-sm font-semibold tracking-wide">Gamificação NASA — Space Points</span>
+          </div>
+        </div>
+
+        <h2 className="text-4xl sm:text-5xl font-black text-white text-center mb-4 leading-tight">
+          NASA tem <span className="text-nasa">alma de jogo</span>
+        </h2>
+        <p className="text-white/40 text-center text-lg mb-16 max-w-xl mx-auto">
+          Cada ação dentro da plataforma gera pontos. Evolua de nível, desbloqueie conquistas e
+          dispute o ranking com outros usuários do NASA.
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          {/* Leaderboard */}
+          <div className="nasa-glass rounded-2xl border border-white/8 overflow-hidden">
+            {/* Leaderboard header */}
+            <div className="bg-[#7C3AED]/15 border-b border-white/8 px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="size-4 text-yellow-400" />
+                <span className="text-white font-bold text-sm">Ranking Global — Julho 2026</span>
+              </div>
+              <div className="text-white/30 text-xs">Top 8</div>
+            </div>
+
+            {/* Top 3 podium */}
+            <div className="flex items-end justify-center gap-3 px-5 pt-6 pb-4 border-b border-white/5">
+              {/* 2nd */}
+              <div className="text-center flex-1">
+                <div className="w-12 h-12 rounded-full border-2 border-blue-400/50 flex items-center justify-center mx-auto mb-2 text-sm font-black"
+                     style={{ background: `linear-gradient(135deg, ${FAKE_USERS[1].color}30, ${FAKE_USERS[1].color}10)`, color: FAKE_USERS[1].color }}>
+                  {FAKE_USERS[1].initials}
+                </div>
+                <p className="text-white/70 text-[11px] font-semibold">{FAKE_USERS[1].name}</p>
+                <p className="text-blue-400 font-black text-sm">#{2}</p>
+                <div className="w-full bg-blue-500/20 rounded-t-lg h-14 mt-2 flex items-center justify-center">
+                  <span className="text-blue-400 text-[10px] font-bold">{FAKE_USERS[1].pts.toLocaleString("pt-BR")} pts</span>
+                </div>
+              </div>
+              {/* 1st */}
+              <div className="text-center flex-1">
+                <div className="relative">
+                  <div className="text-xl text-center mb-1">👑</div>
+                  <div className="w-14 h-14 rounded-full border-2 border-yellow-400/70 flex items-center justify-center mx-auto mb-2 text-sm font-black nasa-level-up"
+                       style={{ background: `linear-gradient(135deg, ${FAKE_USERS[0].color}40, ${FAKE_USERS[0].color}15)`, color: FAKE_USERS[0].color }}>
+                    {FAKE_USERS[0].initials}
+                  </div>
+                </div>
+                <p className="text-white/90 text-[11px] font-bold">{FAKE_USERS[0].name}</p>
+                <p className="text-yellow-400 font-black text-sm">🥇 #1</p>
+                <div className="w-full bg-yellow-500/20 rounded-t-lg h-20 mt-2 flex items-center justify-center">
+                  <span className="text-yellow-400 text-[10px] font-bold">{FAKE_USERS[0].pts.toLocaleString("pt-BR")} pts</span>
+                </div>
+              </div>
+              {/* 3rd */}
+              <div className="text-center flex-1">
+                <div className="w-12 h-12 rounded-full border-2 border-orange-400/50 flex items-center justify-center mx-auto mb-2 text-sm font-black"
+                     style={{ background: `linear-gradient(135deg, ${FAKE_USERS[2].color}30, ${FAKE_USERS[2].color}10)`, color: FAKE_USERS[2].color }}>
+                  {FAKE_USERS[2].initials}
+                </div>
+                <p className="text-white/70 text-[11px] font-semibold">{FAKE_USERS[2].name}</p>
+                <p className="text-orange-400 font-black text-sm">#{3}</p>
+                <div className="w-full bg-orange-500/20 rounded-t-lg h-10 mt-2 flex items-center justify-center">
+                  <span className="text-orange-400 text-[10px] font-bold">{FAKE_USERS[2].pts.toLocaleString("pt-BR")} pts</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Remaining users */}
+            <div className="divide-y divide-white/4">
+              {FAKE_USERS.slice(3).map((user, i) => (
+                <div key={user.name} className="rank-row nasa-rank-in flex items-center gap-3 px-5 py-3 hover:bg-white/3 transition-colors">
+                  <span className="text-white/25 font-black text-sm w-5 text-center">{i + 4}</span>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${user.color}30, ${user.color}10)`, color: user.color, border: `1.5px solid ${user.color}40` }}
+                  >
+                    {user.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/80 font-semibold text-xs truncate">{user.name}</p>
+                    <p className="text-white/25 text-[10px] truncate">{user.company}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-white/60 font-bold text-xs">{user.pts.toLocaleString("pt-BR")} pts</p>
+                    <div className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full border mt-0.5 inline-block", LEVEL_COLORS[user.level] || "text-white/30 bg-white/5 border-white/10")}>
+                      {user.level}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 w-12">
+                    <p className="text-yellow-400/70 text-[10px] font-semibold">
+                      {(user.stars / 1000).toFixed(1)}K ★
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Stars total banner */}
+            <div className="bg-gradient-to-r from-yellow-400/8 to-violet-400/8 border-t border-white/5 px-5 py-3 flex items-center justify-between">
+              <span className="text-white/30 text-xs">Total de Stars na plataforma</span>
+              <span className="text-yellow-400 font-black text-sm">
+                {FAKE_USERS.reduce((s, u) => s + u.stars, 0).toLocaleString("pt-BR")} ★
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Levels + Missions */}
+          <div className="flex flex-col gap-5">
+            {/* Level progression */}
+            <div className="nasa-glass rounded-2xl border border-white/8 p-5">
+              <p className="text-white/40 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Crown className="size-3.5 text-yellow-400" /> Níveis de Progressão
+              </p>
+              <div className="space-y-2.5">
+                {SPACE_LEVELS.map((lvl, i) => {
+                  const nextPts = SPACE_LEVELS[i + 1]?.pts ?? 50_000;
+                  const barPct  = Math.min(100, (lvl.pts / 30_000) * 100);
+                  return (
+                    <div key={lvl.name} className="flex items-center gap-3">
+                      <div className="text-xl shrink-0 w-7 text-center">{lvl.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white/70 text-xs font-semibold">{lvl.name}</span>
+                          <span className="text-white/25 text-[10px]">Nível {lvl.level}</span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${barPct}%`, background: lvl.color }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-white/25 text-[10px] shrink-0 w-14 text-right">
+                        {lvl.pts >= 1000 ? `${lvl.pts / 1000}K` : lvl.pts} pts
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-white/20 text-[10px] text-center mt-4">
+                20 níveis no total · De Terra 🌍 a Galáxia 10 ✨
+              </p>
+            </div>
+
+            {/* Missions */}
+            <div className="nasa-glass rounded-2xl border border-white/8 p-5">
+              <p className="text-white/40 text-xs font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Target className="size-3.5 text-violet-400" /> Missões Disponíveis
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {MISSIONS.map((m) => (
+                  <div key={m.title} className="flex items-center gap-3 bg-white/3 rounded-xl px-3 py-2.5 border border-white/5 hover:border-violet-500/20 transition-colors group">
+                    <span className="text-lg shrink-0">{m.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/80 text-xs font-semibold group-hover:text-white/90 transition-colors">{m.title}</p>
+                      <p className="text-white/30 text-[10px] truncate">{m.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Star className="size-2.5 text-yellow-400 fill-yellow-400" />
+                      <span className="text-yellow-400 text-[10px] font-bold">+{m.pts}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Achievements preview */}
+            <div className="nasa-glass rounded-2xl border border-white/8 p-5">
+              <p className="text-white/40 text-xs font-medium uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Medal className="size-3.5 text-blue-400" /> Conquistas Desbloqueadas
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { emoji: "🚀", label: "Decolar",       rarity: "comum" },
+                  { emoji: "💬", label: "Comunicador",    rarity: "raro" },
+                  { emoji: "🎯", label: "Sniper de Leads",rarity: "épico" },
+                  { emoji: "🤖", label: "Piloto de IA",   rarity: "raro" },
+                  { emoji: "👑", label: "Top 1",          rarity: "lendário" },
+                  { emoji: "⚡", label: "Automatizador",  rarity: "épico" },
+                  { emoji: "📊", label: "Analista",       rarity: "comum" },
+                  { emoji: "🌟", label: "Estrela",        rarity: "lendário" },
+                ].map(({ emoji, label, rarity }) => {
+                  const cls =
+                    rarity === "lendário" ? "border-yellow-400/40 bg-yellow-400/10 text-yellow-300" :
+                    rarity === "épico"    ? "border-violet-400/40 bg-violet-400/10 text-violet-300" :
+                    rarity === "raro"     ? "border-blue-400/40 bg-blue-400/10 text-blue-300" :
+                                           "border-white/10 bg-white/5 text-white/50";
+                  return (
+                    <div key={label} className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold", cls)}>
+                      <span>{emoji}</span> {label}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="text-center">
+          <p className="text-white/30 text-sm mb-4">Comece a acumular pontos hoje mesmo</p>
+          <Button asChild size="lg"
+            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-black px-10 py-6 text-base rounded-2xl nasa-glow-sm">
+            <Link href={isLoggedIn ? "/tracking" : "/sign-up"}>
+              Entrar para o jogo
+              <Trophy className="size-4 ml-2" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function FinalCTASection({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <section className="py-32 px-4">
@@ -1058,6 +1976,10 @@ export default function HomePage() {
       <AppsSection />
       <AstroSection />
       <IntegrationsMarquee />
+      <StarsInfoSection isLoggedIn={isLoggedIn} />
+      <PlansPublicSection isLoggedIn={isLoggedIn} />
+      <SimulatorSection isLoggedIn={isLoggedIn} />
+      <GamifiedRankingSection isLoggedIn={isLoggedIn} />
       <FinalCTASection isLoggedIn={isLoggedIn} />
       <NewFooter />
     </>

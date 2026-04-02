@@ -6,7 +6,8 @@ import { updateOrgPlan }       from "./update-org-plan";
 import { adminUpdateMemberRole } from "./update-member-role";
 import { updateMemberCargo }   from "./update-member-cargo";
 import { setSystemAdmin }      from "./set-system-admin";
-import { listPlans }           from "./list-plans";
+import { listPlans as listPlansLegacy } from "./list-plans";
+import { listPlans, createPlan, updatePlan, deletePlan, togglePlanActive } from "./plans";
 import { listTransactions }    from "./list-transactions";
 import { listUsers }           from "./list-users";
 import { getUser }             from "./get-user";
@@ -61,4 +62,9 @@ export const adminRouter = {
   deleteGatewayConfig,
   toggleGatewayActive,
   listStarsPayments,
+  // Plans CRUD
+  createPlan,
+  updatePlan,
+  deletePlan,
+  togglePlanActive,
 };

@@ -1417,14 +1417,23 @@ model ForgeSettings {
 
 model Plan {
   id            String   @id @default(cuid())
-  slug          String   @unique // earth | explore | constellation
+  slug          String   @unique
   name          String
+  slogan        String?
+  sortOrder     Int      @default(0)        @map("sort_order")
   monthlyStars  Int      @map("monthly_stars")
   priceMonthly  Decimal  @db.Decimal(10, 2) @map("price_monthly")
-  maxUsers      Int      @default(3)       @map("max_users")
-  rolloverPct   Int      @default(30)      @map("rollover_pct") // % máx. de rollover
-  isActive      Boolean  @default(true)    @map("is_active")
-  createdAt     DateTime @default(now())   @map("created_at")
+  billingType   String   @default("monthly") @map("billing_type") // monthly | annual | weekly
+  maxUsers      Int      @default(3)        @map("max_users")
+  rolloverPct   Int      @default(30)       @map("rollover_pct")
+  benefits      Json     @default("[]")     // string[]
+  ctaLabel      String   @default("Assinar agora") @map("cta_label")
+  ctaLink       String?  @map("cta_link")   // external URL (optional, overrides gateway)
+  ctaGatewayId  String?  @map("cta_gateway_id") // PaymentGatewayConfig.id
+  highlighted   Boolean  @default(false)    // destaque "Mais popular"
+  isActive      Boolean  @default(true)     @map("is_active")
+  createdAt     DateTime @default(now())    @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
 
   organizations Organization[]
 

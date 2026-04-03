@@ -213,6 +213,7 @@ model Tracking {
   description    String?
   organizationId String   @map("organization_id")
   isArchived     Boolean  @default(false) @map("is_archived")
+  archivedAt     DateTime? @map("archived_at")
   globalAiActive Boolean  @default(false) @map("global_ai_active")
   isTemplate     Boolean  @default(false) @map("is_template")
   templateMarkedByModerator Boolean @default(false) @map("template_marked_by_moderator")

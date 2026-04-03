@@ -27,6 +27,7 @@ export async function PUT(
         enableConfetti: body.enableConfetti,
         enableSound: body.enableSound,
         dismissDuration: body.dismissDuration,
+        customJson: body.customJson ?? {},
       },
     });
 

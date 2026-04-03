@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ContractForm } from "./contract-form";
 import { TemplateModal } from "./template-modal";
+import { PatternsSection } from "@/features/admin/components/patterns-section";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PENDENTE_ASSINATURA: { label: "Pendente Assinatura", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
@@ -511,6 +512,8 @@ export function ContractsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PatternsSection appType="forge-contract" />
     </div>
   );
 }

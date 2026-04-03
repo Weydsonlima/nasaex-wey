@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
 import {
-  Upload, Trash2, Pencil, Check, X, Search, ImageIcon, Rocket, Puzzle, Palette,
+  Upload, Trash2, Pencil, Check, X, Search, ImageIcon, Rocket, Puzzle, Palette, Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,21 +27,38 @@ interface Props {
   assetsMap:    Record<string, string>;
 }
 
-// ── S3 upload helper ───────────────────────────────────────────────────────────
-async function uploadToS3(file: File): Promise<string> {
-  const res = await fetch("/api/s3/upload", {
+// ── Upload helper (S3 com fallback local) ─────────────────────────────────────
+async function uploadFile(file: File): Promise<string> {
+  // Try S3 first
+  const s3Res = await fetch("/api/s3/upload", {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify({ filename: file.name, contentType: file.type, size: file.size, isImage: true }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "Erro ao gerar URL de upload");
+
+  if (s3Res.ok) {
+    const { presignedUrl, key } = await s3Res.json();
+    const put = await fetch(presignedUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+    if (!put.ok) throw new Error("Falha ao enviar arquivo para S3");
+    return `https://${process.env.NEXT_PUBLIC_S3_BUCKET_CONSTRUCTOR_URL}/${key}`;
   }
-  const { presignedUrl, key } = await res.json();
-  const put = await fetch(presignedUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
-  if (!put.ok) throw new Error("Falha ao enviar arquivo para S3");
-  return `https://${process.env.NEXT_PUBLIC_S3_BUCKET_CONSTRUCTOR_URL}/${key}`;
+
+  // S3 not configured — fall back to local upload
+  const s3Err = await s3Res.json().catch(() => ({}));
+  if (s3Res.status === 503) {
+    const form = new FormData();
+    form.append("file", file);
+    const localRes = await fetch("/api/upload-local", { method: "POST", body: form });
+    if (!localRes.ok) {
+      const localErr = await localRes.json().catch(() => ({}));
+      throw new Error(localErr.error ?? "Erro ao enviar arquivo localmente");
+    }
+    const { url } = await localRes.json();
+    // Convert relative path to absolute URL so z.string().url() passes
+    return `${window.location.origin}${url}`;
+  }
+
+  throw new Error((s3Err as { error?: string }).error ?? "Erro ao gerar URL de upload");
 }
 
 // ── Upload button ──────────────────────────────────────────────────────────────
@@ -55,6 +72,7 @@ function UploadButton({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(currentUrl);
   const setMut = useMutation({ mutationFn: (vars: { key: string; url: string }) => orpc.admin.setPlatformAsset.call(vars) });
   const delMut = useMutation({ mutationFn: (key: string) => orpc.admin.deletePlatformAsset.call({ key }) });
 
@@ -62,12 +80,13 @@ function UploadButton({
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
-    const MAX = 5 * 1024 * 1024;
-    if (file.size > MAX) { toast.error("Arquivo muito grande. Máx 5MB."); return; }
+    const MAX = 10 * 1024 * 1024;
+    if (file.size > MAX) { toast.error("Arquivo muito grande. Máx 10MB."); return; }
     setUploading(true);
     try {
-      const url = await uploadToS3(file);
+      const url = await uploadFile(file);
       await setMut.mutateAsync({ key: assetKey, url });
+      setPreviewUrl(url);
       onUploaded(assetKey, url);
       toast.success("Imagem atualizada!");
     } catch (err: unknown) {
@@ -77,13 +96,21 @@ function UploadButton({
 
   const handleDelete = async () => {
     await delMut.mutateAsync(assetKey);
+    setPreviewUrl(undefined);
     onDeleted(assetKey);
     toast.success("Imagem removida");
   };
 
   return (
-    <div className={cn("flex items-center gap-1.5", size === "sm" ? "mt-1" : "mt-2")}>
-      <input ref={inputRef} type="file" accept="image/*,.svg" className="hidden" onChange={handleFile} />
+    <div className={cn("flex flex-col gap-1.5", size === "sm" ? "mt-1" : "mt-2")}>
+      {previewUrl && (
+        <div className="w-full rounded-lg overflow-hidden bg-zinc-800 border border-zinc-700 flex items-center justify-center" style={{ height: size === "md" ? "80px" : "48px" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewUrl} alt="preview" className="max-h-full max-w-full object-contain" />
+        </div>
+      )}
+      <div className="flex items-center gap-1.5">
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFile} />
       <button
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
@@ -95,7 +122,7 @@ function UploadButton({
         <Upload className={size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3"} />
         {uploading ? "Enviando..." : (label ?? "Trocar")}
       </button>
-      {currentUrl && (
+      {previewUrl && (
         <button
           onClick={handleDelete}
           disabled={delMut.isPending}
@@ -107,6 +134,7 @@ function UploadButton({
           <Trash2 className={size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3"} />
         </button>
       )}
+      </div>
     </div>
   );
 }
@@ -391,8 +419,60 @@ function PlatformTab({ platformKeys, assetsMap, onAssetChange }: {
   );
 }
 
+// ── Mascote tab ───────────────────────────────────────────────────────────────
+const MASCOT_SLOTS = Array.from({ length: 8 }, (_, i) => ({
+  key: `popup:mascot:${i + 1}`,
+  label: `Mascote ${i + 1}`,
+}));
+
+function MascoteTab({ assetsMap, onAssetChange }: {
+  assetsMap: Record<string, string>;
+  onAssetChange: (key: string, url: string | null) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-violet-600/10 border border-violet-500/20 rounded-xl px-4 py-3 text-sm text-zinc-300">
+        Faça upload de imagens <span className="text-white font-semibold">1:1 (quadradas)</span> do mascote NASA.
+        Elas aparecerão nos banners de popup de conquistas e recompensas Stars.
+      </div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {MASCOT_SLOTS.map(({ key, label }) => {
+          const url = assetsMap[key];
+          return (
+            <div key={key} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col items-center gap-3 hover:border-zinc-700 transition-all">
+              <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                {url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={url} alt={label} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-zinc-600">
+                    <Bot className="w-8 h-8" />
+                    <p className="text-[10px]">Vazio</p>
+                  </div>
+                )}
+                {url && (
+                  <div className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-zinc-900" />
+                )}
+              </div>
+              <p className="text-xs font-medium text-zinc-300">{label}</p>
+              <UploadButton
+                assetKey={key}
+                currentUrl={url}
+                label="Enviar 1:1"
+                size="md"
+                onUploaded={(k, u) => onAssetChange(k, u)}
+                onDeleted={(k) => onAssetChange(k, null)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
-type Tab = "selos" | "apps" | "integrations" | "platform";
+type Tab = "selos" | "apps" | "integrations" | "platform" | "mascote";
 
 export function AssetsManager({ levels, apps, integrations, platformKeys, assetsMap: initialMap }: Props) {
   const [tab, setTab]         = useState<Tab>("selos");
@@ -409,10 +489,11 @@ export function AssetsManager({ levels, apps, integrations, platformKeys, assets
   const customCount = Object.keys(assetsMap).length;
 
   const TABS: { key: Tab; label: string; icon: React.ElementType; count?: number }[] = [
-    { key: "selos",        label: "Selos",        icon: Rocket, count: levels.length },
-    { key: "apps",         label: "Apps",         icon: Puzzle, count: apps.length },
+    { key: "selos",        label: "Selos",        icon: Rocket,    count: levels.length },
+    { key: "apps",         label: "Apps",         icon: Puzzle,    count: apps.length },
     { key: "integrations", label: "Integrações",  icon: ImageIcon, count: integrations.length },
-    { key: "platform",     label: "Plataforma",   icon: Palette, count: platformKeys.length },
+    { key: "platform",     label: "Plataforma",   icon: Palette,   count: platformKeys.length },
+    { key: "mascote",      label: "Mascote",      icon: Bot,       count: MASCOT_SLOTS.length },
   ];
 
   return (
@@ -464,6 +545,9 @@ export function AssetsManager({ levels, apps, integrations, platformKeys, assets
       )}
       {tab === "platform" && (
         <PlatformTab platformKeys={platformKeys} assetsMap={assetsMap} onAssetChange={handleAssetChange} />
+      )}
+      {tab === "mascote" && (
+        <MascoteTab assetsMap={assetsMap} onAssetChange={handleAssetChange} />
       )}
     </div>
   );

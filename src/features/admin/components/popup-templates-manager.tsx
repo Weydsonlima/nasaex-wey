@@ -22,6 +22,7 @@ interface PopupTemplate {
   enableConfetti: boolean;
   enableSound: boolean;
   dismissDuration: number;
+  customJson?: Record<string, unknown>;
   isActive?: boolean;
 }
 
@@ -144,24 +145,58 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
             className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4 hover:border-zinc-700 transition-colors animate-slide-down"
           >
             {/* Card Preview */}
-            <div
-              className="rounded-lg p-4 text-center text-sm group"
-              style={{
-                backgroundColor: template.backgroundColor,
-                borderColor: template.primaryColor,
-                borderWidth: "2px",
-              }}
-            >
-              <p style={{ color: template.accentColor }} className="text-xs font-semibold mb-1 uppercase group-hover:animate-pulse-scale transition-all">
-                {typeLabels[template.type]}
-              </p>
-              <p style={{ color: template.textColor }} className="font-bold mb-2 group-hover:scale-110 transition-transform duration-300">
-                {template.title}
-              </p>
-              <p style={{ color: template.textColor }} className="text-xs opacity-90">
-                {template.message}
-              </p>
-            </div>
+            {(template.customJson as Record<string, unknown> | undefined)?.svgPattern ? (
+              <div className="relative w-full rounded-lg overflow-hidden" style={{ aspectRatio: "768/391" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/popup-patterns/${(template.customJson as Record<string, unknown>).svgPattern}.svg`}
+                  alt="padrão"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-[30%] h-full flex items-end justify-center pb-1">
+                    {(template.customJson as Record<string, unknown>).mascotUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={(template.customJson as Record<string, unknown>).mascotUrl as string}
+                        alt="mascote"
+                        className="h-[80%] w-auto object-contain"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="w-[55%] px-2 space-y-0.5">
+                    <p style={{ color: template.accentColor }} className="text-[8px] font-bold uppercase">
+                      {typeLabels[template.type]}
+                    </p>
+                    <p style={{ color: template.textColor }} className="text-xs font-bold leading-tight">
+                      {template.title}
+                    </p>
+                    <p style={{ color: template.textColor }} className="text-[9px] opacity-80">
+                      {template.message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="rounded-lg p-4 text-center text-sm group"
+                style={{
+                  backgroundColor: template.backgroundColor,
+                  borderColor: template.primaryColor,
+                  borderWidth: "2px",
+                }}
+              >
+                <p style={{ color: template.accentColor }} className="text-xs font-semibold mb-1 uppercase group-hover:animate-pulse-scale transition-all">
+                  {typeLabels[template.type]}
+                </p>
+                <p style={{ color: template.textColor }} className="font-bold mb-2 group-hover:scale-110 transition-transform duration-300">
+                  {template.title}
+                </p>
+                <p style={{ color: template.textColor }} className="text-xs opacity-90">
+                  {template.message}
+                </p>
+              </div>
+            )}
 
             {/* Info */}
             <div className="text-xs text-zinc-400 space-y-1">

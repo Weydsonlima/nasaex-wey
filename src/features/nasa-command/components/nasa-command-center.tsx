@@ -1496,6 +1496,7 @@ function CommandInput({
           />
           <textarea
             ref={textareaRef}
+            data-nasa-command
             value={command}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}

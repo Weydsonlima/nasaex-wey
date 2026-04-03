@@ -17,6 +17,7 @@ import {
   Rocket,
   ImageIcon,
   Landmark,
+  Keyboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ const NAV = [
   { href: "/admin/assets",         icon: ImageIcon,       label: "Ativos"        },
   { href: "/admin/payments",       icon: Landmark,        label: "Gateways"      },
   { href: "/admin/moderators",     icon: ShieldCheck,     label: "Moderadores"   },
+  { href: "/admin/atalhos",        icon: Keyboard,        label: "Atalhos"        },
 ];
 
 export function AdminSidebar() {

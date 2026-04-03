@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ProposalForm } from "./proposal-form";
 import { ContractForm } from "../contracts/contract-form";
+import { PatternsSection } from "@/features/admin/components/patterns-section";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   RASCUNHO:    { label: "Rascunho",    color: "bg-gray-100 text-gray-600 border-gray-200" },
@@ -361,6 +362,8 @@ export function ProposalsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PatternsSection appType="forge-proposal" />
     </div>
   );
 }

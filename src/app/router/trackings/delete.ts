@@ -3,13 +3,14 @@ import { z } from "zod";
 import { base } from "../../middlewares/base";
 import { requiredAuthMiddleware } from "../../middlewares/auth";
 import { requireOrgMiddleware } from "../../middlewares/org";
+import { logActivity } from "@/lib/activity-logger";
 
 export const deleteTracking = base
   .use(requiredAuthMiddleware)
   .use(requireOrgMiddleware)
   .route({
     method: "DELETE",
-    summary: "Delete a tracking",
+    summary: "Archive a tracking for 30 days before permanent deletion",
     tags: ["Trackings"],
   })
   .input(
@@ -62,10 +63,28 @@ export const deleteTracking = base
       }
     }
 
-    const result = await prisma.tracking.delete({
+    const result = await prisma.tracking.update({
       where: {
         id: input.trackingId,
       },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+      },
+    });
+
+    // Log activity
+    await logActivity({
+      organizationId: org.id,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      userImage: (user as any).image,
+      appSlug: "tracking",
+      action: "tracking.archived",
+      actionLabel: `Arquivou o tracking "${result.name}"`,
+      resource: result.name,
+      resourceId: result.id,
     });
 
     return {

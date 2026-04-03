@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
         enableConfetti: body.enableConfetti ?? true,
         enableSound: body.enableSound ?? true,
         dismissDuration: body.dismissDuration ?? 5000,
+        customJson: body.customJson ?? {},
         isActive: true,
       },
     });

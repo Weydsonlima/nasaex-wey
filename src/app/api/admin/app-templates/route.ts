@@ -55,15 +55,21 @@ export async function GET(request: NextRequest) {
     }
 
     if (!appType || appType === "forge-contract") {
-      templates.forgeContract = await prisma.forgeContract.findMany({
+      const rawContracts = await prisma.forgeContract.findMany({
         where: { isTemplate: true, templateMarkedByModerator: true },
         select: {
           id: true,
-          organizationId: true,
+          number: true,
+          value: true,
           createdAt: true,
         },
         orderBy: { createdAt: "desc" },
       });
+      templates.forgeContract = rawContracts.map((c) => ({
+        ...c,
+        name: `Contrato #${String(c.number).padStart(4, "0")}`,
+        description: `Valor: R$ ${Number(c.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+      }));
     }
 
     return NextResponse.json(templates);

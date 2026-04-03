@@ -36,6 +36,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
@@ -44,6 +53,7 @@ dayjs.locale("pt-BR");
 function TrackingCard({ tracking }: { tracking: typeof trackings[0] }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const deleteTracking = useMutation(
     orpc.tracking.delete.mutationOptions({
@@ -51,7 +61,8 @@ function TrackingCard({ tracking }: { tracking: typeof trackings[0] }) {
         queryClient.invalidateQueries({
           queryKey: orpc.tracking.list.queryKey(),
         });
-        toast.success(`${data.trackingName} deletado com sucesso`);
+        toast.success(`${data.trackingName} arquivado por 30 dias antes da exclusão permanente`);
+        setShowDeleteConfirm(false);
       },
       onError: (error) => {
         toast.error(error.message);
@@ -60,53 +71,78 @@ function TrackingCard({ tracking }: { tracking: typeof trackings[0] }) {
   );
 
   return (
-    <Link href={`/tracking/${tracking.id}`}>
-      <Card className="cursor-pointer h-full transition-colors hover:bg-accent/60 relative">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <CardTitle>{tracking.name}</CardTitle>
-              <CardDescription>
-                {tracking.description ? tracking.description : "Sem descrição"}
-              </CardDescription>
+    <>
+      <Link href={`/tracking/${tracking.id}`}>
+        <Card className="cursor-pointer h-full transition-colors hover:bg-accent/60 relative">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <CardTitle>{tracking.name}</CardTitle>
+                <CardDescription>
+                  {tracking.description ? tracking.description : "Sem descrição"}
+                </CardDescription>
+              </div>
+              <div onClick={(e) => e.preventDefault()}>
+                <DropdownMenu open={open} onOpenChange={setOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setShowDeleteConfirm(true);
+                        setOpen(false);
+                      }}
+                      disabled={deleteTracking.isPending}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Deletar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-            <div onClick={(e) => e.preventDefault()}>
-              <DropdownMenu open={open} onOpenChange={setOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      deleteTracking.mutate({ trackingId: tracking.id });
-                      setOpen(false);
-                    }}
-                    disabled={deleteTracking.isPending}
-                    className="text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Deletar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-end">
+              <span className="text-sm text-muted-foreground">
+                Criado {dayjs(tracking.createdAt).fromNow()}
+              </span>
             </div>
+          </CardContent>
+        </Card>
+      </Link>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar tracking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O tracking "{tracking.name}" será arquivado por 30 dias. Durante este período, você poderá recuperá-lo. Após 30 dias, será deletado permanentemente. Esta ação pode ser rastreada em Configurações &gt; Histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel disabled={deleteTracking.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTracking.mutate({ trackingId: tracking.id })}
+              disabled={deleteTracking.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteTracking.isPending ? "Arquivando..." : "Deletar"}
+            </AlertDialogAction>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-end">
-            <span className="text-sm text-muted-foreground">
-              Criado {dayjs(tracking.createdAt).fromNow()}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

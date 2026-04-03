@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Folder } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTracking } from "@/hooks/use-tracking-modal";
+import { PatternsSection } from "@/features/admin/components/patterns-section";
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
@@ -106,6 +107,10 @@ export function TrackingList() {
           </Empty>
         </div>
       )}
+      <PatternsSection
+        appType="tracking"
+        redirectPath={(id) => `/tracking/${id}`}
+      />
     </div>
   );
 }

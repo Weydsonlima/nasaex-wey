@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppTemplatesGallery } from "@/features/admin/components/app-templates-gallery";
+import { ToastProvider } from "@/contexts/toast-context";
 
 export default async function PatternsPage() {
   const organization = await auth.api.getFullOrganization({
@@ -16,7 +17,8 @@ export default async function PatternsPage() {
   const organizationId = organization.id;
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6">
+    <ToastProvider>
+      <div className="min-h-screen bg-zinc-950 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -114,5 +116,6 @@ export default async function PatternsPage() {
         </Tabs>
       </div>
     </div>
+    </ToastProvider>
   );
 }

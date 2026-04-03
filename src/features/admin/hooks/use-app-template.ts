@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAdminToast } from "./use-admin-toast";
+import { toast } from "sonner";
 
 type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract";
 
 export function useAppTemplate() {
-  const toast = useAdminToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleTemplate = async (
@@ -25,7 +24,10 @@ export function useAppTemplate() {
         }
       );
 
-      if (!response.ok) throw new Error("Erro ao marcar padrão");
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Erro ao marcar padrão");
+      }
 
       const appTypeLabel = {
         tracking: "Tracking",
@@ -42,7 +44,7 @@ export function useAppTemplate() {
 
       return await response.json();
     } catch (error) {
-      toast.error("Erro ao marcar padrão");
+      toast.error(error instanceof Error ? error.message : "Erro ao marcar padrão");
       throw error;
     } finally {
       setIsLoading(false);

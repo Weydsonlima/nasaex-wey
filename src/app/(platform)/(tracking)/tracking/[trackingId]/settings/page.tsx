@@ -8,6 +8,7 @@ import { ChatSettings } from "@/features/tracking-settings/components/chat-setti
 import { ChatBotIa } from "@/features/tracking-settings/components/chatbot-ia";
 import { FlowAttendiment } from "@/features/tracking-settings/components/flow-attendiment";
 import { SoundNotification } from "@/features/tracking-settings/components/sound-notification";
+import { TemplateSettings } from "@/features/tracking-settings/components/template-settings";
 
 type SettingTrackingPage = {
   params: Promise<{ trackingId: string }>;
@@ -86,6 +87,11 @@ export default async function Page({
           <SoundNotification />
         </HydrateClient>
       ),
+    },
+    {
+      name: "Padrões NASA",
+      value: "templates",
+      content: <TemplateSettings trackingId={trackingId} />,
     },
   ];
 

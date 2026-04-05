@@ -119,6 +119,19 @@ function useColorizedSvg(
 }
 
 function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTemplate; globalPatterns?: { id: string; label: string; url: string }[] }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setScale(entry.contentRect.width / 768);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const cj = template.customJson as Record<string, unknown> | undefined;
   const rawPatternUrl = resolvePatternUrl(cj, globalPatterns);
   const patternUrl = useColorizedSvg(
@@ -145,10 +158,10 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
   };
 
   if (rawPatternUrl || layoutElements.length > 0) {
-    // Render at natural 768×391 and scale down — ensures pixel-perfect proportions
     return (
       <div
-        className="relative w-full rounded-lg overflow-hidden popup-cq"
+        ref={wrapperRef}
+        className="relative w-full rounded-lg overflow-hidden"
         style={{ aspectRatio: "768/391" }}
       >
         <div
@@ -159,7 +172,7 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
             width: "768px",
             height: "391px",
             transformOrigin: "top left",
-            transform: "scale(calc(100cqw / 768))",
+            transform: `scale(${scale})`,
           }}
         >
           {patternUrl && (

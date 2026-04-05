@@ -37,12 +37,152 @@ interface PopupTemplateModalProps {
   isCreating?: boolean;
   onClose: () => void;
   onSave: (template: PopupTemplate) => Promise<void>;
+  onLiveChange?: (template: PopupTemplate) => void;
+  globalPatterns?: { id: string; label: string; url: string }[];
   isLoading?: boolean;
 }
 
 const DEFAULT_SVG_PATTERNS = [
   { id: "padrao", label: "Padrão NASA", url: "/popup-patterns/padrao.svg" },
 ];
+
+const COLOR_PRESETS = [
+  // NASA / Space
+  { label: "NASA Purple",  primary: "#7a1fe7", accent: "#a855f7", bg: "#1a0a3d", text: "#ffffff" },
+  { label: "Deep Space",   primary: "#3b82f6", accent: "#60a5fa", bg: "#0f172a", text: "#e2e8f0" },
+  { label: "Nebula",       primary: "#ec4899", accent: "#f472b6", bg: "#1e0533", text: "#fce7f3" },
+  { label: "Aurora",       primary: "#10b981", accent: "#34d399", bg: "#022c22", text: "#d1fae5" },
+  { label: "Solar Flare",  primary: "#f59e0b", accent: "#fbbf24", bg: "#1c1100", text: "#fef3c7" },
+  { label: "Red Planet",   primary: "#ef4444", accent: "#f87171", bg: "#1f0707", text: "#fee2e2" },
+  { label: "Ice Giant",    primary: "#06b6d4", accent: "#22d3ee", bg: "#042330", text: "#cffafe" },
+  { label: "Midnight",     primary: "#6366f1", accent: "#818cf8", bg: "#0f0f23", text: "#e0e7ff" },
+];
+
+interface ColorPaletteProps {
+  values: { primaryColor: string; accentColor: string; backgroundColor: string; textColor: string };
+  onChange: (field: string, value: string) => void;
+  disabled?: boolean;
+}
+
+function ColorPalette({ values, onChange, disabled }: ColorPaletteProps) {
+  const [openPicker, setOpenPicker] = useState<string | null>(null);
+
+  const fields = [
+    { label: "Cor Primária",  field: "primaryColor",     key: "primary" as const },
+    { label: "Cor Acento",    field: "accentColor",      key: "accent"  as const },
+    { label: "Cor Fundo",     field: "backgroundColor",  key: "bg"      as const },
+    { label: "Cor Texto",     field: "textColor",        key: "text"    as const },
+  ];
+
+  const applyPreset = (preset: typeof COLOR_PRESETS[0]) => {
+    onChange("primaryColor",    preset.primary);
+    onChange("accentColor",     preset.accent);
+    onChange("backgroundColor", preset.bg);
+    onChange("textColor",       preset.text);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Presets */}
+      <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-2">Paletas de cores</label>
+        <div className="flex flex-wrap gap-2">
+          {COLOR_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              title={p.label}
+              onClick={() => applyPreset(p)}
+              disabled={disabled}
+              className="group relative flex items-center gap-1 px-2 py-1.5 rounded-lg border border-zinc-700 hover:border-violet-500/60 bg-zinc-800 hover:bg-zinc-700 transition-all"
+            >
+              <span className="flex gap-0.5">
+                {[p.primary, p.accent, p.bg, p.text].map((c, i) => (
+                  <span key={i} className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: c }} />
+                ))}
+              </span>
+              <span className="text-[10px] text-zinc-400 group-hover:text-white transition-colors">{p.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Individual pickers */}
+      <div className="grid grid-cols-2 gap-4">
+        {fields.map(({ label, field }) => {
+          const value = values[field as keyof typeof values];
+          const isOpen = openPicker === field;
+          return (
+            <div key={field} className="relative">
+              <label className="block text-sm font-medium text-zinc-300 mb-2">{label}</label>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setOpenPicker(isOpen ? null : field)}
+                className="w-full flex items-center gap-2 bg-zinc-800 border border-zinc-700 hover:border-violet-500/60 rounded-lg px-3 py-2 transition-all"
+              >
+                <span className="w-5 h-5 rounded-md border border-white/20 shrink-0" style={{ backgroundColor: value }} />
+                <span className="text-sm text-white font-mono flex-1 text-left">{value}</span>
+              </button>
+
+              {isOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenPicker(null)} />
+                  <div className="absolute z-50 top-full left-0 mt-1 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-3 space-y-3">
+                  {/* Native color picker */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={value}
+                      onChange={(e) => onChange(field, e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border border-zinc-700 bg-zinc-800"
+                    />
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => /^#[0-9a-fA-F]{0,6}$/.test(e.target.value) && onChange(field, e.target.value)}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-violet-500/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setOpenPicker(null)}
+                      className="text-zinc-500 hover:text-white transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Swatches per field */}
+                  <div>
+                    <p className="text-[10px] text-zinc-500 mb-1.5">Sugestões</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        "#7a1fe7","#a855f7","#3b82f6","#06b6d4","#10b981",
+                        "#f59e0b","#ef4444","#ec4899","#6366f1","#ffffff",
+                        "#e2e8f0","#fbbf24","#34d399","#f472b6","#818cf8",
+                        "#1a0a3d","#0f172a","#022c22","#042330","#000000",
+                      ].map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          title={c}
+                          onClick={() => onChange(field, c)}
+                          className={`w-6 h-6 rounded-md border-2 transition-all hover:scale-110 ${value === c ? "border-white" : "border-transparent hover:border-white/40"}`}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const POPUP_FUNCTIONS = [
   { value: "STAR", label: "STAR" },
@@ -58,9 +198,15 @@ export function PopupTemplateModal({
   isCreating = false,
   onClose,
   onSave,
+  onLiveChange,
+  globalPatterns = [],
   isLoading = false,
 }: PopupTemplateModalProps) {
   const [template, setTemplate] = useState(initialTemplate);
+
+  const setTemplateAndNotify = useCallback((next: typeof initialTemplate) => {
+    setTemplate(next);
+  }, []);
   const [svgPattern, setSvgPattern] = useState<string>(
     (initialTemplate.customJson?.svgPattern as string) ?? ""
   );
@@ -130,7 +276,26 @@ export function PopupTemplateModal({
   const [editingPatternId, setEditingPatternId] = useState<string | null>(null);
   const [uploadingPattern, setUploadingPattern] = useState(false);
 
-  const SVG_PATTERNS = [...DEFAULT_SVG_PATTERNS, ...customPatterns].map((p) => ({
+  // Emit full merged template to parent on any relevant state change
+  useEffect(() => {
+    if (!onLiveChange) return;
+    onLiveChange({
+      ...template,
+      customJson: {
+        ...(template.customJson ?? {}),
+        svgPattern,
+        mascotUrl,
+        popupFunction,
+        prizeValue,
+        layoutElements,
+        customPatterns,
+        patternUrlOverrides,
+      },
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template, svgPattern, mascotUrl, layoutElements, customPatterns, patternUrlOverrides]);
+
+  const SVG_PATTERNS = [...DEFAULT_SVG_PATTERNS, ...globalPatterns, ...customPatterns].map((p) => ({
     ...p,
     url: patternUrlOverrides[p.id] ?? p.url,
   }));
@@ -457,34 +622,16 @@ export function PopupTemplateModal({
           </div>
 
           {/* Colors */}
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: "Cor Primária", field: "primaryColor" },
-              { label: "Cor Acento",   field: "accentColor" },
-              { label: "Cor Fundo",    field: "backgroundColor" },
-              { label: "Cor Texto",    field: "textColor" },
-            ].map(({ label, field }) => (
-              <div key={field}>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">{label}</label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={(template as Record<string, unknown>)[field] as string}
-                    onChange={(e) => setTemplate({ ...template, [field]: e.target.value })}
-                    className="w-12 h-10 rounded-lg cursor-pointer border border-zinc-700"
-                    disabled={isLoading}
-                  />
-                  <input
-                    type="text"
-                    value={(template as Record<string, unknown>)[field] as string}
-                    onChange={(e) => setTemplate({ ...template, [field]: e.target.value })}
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/60"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ColorPalette
+            values={{
+              primaryColor: template.primaryColor,
+              accentColor: template.accentColor,
+              backgroundColor: template.backgroundColor,
+              textColor: template.textColor,
+            }}
+            onChange={(field, value) => setTemplateAndNotify({ ...template, [field]: value })}
+            disabled={isLoading}
+          />
 
           {/* Duration */}
           <div>

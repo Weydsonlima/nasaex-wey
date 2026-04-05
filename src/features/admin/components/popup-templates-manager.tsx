@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAdminToast } from "@/features/admin/hooks/use-admin-toast";
 import { usePopupTemplates } from "@/features/admin/hooks/use-popup-templates";
-import { Trash2, Edit2, Plus } from "lucide-react";
+import { Trash2, Edit2, Plus, Eye, X, Upload, ImageIcon } from "lucide-react";
+import { createPortal } from "react-dom";
 import { PopupTemplateModal } from "./popup-template-modal";
 import { useConfirm } from "@/features/admin/hooks/use-confirm";
 import "@/features/admin/styles/animations.css";
@@ -65,9 +66,57 @@ interface LayoutElement {
   color?: string;
 }
 
+function useColorizedSvg(
+  patternUrl: string | null,
+  primary: string,
+  bg: string,
+  accent: string,
+  text: string,
+) {
+  const [colorizedUrl, setColorizedUrl] = useState<string | null>(null);
+  const cacheRef = useRef<Record<string, string>>({});
+  const blobRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!patternUrl) { setColorizedUrl(null); return; }
+    let cancelled = false;
+    const run = async () => {
+      try {
+        if (!cacheRef.current[patternUrl]) {
+          const res = await fetch(patternUrl);
+          cacheRef.current[patternUrl] = await res.text();
+        }
+        if (cancelled) return;
+        let svg = cacheRef.current[patternUrl];
+        svg = svg
+          .replace(/#7a1fe7/gi, primary)
+          .replace(/#29125b/gi, primary + "88")
+          .replace(/#1a0a3d/gi, bg)
+          .replace(/#ff00ff/gi, accent)
+          .replace(/#fff2e6/gi, text);
+        if (blobRef.current) URL.revokeObjectURL(blobRef.current);
+        const blob = new Blob([svg], { type: "image/svg+xml" });
+        blobRef.current = URL.createObjectURL(blob);
+        setColorizedUrl(blobRef.current);
+      } catch { setColorizedUrl(patternUrl); }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [patternUrl, primary, bg, accent, text]);
+
+  return colorizedUrl;
+}
+
 function TemplatePreview({ template }: { template: PopupTemplate }) {
   const cj = template.customJson as Record<string, unknown> | undefined;
-  const patternUrl = resolvePatternUrl(cj);
+  const rawPatternUrl = resolvePatternUrl(cj);
+  const patternUrl = useColorizedSvg(
+    rawPatternUrl,
+    template.primaryColor,
+    template.backgroundColor,
+    template.accentColor,
+    template.textColor,
+  );
   const mascotUrl = cj?.mascotUrl as string | undefined;
   const layoutElements = (cj?.layoutElements as LayoutElement[] | undefined) ?? [];
   const prizeValue = cj?.prizeValue as string | undefined;
@@ -81,11 +130,11 @@ function TemplatePreview({ template }: { template: PopupTemplate }) {
     return "";
   };
 
-  if (patternUrl || layoutElements.length > 0) {
+  if (rawPatternUrl || layoutElements.length > 0) {
     return (
       <div
-        className="relative w-full rounded-lg overflow-hidden bg-zinc-800"
-        style={{ aspectRatio: "768/391", containerType: "inline-size" }}
+        className="relative w-full rounded-lg overflow-hidden"
+        style={{ aspectRatio: "768/391", containerType: "inline-size", background: "transparent" }}
       >
         {patternUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -175,8 +224,53 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
   const { templates, isLoading, updateTemplate, deleteTemplate, createTemplate } = usePopupTemplates(initialTemplates);
   const [selectedType, setSelectedType] = useState<"all" | "achievement" | "stars_reward" | "level_up">("all");
   const [editingTemplate, setEditingTemplate] = useState<PopupTemplate | null>(null);
+  const [liveTemplate, setLiveTemplate] = useState<PopupTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<PopupTemplate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [showBanners, setShowBanners] = useState(false);
+  const [globalPatterns, setGlobalPatterns] = useState<{ id: string; label: string; url: string }[]>([]);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/banner-patterns")
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d) && setGlobalPatterns(d))
+      .catch(() => {});
+  }, []);
+
+  const handleBannerUpload = async (file: File) => {
+    setUploadingBanner(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "popup-patterns");
+      const res = await fetch("/api/upload-local", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro no upload");
+      const url = `${window.location.origin}${data.url}`;
+      const id = `global-${Date.now()}`;
+      const label = file.name.replace(/\.[^.]+$/, "");
+      const saveRes = await fetch("/api/admin/banner-patterns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, label, url }),
+      });
+      const updated = await saveRes.json();
+      if (Array.isArray(updated)) setGlobalPatterns(updated);
+    } catch (e) { alert((e as Error).message); }
+    finally { setUploadingBanner(false); }
+  };
+
+  const handleBannerDelete = async (id: string) => {
+    const res = await fetch("/api/admin/banner-patterns", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const updated = await res.json();
+    if (Array.isArray(updated)) setGlobalPatterns(updated);
+  };
   const confirm = useConfirm();
 
   const filteredTemplates =
@@ -241,7 +335,7 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {["all", "achievement", "stars_reward", "level_up"].map((type) => (
           <button
             key={type}
@@ -255,28 +349,89 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
             {type === "all" ? "Todos" : typeLabels[type as keyof typeof typeLabels]}
           </button>
         ))}
+        <button
+          onClick={() => setShowBanners((v) => !v)}
+          className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            showBanners ? "bg-violet-600 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+          }`}
+        >
+          <ImageIcon className="w-4 h-4" />
+          Padrões de Banner
+          {globalPatterns.length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${showBanners ? "bg-white/20" : "bg-zinc-700 text-zinc-400"}`}>
+              {globalPatterns.length}
+            </span>
+          )}
+        </button>
       </div>
+
+      {/* Banner Patterns Panel */}
+      {showBanners && (
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white">Padrões de Banner globais</h3>
+            <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${uploadingBanner ? "opacity-50 pointer-events-none" : "bg-violet-600 hover:bg-violet-500 text-white"}`}>
+              <Upload className="w-3 h-3" />
+              {uploadingBanner ? "Enviando..." : "Novo padrão"}
+              <input
+                type="file"
+                accept="image/svg+xml,image/png,image/jpeg,image/webp"
+                className="hidden"
+                disabled={uploadingBanner}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBannerUpload(f); e.target.value = ""; }}
+              />
+            </label>
+          </div>
+          {globalPatterns.length === 0 ? (
+            <p className="text-xs text-zinc-500 text-center py-4">Nenhum padrão cadastrado. Faça upload acima.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {globalPatterns.map((p) => (
+                <div key={p.id} className="relative group rounded-xl overflow-hidden border border-zinc-700 hover:border-violet-500/50 transition-all">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.label} className="w-full aspect-[768/391] object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={() => handleBannerDelete(p.id)}
+                      className="p-1.5 bg-red-600/90 rounded-lg text-white hover:bg-red-500 transition-colors"
+                      title="Remover"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 px-2 py-1 truncate bg-zinc-900/80">{p.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Templates Grid */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTemplates.map((template) => (
+        {filteredTemplates.map((template) => {
+          const isEditing = isModalOpen && editingTemplate?.id === template.id;
+          const displayTemplate = isEditing && liveTemplate ? liveTemplate : template;
+          return (
           <div
             key={template.id || template.name}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4 hover:border-zinc-700 transition-colors animate-slide-down"
+            className={`bg-zinc-900 border rounded-xl p-4 space-y-4 transition-colors animate-slide-down ${
+              isEditing ? "border-violet-500/60 ring-1 ring-violet-500/30" : "border-zinc-800 hover:border-zinc-700"
+            }`}
           >
             {/* Card Preview */}
-            <TemplatePreview template={template} />
+            <TemplatePreview template={displayTemplate} />
 
             {/* Info */}
             <div className="text-xs text-zinc-400 space-y-1">
               <p>
                 <span className="text-zinc-500">Cor primária:</span>{" "}
                 <span
-                  className="inline-block w-3 h-3 rounded-full"
-                  style={{ backgroundColor: template.primaryColor }}
+                  className="inline-block w-3 h-3 rounded-full transition-colors"
+                  style={{ backgroundColor: displayTemplate.primaryColor }}
                 />
                 {" "}
-                {template.primaryColor}
+                {displayTemplate.primaryColor}
               </p>
               <p>
                 <span className="text-zinc-500">Duração:</span> {template.dismissDuration / 1000}s
@@ -291,6 +446,13 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
 
             {/* Actions */}
             <div className="flex gap-2 pt-2 border-t border-zinc-800">
+              <button
+                onClick={() => setPreviewTemplate(displayTemplate)}
+                className="flex items-center justify-center gap-1 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              >
+                <Eye className="w-3 h-3" />
+                Prévia
+              </button>
               <button
                 onClick={() => handleEditClick(template)}
                 disabled={isLoading}
@@ -309,7 +471,8 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Empty State */}
@@ -341,11 +504,39 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
           onClose={() => {
             setIsModalOpen(false);
             setEditingTemplate(null);
+            setLiveTemplate(null);
             setIsCreating(false);
           }}
           onSave={handleSave}
+          onLiveChange={(t) => setLiveTemplate(t as PopupTemplate)}
+          globalPatterns={globalPatterns}
           isLoading={isLoading}
         />
+      )}
+
+      {/* Screen Preview */}
+      {previewTemplate && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setPreviewTemplate(null)}
+        >
+          <div
+            className="relative"
+            style={{ width: "40vw" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewTemplate(null)}
+              className="absolute -top-8 right-0 flex items-center gap-1.5 text-zinc-400 hover:text-white text-xs transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Fechar prévia
+            </button>
+            <TemplatePreview template={previewTemplate} />
+            <p className="text-center text-zinc-500 text-xs mt-2">{previewTemplate.name}</p>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Confirm Dialog */}

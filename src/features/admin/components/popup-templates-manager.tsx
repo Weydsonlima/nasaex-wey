@@ -75,6 +75,9 @@ interface LayoutElement {
   imageSize?: number;
   boxWidth?: number;
   boxHeight?: number;
+  href?: string;
+  hrefTarget?: string;
+  isHide?: boolean;
 }
 
 function useColorizedSvg(

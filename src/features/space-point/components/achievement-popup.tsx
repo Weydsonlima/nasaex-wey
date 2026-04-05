@@ -18,6 +18,9 @@ interface LayoutElement {
   imageSize?: number;
   boxWidth?: number;
   boxHeight?: number;
+  href?: string;
+  hrefTarget?: string;
+  isHide?: boolean;
 }
 
 interface PopupTemplateData {
@@ -42,6 +45,8 @@ interface PopupTemplateData {
     customPatterns?: { id: string; url: string; label: string }[];
     prizeValue?: string;
     popupFunction?: string;
+    clickUrl?: string;
+    clickUrlTarget?: string;
   };
 }
 
@@ -158,7 +163,40 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
   const mascotX    = (tpl?.customJson?.mascotX    as number | undefined) ?? 15;
   const mascotY    = (tpl?.customJson?.mascotY    as number | undefined) ?? 80;
   const mascotSize = (tpl?.customJson?.mascotSize as number | undefined) ?? 28;
+  const clickUrl       = tpl?.customJson?.clickUrl ?? null;
+  const clickUrlTarget = tpl?.customJson?.clickUrlTarget ?? "_blank";
   const hasTemplate = !!tpl && (!!patternUrl || layoutElements.length > 0);
+
+  const handlePopupClick = () => {
+    if (clickUrl) {
+      if (clickUrlTarget === "_self") {
+        window.location.href = clickUrl;
+      } else {
+        window.open(clickUrl, "_blank", "noopener,noreferrer");
+      }
+      handleDismiss();
+    } else {
+      handleDismiss();
+    }
+  };
+
+  const handleElementClick = (el: LayoutElement) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (el.isHide) {
+      handleDismiss();
+      return;
+    }
+    if (el.href) {
+      if ((el.hrefTarget ?? "_blank") === "_self") {
+        window.location.href = el.href;
+      } else {
+        window.open(el.href, "_blank", "noopener,noreferrer");
+      }
+      handleDismiss();
+      return;
+    }
+    handleDismiss();
+  };
 
   const sysVars: Record<string, string> = {
     nome_usuario: data.vars?.nome_usuario ?? "",
@@ -211,7 +249,7 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
       <div
         className="fixed inset-0 flex items-center justify-center pointer-events-auto"
         style={{ zIndex: 10001 }}
-        onClick={handleDismiss}
+        onClick={handlePopupClick}
       >
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
@@ -226,7 +264,7 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
               overflow: "hidden",
               ...animStyle,
             }}
-            onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
+            onClick={(e) => { e.stopPropagation(); handlePopupClick(); }}
           >
             {/* SVG background */}
             {patternUrl && (
@@ -264,11 +302,12 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
 
             {/* Layout elements */}
             {layoutElements.filter((el) => el.visible).map((el) => {
+              const isClickable = el.isHide || !!el.href || el.type === "hide" || el.type === "link";
               if (el.type === "image" && el.imageUrl) {
                 return (
                   <div
                     key={el.id}
-                    className="absolute pointer-events-none select-none"
+                    className={`absolute select-none ${isClickable ? "pointer-events-auto cursor-pointer" : "pointer-events-none"}`}
                     style={{
                       left: `${el.x}%`,
                       top: `${el.y}%`,
@@ -276,6 +315,7 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
                       transform: "translate(-50%, -50%)",
                       filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
                     }}
+                    onClick={isClickable ? handleElementClick(el) : undefined}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={el.imageUrl} alt={el.label} className="w-full h-auto object-contain" />
@@ -285,7 +325,7 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
               return (
                 <div
                   key={el.id}
-                  className="absolute pointer-events-none select-none"
+                  className={`absolute select-none ${isClickable ? "pointer-events-auto cursor-pointer" : "pointer-events-none"}`}
                   style={{
                     left: `${el.x}%`,
                     top: `${el.y}%`,
@@ -302,15 +342,12 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
                     boxSizing: "border-box",
                     padding: "2px 6px",
                   }}
+                  onClick={isClickable ? handleElementClick(el) : undefined}
                 >
-                  {el.type === "hide" || el.type === "link" ? (
-                    <button
-                      className="pointer-events-auto underline opacity-80 hover:opacity-100"
-                      style={{ fontFamily: "inherit", fontSize: "inherit", color: "inherit" }}
-                      onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-                    >
+                  {isClickable ? (
+                    <span className="underline opacity-80 hover:opacity-100">
                       {elementValue(el)}
-                    </button>
+                    </span>
                   ) : (
                     elementValue(el)
                   )}

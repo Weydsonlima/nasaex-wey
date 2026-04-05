@@ -14,8 +14,11 @@ interface LayoutElement {
   color?: string;
   imageUrl?: string;
   imageSize?: number;
-  boxWidth?: number;  // % of container width (text elements)
-  boxHeight?: number; // % of container height (text elements)
+  boxWidth?: number;
+  boxHeight?: number;
+  href?: string;       // URL to open when element is clicked
+  hrefTarget?: string; // "_blank" | "_self"
+  isHide?: boolean;    // closes popup when clicked
 }
 
 const RESIZE_HANDLES = [
@@ -234,6 +237,12 @@ export function PopupTemplateModal({
   const [popupFunction, setPopupFunction] = useState<string>(
     (initialTemplate.customJson?.popupFunction as string) ?? "STAR"
   );
+  const [clickUrl, setClickUrl] = useState<string>(
+    (initialTemplate.customJson?.clickUrl as string) ?? ""
+  );
+  const [clickUrlTarget, setClickUrlTarget] = useState<string>(
+    (initialTemplate.customJson?.clickUrlTarget as string) ?? "_blank"
+  );
   const [prizeValue, setPrizeValue] = useState<string>(
     (initialTemplate.customJson?.prizeValue as string) ?? ""
   );
@@ -312,13 +321,15 @@ export function PopupTemplateModal({
         svgPattern,
         popupFunction,
         prizeValue,
+        clickUrl,
+        clickUrlTarget,
         layoutElements,
         customPatterns,
         patternUrlOverrides,
       },
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template, svgPattern, layoutElements, customPatterns, patternUrlOverrides]);
+  }, [template, svgPattern, clickUrl, clickUrlTarget, layoutElements, customPatterns, patternUrlOverrides]);
 
   const SVG_PATTERNS = [...DEFAULT_SVG_PATTERNS, ...globalPatterns, ...customPatterns].map((p) => ({
     ...p,
@@ -479,6 +490,8 @@ export function PopupTemplateModal({
         svgPattern,
         popupFunction,
         prizeValue,
+        clickUrl,
+        clickUrlTarget,
         layoutElements,
         customPatterns,
         patternUrlOverrides,
@@ -546,6 +559,38 @@ export function PopupTemplateModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Global click URL */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Link do popup{" "}
+              <span className="text-zinc-500 font-normal text-xs">(clicar em qualquer lugar abre o link)</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={clickUrl}
+                onChange={(e) => setClickUrl(e.target.value)}
+                placeholder="https://... ou /ranking"
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/60"
+                disabled={isLoading}
+              />
+              <select
+                value={clickUrlTarget}
+                onChange={(e) => setClickUrlTarget(e.target.value)}
+                className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-2 text-white text-xs focus:outline-none focus:border-violet-500/60"
+                disabled={isLoading}
+              >
+                <option value="_blank">Nova aba</option>
+                <option value="_self">Mesma aba</option>
+              </select>
+              {clickUrl && (
+                <button type="button" onClick={() => setClickUrl("")} className="px-2 text-zinc-500 hover:text-red-400 transition-colors text-xs">
+                  ×
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Title */}
@@ -981,6 +1026,52 @@ export function PopupTemplateModal({
                       />
                     </div>
                   )}
+
+                  {/* Link + Hide — shared for all element types */}
+                  <div className="w-full flex items-center gap-1 mt-1 ml-[6.5rem]">
+                    <input
+                      type="url"
+                      value={el.href ?? ""}
+                      onChange={(e) =>
+                        setLayoutElements(layoutElements.map((item) =>
+                          item.id === el.id ? { ...item, href: e.target.value || undefined } : item
+                        ))
+                      }
+                      placeholder="Link (ex: /ranking)"
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded text-white text-[10px] px-2 py-1 focus:outline-none focus:border-violet-500/60"
+                      disabled={isLoading}
+                    />
+                    <select
+                      value={el.hrefTarget ?? "_blank"}
+                      onChange={(e) =>
+                        setLayoutElements(layoutElements.map((item) =>
+                          item.id === el.id ? { ...item, hrefTarget: e.target.value } : item
+                        ))
+                      }
+                      className="bg-zinc-800 border border-zinc-700 rounded text-white text-[10px] px-1 py-1 focus:outline-none focus:border-violet-500/60"
+                      disabled={isLoading || !el.href}
+                    >
+                      <option value="_blank">↗ nova aba</option>
+                      <option value="_self">→ mesma aba</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLayoutElements(layoutElements.map((item) =>
+                          item.id === el.id ? { ...item, isHide: !item.isHide } : item
+                        ))
+                      }
+                      title="Fechar popup ao clicar"
+                      className={`shrink-0 px-2 py-1 text-[10px] rounded transition-all ${
+                        el.isHide
+                          ? "bg-red-600 text-white"
+                          : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-white"
+                      }`}
+                      disabled={isLoading}
+                    >
+                      ✕ fechar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

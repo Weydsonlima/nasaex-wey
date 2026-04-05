@@ -326,3 +326,7 @@ input::placeholder {
   75%       { transform: rotate(-5deg); }
   90%       { transform: rotate(5deg); }
 }
+
+.popup-cq {
+  container-type: inline-size;
+}

@@ -147,7 +147,7 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
   if (rawPatternUrl || layoutElements.length > 0) {
     return (
       <div
-        className="relative w-full rounded-lg overflow-hidden [container-type:inline-size]"
+        className="relative w-full rounded-lg overflow-hidden popup-cq"
         style={{ aspectRatio: "768/391", background: "transparent" }}
       >
         {patternUrl && (

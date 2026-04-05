@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlanDetailModal, type PlanDetail } from "@/components/plan-detail-modal";
+import { PlanPurchaseModal } from "@/features/stars/components/plan-purchase-modal";
 
 // ─── CSS Animations ───────────────────────────────────────────────────────────
 const STYLES = `
@@ -1621,9 +1622,22 @@ const PUBLIC_PLANS = [
 ];
 
 // PlanCard público — espelha o padrão do /admin > Planos
-function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number]; isLoggedIn: boolean }) {
+function PublicPlanCard({
+  plan,
+  isLoggedIn,
+  currentPlanSlug,
+  onPurchase,
+}: {
+  plan:             typeof PUBLIC_PLANS[number] & { planSlug?: string };
+  isLoggedIn:       boolean;
+  currentPlanSlug?: string;
+  onPurchase?:      (planSlug: string) => void;
+}) {
   const [showBenefits, setShowBenefits] = useState(false);
   const [detailOpen,   setDetailOpen]   = useState(false);
+
+  const slug          = plan.planSlug ?? plan.id;
+  const isCurrentPlan = isLoggedIn && currentPlanSlug === slug;
 
   const planDetail: PlanDetail = {
     id:          plan.id,
@@ -1638,6 +1652,7 @@ function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number
     ctaLabel:    plan.ctaLabel,
     ctaHref:     plan.ctaHref,
     starPerUser: STAR_PER_USER,
+    planSlug:    slug,
   };
 
   return (
@@ -1647,6 +1662,8 @@ function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         isLoggedIn={isLoggedIn}
+        isCurrentPlan={isCurrentPlan}
+        onPurchase={() => onPurchase?.(slug)}
       />
 
     <div className={cn(
@@ -1766,39 +1783,88 @@ function PublicPlanCard({ plan, isLoggedIn }: { plan: typeof PUBLIC_PLANS[number
       <div className="border-t border-white/8" />
 
       {/* CTA */}
-      <Button
-        asChild
-        className={cn(
-          "w-full font-bold text-sm rounded-xl",
-          plan.highlighted
-            ? "bg-violet-600 hover:bg-violet-700 text-white"
-            : plan.id === "constellation"
-            ? "bg-gradient-to-r from-yellow-500/80 to-orange-500/80 hover:from-yellow-500 hover:to-orange-500 text-black"
-            : plan.price === 0
-            ? "bg-emerald-700 hover:bg-emerald-600 text-white"
-            : "bg-zinc-700/80 hover:bg-zinc-700 text-white border border-zinc-600/50"
-        )}
-      >
-        <Link href={isLoggedIn ? "/tracking" : plan.ctaHref}>
-          {plan.ctaLabel}
+      {isCurrentPlan ? (
+        <Button
+          disabled
+          className={cn(
+            "w-full font-bold text-sm rounded-xl opacity-60 cursor-not-allowed",
+            plan.price === 0
+              ? "bg-emerald-700 text-white"
+              : plan.highlighted
+              ? "bg-violet-600 text-white"
+              : "bg-zinc-700/80 text-white border border-zinc-600/50"
+          )}
+        >
+          Plano atual
+        </Button>
+      ) : isLoggedIn ? (
+        <Button
+          onClick={() => onPurchase?.(slug)}
+          className={cn(
+            "w-full font-bold text-sm rounded-xl",
+            plan.highlighted
+              ? "bg-violet-600 hover:bg-violet-700 text-white"
+              : plan.id === "constellation"
+              ? "bg-gradient-to-r from-yellow-500/80 to-orange-500/80 hover:from-yellow-500 hover:to-orange-500 text-black"
+              : plan.price === 0
+              ? "bg-emerald-700 hover:bg-emerald-600 text-white"
+              : "bg-zinc-700/80 hover:bg-zinc-700 text-white border border-zinc-600/50"
+          )}
+        >
+          Adquirir plano
           <ArrowRight className="size-3.5 ml-1.5" />
-        </Link>
-      </Button>
+        </Button>
+      ) : (
+        <Button
+          asChild
+          className={cn(
+            "w-full font-bold text-sm rounded-xl",
+            plan.highlighted
+              ? "bg-violet-600 hover:bg-violet-700 text-white"
+              : plan.id === "constellation"
+              ? "bg-gradient-to-r from-yellow-500/80 to-orange-500/80 hover:from-yellow-500 hover:to-orange-500 text-black"
+              : plan.price === 0
+              ? "bg-emerald-700 hover:bg-emerald-600 text-white"
+              : "bg-zinc-700/80 hover:bg-zinc-700 text-white border border-zinc-600/50"
+          )}
+        >
+          <Link href={plan.ctaHref}>
+            {plan.ctaLabel}
+            <ArrowRight className="size-3.5 ml-1.5" />
+          </Link>
+        </Button>
+      )}
     </div>
     </>
   );
 }
 
 function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const [purchaseOpen,    setPurchaseOpen]    = useState(false);
+  const [purchasePlanSlug, setPurchasePlanSlug] = useState<string | undefined>(undefined);
+
   // Fetch plans live from DB (public endpoint, no auth needed)
   const { data: dbData, isLoading: plansLoading } = useQuery(
     orpc.public.listPlans.queryOptions()
   );
 
+  // Fetch current plan slug for logged-in users
+  const { data: balanceData } = useQuery({
+    ...orpc.stars.getBalance.queryOptions(),
+    enabled: isLoggedIn,
+  });
+  const currentPlanSlug = balanceData?.planSlug;
+
+  const handlePurchase = (planSlug: string) => {
+    setPurchasePlanSlug(planSlug);
+    setPurchaseOpen(true);
+  };
+
   // Map DB plans → PublicPlanCard shape, fall back to hardcoded
   const plans = (dbData?.plans ?? []).length > 0
     ? dbData!.plans.map((p) => ({
         id:           p.slug,
+        planSlug:     p.slug,
         name:         p.name,
         stars:        p.monthlyStars,
         price:        p.priceMonthly,
@@ -1864,7 +1930,13 @@ function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             {plans.map((plan) => (
-              <PublicPlanCard key={plan.id} plan={plan} isLoggedIn={isLoggedIn} />
+              <PublicPlanCard
+                key={plan.id}
+                plan={plan}
+                isLoggedIn={isLoggedIn}
+                currentPlanSlug={currentPlanSlug}
+                onPurchase={handlePurchase}
+              />
             ))}
           </div>
         )}
@@ -1873,6 +1945,14 @@ function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
           🔒 Pagamento seguro via Stripe e PIX (Asaas) · Cancele quando quiser · LGPD Compliant
         </p>
       </div>
+
+      {/* Modal de compra de plano */}
+      <PlanPurchaseModal
+        open={purchaseOpen}
+        onClose={() => setPurchaseOpen(false)}
+        currentPlanSlug={currentPlanSlug}
+        initialPlanSlug={purchasePlanSlug}
+      />
     </section>
   );
 }

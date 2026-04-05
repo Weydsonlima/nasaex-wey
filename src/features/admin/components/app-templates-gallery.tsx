@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Copy, Loader } from "lucide-react";
 import { useAdminToast } from "@/features/admin/hooks/use-admin-toast";
 
-type AppType = "tracking" | "workspace" | "forgeProposal" | "forgeContract";
+type AppType = "tracking" | "workspace" | "forgeProposal" | "forgeContract" | "form";
 
 interface AppTemplatesGalleryProps {
   appType: AppType;
@@ -47,7 +47,7 @@ export function AppTemplatesGallery({
               : appType === "forge-contract"
                 ? "forgeContract"
                 : appType
-          ] || [];
+          ] ?? [];
 
         setTemplates(typeData);
       } catch (error) {

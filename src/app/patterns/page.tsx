@@ -40,77 +40,55 @@ export default async function PatternsPage() {
         {/* Tabs */}
         <Tabs defaultValue="tracking" className="space-y-6">
           <TabsList className="bg-zinc-900 border border-zinc-800">
-            <TabsTrigger
-              value="tracking"
-              className="data-[state=active]:bg-violet-600"
-            >
+            <TabsTrigger value="tracking" className="data-[state=active]:bg-violet-600">
               Tracking
             </TabsTrigger>
-            <TabsTrigger
-              value="workspace"
-              className="data-[state=active]:bg-violet-600"
-            >
+            <TabsTrigger value="workspace" className="data-[state=active]:bg-violet-600">
               Workspace
             </TabsTrigger>
-            <TabsTrigger
-              value="forge-proposal"
-              className="data-[state=active]:bg-violet-600"
-            >
+            <TabsTrigger value="forge-proposal" className="data-[state=active]:bg-violet-600">
               Proposta
             </TabsTrigger>
-            <TabsTrigger
-              value="forge-contract"
-              className="data-[state=active]:bg-violet-600"
-            >
+            <TabsTrigger value="forge-contract" className="data-[state=active]:bg-violet-600">
               Contrato
+            </TabsTrigger>
+            <TabsTrigger value="form" className="data-[state=active]:bg-violet-600">
+              Formulário
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="tracking" className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Padrões de Tracking
-              </h2>
-              <AppTemplatesGallery
-                appType="tracking"
-                organizationId={organizationId}
-              />
+              <h2 className="text-lg font-semibold text-white mb-4">Padrões de Tracking</h2>
+              <AppTemplatesGallery appType="tracking" organizationId={organizationId} />
             </div>
           </TabsContent>
 
           <TabsContent value="workspace" className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Padrões de Workspace
-              </h2>
-              <AppTemplatesGallery
-                appType="workspace"
-                organizationId={organizationId}
-              />
+              <h2 className="text-lg font-semibold text-white mb-4">Padrões de Workspace</h2>
+              <AppTemplatesGallery appType="workspace" organizationId={organizationId} />
             </div>
           </TabsContent>
 
           <TabsContent value="forge-proposal" className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Padrões de Proposta
-              </h2>
-              <AppTemplatesGallery
-                appType="forgeProposal"
-                organizationId={organizationId}
-              />
+              <h2 className="text-lg font-semibold text-white mb-4">Padrões de Proposta</h2>
+              <AppTemplatesGallery appType="forgeProposal" organizationId={organizationId} />
             </div>
           </TabsContent>
 
           <TabsContent value="forge-contract" className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Padrões de Contrato
-              </h2>
-              <AppTemplatesGallery
-                appType="forgeContract"
-                organizationId={organizationId}
-              />
+              <h2 className="text-lg font-semibold text-white mb-4">Padrões de Contrato</h2>
+              <AppTemplatesGallery appType="forgeContract" organizationId={organizationId} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="form" className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white mb-4">Padrões de Formulário</h2>
+              <AppTemplatesGallery appType="form" organizationId={organizationId} />
             </div>
           </TabsContent>
         </Tabs>

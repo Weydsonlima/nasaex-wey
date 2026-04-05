@@ -163,10 +163,22 @@ function TemplatePreview({
   const clickUrl       = cj?.clickUrl       as string | undefined;
   const clickUrlTarget = (cj?.clickUrlTarget as string | undefined) ?? "_blank";
 
+  const PREVIEW_VARS: Record<string, string> = {
+    nome_usuario: "Astronauta",
+    quantidade_stars: "250",
+    nome_plano: "NASA Pro",
+    quantidade_space_points: "1.200",
+    nova_conquista: template.name || "Nova conquista",
+    meu_ranking: "12º",
+  };
+
+  const interpolate = (text: string) =>
+    text.replace(/\{\{(\w+)\}\}/g, (_, key) => PREVIEW_VARS[key] ?? `{{${key}}}`);
+
   const elementText = (el: LayoutElement): string => {
-    if (el.type === "name") return template.name;
-    if (el.type === "title") return template.title;
-    if (el.type === "message") return template.message;
+    if (el.type === "name") return interpolate(template.name);
+    if (el.type === "title") return interpolate(template.title);
+    if (el.type === "message") return interpolate(template.message);
     return "";
   };
 

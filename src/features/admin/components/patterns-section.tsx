@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract";
+type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract" | "form";
 
 interface Template {
   id: string;
@@ -36,6 +36,7 @@ const APP_TYPE_LABELS: Record<AppType, string> = {
   workspace: "workspace",
   "forge-proposal": "proposta",
   "forge-contract": "contrato",
+  form: "formulário",
 };
 
 export function PatternsSection({ appType, redirectPath }: PatternsSectionProps) {
@@ -51,6 +52,7 @@ export function PatternsSection({ appType, redirectPath }: PatternsSectionProps)
       workspace: "workspace",
       "forge-proposal": "forgeProposal",
       "forge-contract": "forgeContract",
+      form: "form",
     };
     fetch(`/api/admin/app-templates?appType=${appType}`)
       .then((r) => r.json())

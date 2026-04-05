@@ -26,6 +26,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         return await duplicateProposal(appId, org.id, user.id);
       case "forge-contract":
         return await duplicateContract(appId, org.id, user.id);
+      case "form":
+        return await duplicateForm(appId, org.id, user.id);
       default:
         return NextResponse.json({ error: "Tipo não suportado" }, { status: 400 });
     }
@@ -338,4 +340,26 @@ async function getNextContractNumber(orgId: string): Promise<number> {
     select: { number: true },
   });
   return (last?.number ?? 0) + 1;
+}
+
+// ─── Form ─────────────────────────────────────────────────────────────────────
+
+async function duplicateForm(templateId: string, orgId: string, userId: string) {
+  const tpl = await prisma.form.findUnique({ where: { id: templateId } });
+  if (!tpl) return NextResponse.json({ error: "Padrão não encontrado" }, { status: 404 });
+
+  const created = await prisma.form.create({
+    data: {
+      name: tpl.name,
+      description: tpl.description,
+      jsonBlock: tpl.jsonBlock,
+      content: tpl.content,
+      published: false,
+      organizationId: orgId,
+      userId,
+      shareUrl: `${orgId}-${Date.now()}`,
+    },
+  });
+
+  return NextResponse.json({ id: created.id, name: created.name });
 }

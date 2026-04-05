@@ -804,6 +804,9 @@ model Form {
   views Int @default(0)
   responses Int @default(0)
 
+  isTemplate Boolean @default(false) @map("is_template")
+  templateMarkedByModerator Boolean @default(false) @map("template_marked_by_moderator")
+
   createdBy     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   formSubmissions FormResponses[]
   shareUrl String @unique @map("share_url")

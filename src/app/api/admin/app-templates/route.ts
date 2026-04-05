@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
       workspace: [] as any[],
       forgeProposal: [] as any[],
       forgeContract: [] as any[],
+      form: [] as any[],
     };
 
     if (!appType || appType === "tracking") {
@@ -70,6 +71,19 @@ export async function GET(request: NextRequest) {
         name: `Contrato #${String(c.number).padStart(4, "0")}`,
         description: `Valor: R$ ${Number(c.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       }));
+    }
+
+    if (!appType || appType === "form") {
+      templates.form = await prisma.form.findMany({
+        where: { isTemplate: true, templateMarkedByModerator: true },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
     }
 
     return NextResponse.json(templates);

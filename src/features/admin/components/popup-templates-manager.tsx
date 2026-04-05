@@ -145,32 +145,63 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
   };
 
   if (rawPatternUrl || layoutElements.length > 0) {
+    // Render at natural 768×391 and scale down — ensures pixel-perfect proportions
     return (
       <div
         className="relative w-full rounded-lg overflow-hidden popup-cq"
-        style={{ aspectRatio: "768/391", background: "transparent" }}
+        style={{ aspectRatio: "768/391" }}
       >
-        {patternUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={patternUrl} alt="padrão" className="absolute inset-0 w-full h-full object-cover" />
-        )}
-        {mascotUrl && (
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: `${mascotX}%`,
-              top: `${mascotY}%`,
-              width: `${mascotSize}%`,
-              transform: "translate(-50%, -50%)",
-              filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={mascotUrl} alt="mascote" className="w-full h-auto object-contain" />
-          </div>
-        )}
-        {layoutElements.filter((el) => el.visible).map((el) => {
-          if (el.type === "image" && el.imageUrl) {
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "768px",
+            height: "391px",
+            transformOrigin: "top left",
+            transform: "scale(calc(100cqw / 768))",
+          }}
+        >
+          {patternUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={patternUrl} alt="padrão" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          {mascotUrl && (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${mascotX}%`,
+                top: `${mascotY}%`,
+                width: `${mascotSize / 100 * 768}px`,
+                transform: "translate(-50%, -50%)",
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mascotUrl} alt="mascote" className="w-full h-auto object-contain" />
+            </div>
+          )}
+          {layoutElements.filter((el) => el.visible).map((el) => {
+            if (el.type === "image" && el.imageUrl) {
+              return (
+                <div
+                  key={el.id}
+                  className="absolute pointer-events-none select-none"
+                  style={{
+                    left: `${el.x}%`,
+                    top: `${el.y}%`,
+                    width: `${(el.imageSize ?? 20) / 100 * 768}px`,
+                    transform: "translate(-50%, -50%)",
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={el.imageUrl} alt={el.label ?? ""} className="w-full h-auto object-contain" />
+                </div>
+              );
+            }
+            const w = el.boxWidth ? el.boxWidth / 100 * 768 : undefined;
+            const h = el.boxHeight ? el.boxHeight / 100 * 391 : undefined;
             return (
               <div
                 key={el.id}
@@ -178,62 +209,41 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
                 style={{
                   left: `${el.x}%`,
                   top: `${el.y}%`,
-                  width: `${el.imageSize ?? 20}%`,
                   transform: "translate(-50%, -50%)",
-                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+                  width: w ? `${w}px` : undefined,
+                  minHeight: h ? `${h}px` : undefined,
+                  fontSize: `${el.fontSize ?? 12}px`,
+                  color: el.color ?? template.textColor,
+                  fontFamily: "var(--font-bungee), sans-serif",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.7)",
+                  whiteSpace: w ? "normal" : "nowrap",
+                  wordBreak: "break-word",
+                  overflow: "hidden",
+                  lineHeight: 1.2,
+                  padding: "2px 6px",
+                  boxSizing: "border-box",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={el.imageUrl} alt={el.label ?? ""} className="w-full h-auto object-contain" />
+                {elementText(el)}
               </div>
             );
-          }
-          const DEFAULT_WIDTHS: Record<string, number> = {
-            name: 35, title: 40, message: 50, hide: 15, link: 15,
-          };
-          const w = el.boxWidth ?? DEFAULT_WIDTHS[el.type] ?? 40;
-          const h = el.boxHeight;
-          return (
+          })}
+          {prizeValue && (
             <div
-              key={el.id}
-              className="absolute pointer-events-none select-none"
+              className="absolute bottom-[8%] left-1/2 pointer-events-none select-none"
               style={{
-                left: `${el.x}%`,
-                top: `${el.y}%`,
-                transform: "translate(-50%, -50%)",
-                width: `${w}%`,
-                minHeight: h ? `${h}%` : undefined,
-                fontSize: `${((el.fontSize ?? 12) / 768) * 100}cqw`,
-                color: el.color ?? template.textColor,
+                transform: "translateX(-50%)",
                 fontFamily: "var(--font-bungee), sans-serif",
-                textShadow: "0 1px 3px rgba(0,0,0,0.7)",
-                whiteSpace: "normal",
-                wordBreak: "break-word",
-                overflow: "hidden",
-                boxSizing: "border-box",
-                padding: "2px 6px",
-                lineHeight: 1.2,
+                fontSize: "24px",
+                color: template.accentColor,
+                textShadow: "0 2px 6px rgba(0,0,0,0.7)",
+                whiteSpace: "nowrap",
               }}
             >
-              {elementText(el)}
+              {prizeValue}
             </div>
-          );
-        })}
-        {prizeValue && (
-          <div
-            className="absolute bottom-[8%] left-1/2 pointer-events-none select-none"
-            style={{
-              transform: "translateX(-50%)",
-              fontFamily: "var(--font-bungee), sans-serif",
-              fontSize: `${(24 / 768) * 100}cqw`,
-              color: template.accentColor,
-              textShadow: "0 2px 6px rgba(0,0,0,0.7)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {prizeValue}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }

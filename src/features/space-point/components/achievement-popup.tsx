@@ -16,6 +16,8 @@ interface LayoutElement {
   color?: string;
   imageUrl?: string;
   imageSize?: number;
+  boxWidth?: number;
+  boxHeight?: number;
 }
 
 interface PopupTemplateData {
@@ -288,11 +290,17 @@ export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
                     left: `${el.x}%`,
                     top: `${el.y}%`,
                     transform: "translate(-50%, -50%)",
+                    width: el.boxWidth ? `${el.boxWidth}%` : undefined,
+                    minHeight: el.boxHeight ? `${el.boxHeight}%` : undefined,
                     fontSize: `${el.fontSize ?? 14}px`,
                     color: el.color ?? tpl?.textColor ?? "#ffffff",
                     fontFamily: "var(--font-bungee), sans-serif",
                     textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-                    whiteSpace: "nowrap",
+                    whiteSpace: el.boxWidth ? "normal" : "nowrap",
+                    wordBreak: "break-word",
+                    overflow: "hidden",
+                    boxSizing: "border-box",
+                    padding: "2px 6px",
                   }}
                 >
                   {el.type === "hide" || el.type === "link" ? (

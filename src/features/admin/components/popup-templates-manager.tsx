@@ -67,6 +67,8 @@ interface LayoutElement {
   color?: string;
   imageUrl?: string;
   imageSize?: number;
+  boxWidth?: number;
+  boxHeight?: number;
 }
 
 function useColorizedSvg(
@@ -188,11 +190,17 @@ function TemplatePreview({ template }: { template: PopupTemplate }) {
                 left: `${el.x}%`,
                 top: `${el.y}%`,
                 transform: "translate(-50%, -50%)",
+                width: el.boxWidth ? `${el.boxWidth}%` : undefined,
+                minHeight: el.boxHeight ? `${el.boxHeight}%` : undefined,
                 fontSize: `${((el.fontSize ?? 12) / 768) * 100}cqw`,
                 color: el.color ?? template.textColor,
                 fontFamily: "var(--font-bungee), sans-serif",
                 textShadow: "0 1px 3px rgba(0,0,0,0.7)",
-                whiteSpace: "nowrap",
+                whiteSpace: el.boxWidth ? "normal" : "nowrap",
+                wordBreak: "break-word",
+                overflow: "hidden",
+                boxSizing: "border-box",
+                padding: "2px 6px",
               }}
             >
               {elementText(el)}

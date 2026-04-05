@@ -13,8 +13,27 @@ interface LayoutElement {
   fontSize?: number;
   color?: string;
   imageUrl?: string;
-  imageSize?: number; // percentage of container width (for image type)
+  imageSize?: number;
+  boxWidth?: number;  // % of container width (text elements)
+  boxHeight?: number; // % of container height (text elements)
 }
+
+const RESIZE_HANDLES = [
+  { id: "nw", left: "0%",   top: "0%",   cursor: "nw-resize" },
+  { id: "n",  left: "50%",  top: "0%",   cursor: "n-resize"  },
+  { id: "ne", left: "100%", top: "0%",   cursor: "ne-resize" },
+  { id: "w",  left: "0%",   top: "50%",  cursor: "w-resize"  },
+  { id: "e",  left: "100%", top: "50%",  cursor: "e-resize"  },
+  { id: "sw", left: "0%",   top: "100%", cursor: "sw-resize" },
+  { id: "s",  left: "50%",  top: "100%", cursor: "s-resize"  },
+  { id: "se", left: "100%", top: "100%", cursor: "se-resize" },
+] as const;
+
+const HANDLE_SIGNS: Record<string, [number, number]> = {
+  nw: [-1, -1], n: [0, -1], ne: [1, -1],
+  w:  [-1,  0],              e: [1,  0],
+  sw: [-1,  1], s: [0,  1], se: [1,  1],
+};
 
 interface PopupTemplate {
   id?: string;
@@ -221,14 +240,22 @@ export function PopupTemplateModal({
   const [mascots, setMascots] = useState<{ key: string; url: string; label: string }[]>([]);
   const [layoutElements, setLayoutElements] = useState<LayoutElement[]>(
     (initialTemplate.customJson?.layoutElements as LayoutElement[]) ?? [
-      { id: "name", type: "name", label: "Nome", x: 10, y: 10, visible: true, fontSize: 18, color: "#ffffff" },
-      { id: "title", type: "title", label: "Título", x: 10, y: 50, visible: true, fontSize: 14, color: "#ffffff" },
-      { id: "message", type: "message", label: "Mensagem", x: 10, y: 90, visible: true, fontSize: 11, color: "#ffffff" },
-      { id: "hide", type: "hide", label: "Hide", x: 80, y: 90, visible: false, fontSize: 11, color: "#ffffff" },
-      { id: "link", type: "link", label: "Link", x: 80, y: 110, visible: false, fontSize: 11, color: "#ffffff" },
+      { id: "name",    type: "name",    label: "Nome",      x: 60, y: 20, visible: true,  fontSize: 20, color: "#ffffff", boxWidth: 35, boxHeight: 12 },
+      { id: "title",   type: "title",   label: "Título",    x: 60, y: 40, visible: true,  fontSize: 14, color: "#ffffff", boxWidth: 35, boxHeight: 10 },
+      { id: "message", type: "message", label: "Mensagem",  x: 60, y: 65, visible: true,  fontSize: 11, color: "#ffffff", boxWidth: 40, boxHeight: 22 },
+      { id: "hide",    type: "hide",    label: "Hide",      x: 80, y: 88, visible: false, fontSize: 11, color: "#ffffff", boxWidth: 15, boxHeight:  8 },
+      { id: "link",    type: "link",    label: "Link",      x: 80, y: 96, visible: false, fontSize: 11, color: "#ffffff", boxWidth: 15, boxHeight:  8 },
     ]
   );
   const [draggingElement, setDraggingElement] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const resizingRef = useRef<{
+    id: string; handle: string;
+    startMx: number; startMy: number;
+    startEl: LayoutElement;
+    containerW: number; containerH: number;
+  } | null>(null);
   const [colorizedPatternUrl, setColorizedPatternUrl] = useState<string | null>(null);
   const svgCacheRef = useRef<Record<string, string>>({});
   const blobUrlRef = useRef<string | null>(null);
@@ -340,7 +367,50 @@ export function PopupTemplateModal({
       .catch(() => {});
   }, []);
 
+  // ── Resize via document mouse events ─────────────────────────────────────
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const r = resizingRef.current;
+      if (!r) return;
+      const dx = ((e.clientX - r.startMx) / r.containerW) * 100;
+      const dy = ((e.clientY - r.startMy) / r.containerH) * 100;
+      const [sx, sy] = HANDLE_SIGNS[r.handle] ?? [0, 0];
+      const dw = dx * sx, dh = dy * sy;
+      const newW = Math.max(8, (r.startEl.boxWidth ?? 30) + dw);
+      const newH = Math.max(4, (r.startEl.boxHeight ?? 12) + dh);
+      setLayoutElements((prev) =>
+        prev.map((el) =>
+          el.id === r.id
+            ? { ...el, x: r.startEl.x + dw / 2, y: r.startEl.y + dh / 2, boxWidth: newW, boxHeight: newH }
+            : el
+        )
+      );
+    };
+    const onUp = () => { resizingRef.current = null; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const handleResizeMouseDown = (e: React.MouseEvent, elementId: string, handle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = layoutElements.find((el) => el.id === elementId);
+    if (!el || !previewRef.current) return;
+    const rect = previewRef.current.getBoundingClientRect();
+    resizingRef.current = {
+      id: elementId, handle,
+      startMx: e.clientX, startMy: e.clientY,
+      startEl: { ...el },
+      containerW: rect.width, containerH: rect.height,
+    };
+  };
+
   const handleElementDragStart = (e: React.DragEvent, elementId: string) => {
+    if (resizingRef.current) { e.preventDefault(); return; }
     setDraggingElement(elementId);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -679,14 +749,16 @@ export function PopupTemplateModal({
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-3">Prévia (Arraste os elementos)</label>
             <div
+              ref={previewRef}
               className="relative w-full rounded-xl overflow-hidden"
               style={{
                 aspectRatio: "768/391",
                 containerType: "inline-size",
-                background: colorizedPatternUrl ? "transparent" : "transparent",
+                background: "transparent",
               }}
               onDragOver={handlePreviewDragOver}
               onDrop={handlePreviewDrop}
+              onClick={() => setSelectedId(null)}
             >
               {colorizedPatternUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -716,28 +788,63 @@ export function PopupTemplateModal({
                     </div>
                   );
                 }
+                const isSelected = selectedId === el.id;
                 return (
                   <div
                     key={el.id}
                     draggable
                     onDragStart={(e) => handleElementDragStart(e, el.id)}
-                    className="absolute cursor-move px-2 py-1 rounded transition-all bg-white/10 border border-white/30 hover:bg-white/20"
+                    onClick={(e) => { e.stopPropagation(); setSelectedId(el.id); }}
+                    className="absolute cursor-move"
                     style={{
                       left: `${el.x}%`,
                       top: `${el.y}%`,
+                      width: `${el.boxWidth ?? 30}%`,
+                      minHeight: `${el.boxHeight ?? 12}%`,
+                      transform: "translate(-50%, -50%)",
                       opacity: draggingElement === el.id ? 0.5 : 1,
                       color: el.color ?? template.textColor,
                       fontFamily: "var(--font-bungee), sans-serif",
                       fontSize: `${((el.fontSize ?? 12) / 768) * 100}cqw`,
-                      transform: "translate(-50%, -50%)",
                       textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                      padding: "2px 6px",
+                      boxSizing: "border-box",
+                      wordBreak: "break-word",
+                      whiteSpace: "normal",
+                      overflow: "hidden",
+                      border: isSelected ? "1px solid rgba(139,92,246,0.9)" : "1px dashed rgba(255,255,255,0.3)",
+                      background: isSelected ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.06)",
+                      borderRadius: "4px",
                     }}
                   >
-                    {el.type === "name" && (template.name || "Nome")}
-                    {el.type === "title" && (template.title || "Título")}
-                    {el.type === "message" && (template.message || "Mensagem").substring(0, 30)}
-                    {el.type === "hide" && "[ Hide ]"}
-                    {el.type === "link" && "[ Link ]"}
+                    <span className="pointer-events-none select-none">
+                      {el.type === "name"    && (template.name    || "Nome")}
+                      {el.type === "title"   && (template.title   || "Título")}
+                      {el.type === "message" && (template.message || "Mensagem")}
+                      {el.type === "hide"    && "[ Hide ]"}
+                      {el.type === "link"    && "[ Link ]"}
+                    </span>
+                    {/* Resize handles */}
+                    {isSelected && RESIZE_HANDLES.map((h) => (
+                      <div
+                        key={h.id}
+                        onMouseDown={(e) => handleResizeMouseDown(e, el.id, h.id)}
+                        style={{
+                          position: "absolute",
+                          left: h.left,
+                          top: h.top,
+                          transform: "translate(-50%, -50%)",
+                          width: 8,
+                          height: 8,
+                          background: "#8b5cf6",
+                          border: "1.5px solid #fff",
+                          borderRadius: 2,
+                          cursor: h.cursor,
+                          zIndex: 20,
+                          pointerEvents: "auto",
+                        }}
+                      />
+                    ))}
                   </div>
                 );
               })}

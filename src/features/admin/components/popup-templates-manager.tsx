@@ -121,7 +121,17 @@ function useColorizedSvg(
   return colorizedUrl;
 }
 
-function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTemplate; globalPatterns?: { id: string; label: string; url: string }[] }) {
+function TemplatePreview({
+  template,
+  globalPatterns = [],
+  interactive = false,
+  onClose,
+}: {
+  template: PopupTemplate;
+  globalPatterns?: { id: string; label: string; url: string }[];
+  interactive?: boolean;
+  onClose?: () => void;
+}) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -150,6 +160,8 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
   const mascotSize = (cj?.mascotSize as number | undefined) ?? 28;
   const layoutElements = (cj?.layoutElements as LayoutElement[] | undefined) ?? [];
   const prizeValue = cj?.prizeValue as string | undefined;
+  const clickUrl       = cj?.clickUrl       as string | undefined;
+  const clickUrlTarget = (cj?.clickUrlTarget as string | undefined) ?? "_blank";
 
   const elementText = (el: LayoutElement): string => {
     if (el.type === "name") return template.name;
@@ -158,12 +170,30 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
     return "";
   };
 
+  const handleElClick = (el: LayoutElement) => (e: React.MouseEvent) => {
+    if (!interactive) return;
+    e.stopPropagation();
+    if (el.type === "hide" || el.isHide) { onClose?.(); return; }
+    if (el.href) {
+      window.open(el.href, el.hrefTarget ?? "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (el.type === "link") { onClose?.(); }
+  };
+
+  const handleBgClick = () => {
+    if (!interactive) return;
+    if (clickUrl) window.open(clickUrl, clickUrlTarget, "noopener,noreferrer");
+    else onClose?.();
+  };
+
   if (rawPatternUrl || layoutElements.length > 0) {
     return (
       <div
         ref={wrapperRef}
-        className="relative w-full rounded-lg overflow-hidden"
+        className={`relative w-full rounded-lg overflow-hidden ${interactive ? "cursor-pointer" : ""}`}
         style={{ aspectRatio: "768/391" }}
+        onClick={interactive ? handleBgClick : undefined}
       >
         <div
           style={{
@@ -219,7 +249,7 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
               return (
                 <div
                   key={el.id}
-                  className="absolute pointer-events-none select-none"
+                  className={`absolute select-none ${interactive ? "pointer-events-auto cursor-pointer hover:opacity-80 active:scale-95 transition-all" : "pointer-events-none"}`}
                   style={{
                     left: `${el.x}%`,
                     top: `${el.y}%`,
@@ -236,6 +266,7 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
                     fontSize: `${el.fontSize ?? 22}px`,
                     boxSizing: "border-box",
                   }}
+                  onClick={interactive ? handleElClick(el) : undefined}
                 >
                   ✕
                 </div>
@@ -245,7 +276,7 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
               return (
                 <div
                   key={el.id}
-                  className="absolute pointer-events-none select-none"
+                  className={`absolute select-none ${interactive ? "pointer-events-auto cursor-pointer hover:opacity-80 active:scale-95 transition-all" : "pointer-events-none"}`}
                   style={{
                     left: `${el.x}%`,
                     top: `${el.y}%`,
@@ -260,8 +291,9 @@ function TemplatePreview({ template, globalPatterns = [] }: { template: PopupTem
                     whiteSpace: "nowrap",
                     boxSizing: "border-box",
                   }}
+                  onClick={interactive ? handleElClick(el) : undefined}
                 >
-                  ↗ Ver mais
+                  ↗ {el.href ? "Ver mais" : "Ver mais"}
                 </div>
               );
             }
@@ -662,8 +694,18 @@ export function PopupTemplatesManager({ templates: initialTemplates }: PopupTemp
               <X className="w-4 h-4" />
               Fechar prévia
             </button>
-            <TemplatePreview template={previewTemplate} globalPatterns={globalPatterns} />
+            <TemplatePreview
+              template={previewTemplate}
+              globalPatterns={globalPatterns}
+              interactive
+              onClose={() => setPreviewTemplate(null)}
+            />
             <p className="text-center text-zinc-500 text-xs mt-2">{previewTemplate.name}</p>
+            {(previewTemplate.customJson as Record<string,unknown> | undefined)?.clickUrl && (
+              <p className="text-center text-zinc-600 text-[10px] mt-1">
+                🔗 Clique em qualquer área para abrir o link do popup
+              </p>
+            )}
           </div>
         </div>,
         document.body

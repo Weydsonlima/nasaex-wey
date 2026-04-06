@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract";
+type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract" | "form";
 
 export function useAppTemplate() {
   const [isLoading, setIsLoading] = useState(false);
@@ -34,6 +34,7 @@ export function useAppTemplate() {
         workspace: "Workspace",
         "forge-proposal": "Proposta",
         "forge-contract": "Contrato",
+        form: "Formulário",
       }[appType];
 
       toast.success(

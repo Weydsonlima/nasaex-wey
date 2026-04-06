@@ -24,6 +24,10 @@ async function getOrgIdForApp(appType: string, appId: string): Promise<string | 
       const c = await prisma.forgeContract.findUnique({ where: { id: appId }, select: { organizationId: true } });
       return c?.organizationId ?? null;
     }
+    case "form": {
+      const f = await prisma.form.findUnique({ where: { id: appId }, select: { organizationId: true } });
+      return f?.organizationId ?? null;
+    }
     default:
       return null;
   }
@@ -99,6 +103,13 @@ export async function PATCH(
       }
       case "forge-contract": {
         updated = await prisma.forgeContract.update({
+          where: { id: appId },
+          data: { isTemplate: templateMarkedByModerator, templateMarkedByModerator },
+        });
+        break;
+      }
+      case "form": {
+        updated = await prisma.form.update({
           where: { id: appId },
           data: { isTemplate: templateMarkedByModerator, templateMarkedByModerator },
         });

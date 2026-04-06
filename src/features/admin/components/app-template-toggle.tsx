@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAppTemplate } from "@/features/admin/hooks/use-app-template";
 
-type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract";
+type AppType = "tracking" | "workspace" | "forge-proposal" | "forge-contract" | "form";
 
 interface AppTemplateToggleProps {
   appId: string;

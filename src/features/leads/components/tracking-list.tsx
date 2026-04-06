@@ -50,7 +50,14 @@ dayjs.extend(relativeTime);
 
 dayjs.locale("pt-BR");
 
-function TrackingCard({ tracking }: { tracking: typeof trackings[0] }) {
+interface Tracking {
+  id: string;
+  name: string;
+  description?: string | null;
+  createdAt: Date | string | number;
+}
+
+function TrackingCard({ tracking }: { tracking: Tracking }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -188,7 +195,7 @@ export function TrackingList() {
               </EmptyMedia>
               <EmptyTitle>Nenhum tracking encontrado</EmptyTitle>
               <EmptyDescription>
-                Você não possui nenhum trackings criado ainda. Começe criando
+                Você não possui nenhum tracking criado ainda. Comece criando
                 seu primeiro tracking
               </EmptyDescription>
             </EmptyHeader>

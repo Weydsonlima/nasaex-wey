@@ -236,6 +236,24 @@ const SpaceTimeIcon = () => (
   </svg>
 );
 
+const PaymentIcon = () => (
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-full h-full"
+  >
+    <rect width="48" height="48" rx="12" fill="#1E90FF" />
+    <rect x="8" y="15" width="32" height="22" rx="4" stroke="white" strokeWidth="1.5" fill="white" fillOpacity="0.1" />
+    <line x1="8" y1="21" x2="40" y2="21" stroke="white" strokeWidth="1.5" />
+    <rect x="12" y="27" width="8" height="4" rx="1" fill="white" fillOpacity="0.7" />
+    <rect x="24" y="27" width="4" height="4" rx="1" fill="white" fillOpacity="0.5" />
+    <rect x="30" y="27" width="4" height="4" rx="1" fill="white" fillOpacity="0.5" />
+    <circle cx="35" cy="10" r="5" fill="#00FF87" />
+    <text x="35" y="13" textAnchor="middle" fill="#0A0E27" fontSize="7" fontWeight="900" fontFamily="Arial">$</text>
+  </svg>
+);
+
 const ForgeIcon = () => (
   <svg
     viewBox="0 0 48 48"
@@ -783,6 +801,23 @@ const APPS: AppDef[] = [
     activeUsers: null,
     theme: "purple",
     sidebarKey: "forge",
+  },
+  {
+    id: "payment",
+    name: "PAYMENT",
+    byline: "by NASA®",
+    status: "installed",
+    icon: PaymentIcon,
+    shortDesc: "Gestão financeira: contas, fluxo de caixa, boletos e PIX",
+    fullDesc:
+      "Hub financeiro central da plataforma. Contas a receber e pagar, fluxo de caixa, DRE, boletos, PIX, notas fiscais e integrações com gateways de pagamento.",
+    category: "Financeiro",
+    integration: "Asaas · Stripe",
+    action: "internal",
+    href: "/payment",
+    activeUsers: null,
+    theme: "blue",
+    sidebarKey: "payment",
   },
   {
     id: "linnker",

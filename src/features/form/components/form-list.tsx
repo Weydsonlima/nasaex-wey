@@ -1,6 +1,6 @@
 "use client";
 import { SquarePenIcon } from "lucide-react";
-import { useQueryListForms } from "../hooks/use-form";
+import { useMutationPublishForm, useQueryListForms } from "../hooks/use-form";
 import { FormItem } from "./form-item";
 import {
   Empty,
@@ -16,6 +16,11 @@ import { Form } from "@/generated/prisma/client";
 
 export function FormList() {
   const { forms, isLoading } = useQueryListForms();
+  const onPublish = useMutationPublishForm();
+
+  const handlePublish = (checked: boolean, id: string) => {
+    onPublish.mutate({ id, published: checked });
+  };
   return (
     <>
       {isLoading && (
@@ -34,10 +39,7 @@ export function FormList() {
       )}
       {forms && (
         <div
-          className="grid gap-4 grid-cols-2
-        md:grid-cols-5
-           lg:grid-cols-3
-           xl:grid-cols-5
+          className="flex flex-col w-full items-center justify-center gap-4
            "
         >
           {forms?.map((form: any) => (
@@ -49,8 +51,7 @@ export function FormList() {
               published={form.published}
               createdAt={form.createdAt}
               responses={form.responses}
-              views={form.views}
-              backgroundColor={form.settings.backgroundColor}
+              handlePublish={handlePublish}
             />
           ))}
         </div>

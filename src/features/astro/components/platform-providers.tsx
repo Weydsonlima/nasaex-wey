@@ -8,7 +8,29 @@ import { SpacePointProvider } from "@/features/space-point";
 import { TourProvider } from "@/features/tour/context";
 import { TourOverlay } from "@/features/tour/overlay";
 
+import { usePathname, useParams } from "next/navigation";
+
 export function PlatformProviders({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const params = useParams();
+
+  const isTrackingChatPage =
+    pathname.includes("tracking-chat") && params.conversationId;
+
+  if (isTrackingChatPage) {
+    return (
+      <TourProvider>
+        <MarketplaceProvider>
+          <SpacePointProvider>
+            {children}
+            <TourOverlay />
+            <HeartbeatProvider />
+          </SpacePointProvider>
+        </MarketplaceProvider>
+      </TourProvider>
+    );
+  }
+
   return (
     <TourProvider>
       <MarketplaceProvider>

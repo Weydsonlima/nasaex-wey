@@ -32,6 +32,7 @@ import {
 import { SIDEBAR_NAV_ITEMS } from "@/lib/sidebar-items";
 import { useSuspenseWokspaces } from "@/features/workspace/hooks/use-workspace";
 import { Suspense } from "react";
+import { HeaderTracking } from "@/features/leads/components/header-tracking";
 
 // ─── App Status ───────────────────────────────────────────────────────────────
 
@@ -1327,11 +1328,8 @@ export function AppsPage() {
           <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-[#7C3AED]/3 blur-2xl" />
         </div>
 
+        <HeaderTracking title="Apps" />
         <div className="relative px-6 py-10 mx-auto">
-          <div className="flex items-center justify-end gap-2 mb-4">
-            <SpacePointWidget />
-            <StarsWidget />
-          </div>
           <div className="flex items-center gap-2 mb-1">
             <div className="flex gap-1">
               {["#7C3AED", "#a855f7", "#c084fc"].map((c, i) => (

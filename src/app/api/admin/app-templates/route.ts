@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
           id: true,
           name: true,
           description: true,
+          jsonBlock: true,
           createdAt: true,
         },
         orderBy: { createdAt: "desc" },

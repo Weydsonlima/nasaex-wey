@@ -20,7 +20,14 @@ function StarsCanvas() {
     if (!ctx) return;
 
     let animFrame: number;
-    const stars: { x: number; y: number; r: number; alpha: number; speed: number; twinkle: number }[] = [];
+    const stars: {
+      x: number;
+      y: number;
+      r: number;
+      alpha: number;
+      speed: number;
+      twinkle: number;
+    }[] = [];
 
     const resize = () => {
       canvas.width = canvas.offsetWidth;
@@ -74,12 +81,23 @@ function StarsCanvas() {
 
 export function IntegrationsMarketplace() {
   const { installedSlugs } = useMarketplace();
-  const hardcodedInstalled = integrations.filter((i) => i.status === "installed").map((i) => i.slug);
-  const installedCount = new Set([...hardcodedInstalled, ...installedSlugs]).size;
+  const hardcodedInstalled = integrations
+    .filter((i) => i.status === "installed")
+    .map((i) => i.slug);
+  const installedCount = new Set([...hardcodedInstalled, ...installedSlugs])
+    .size;
 
   const stats = [
-    { label: "Integrações", value: integrations.length.toString(), icon: Puzzle },
-    { label: "Instaladas", value: installedCount.toString(), icon: CheckCircle2 },
+    {
+      label: "Integrações",
+      value: integrations.length.toString(),
+      icon: Puzzle,
+    },
+    {
+      label: "Instaladas",
+      value: installedCount.toString(),
+      icon: CheckCircle2,
+    },
     { label: "Categorias", value: "19", icon: Zap },
   ];
   return (
@@ -88,7 +106,8 @@ export function IntegrationsMarketplace() {
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
-          background: "linear-gradient(135deg, #0d0a1a 0%, #1a0e3a 40%, #0f0729 70%, #060312 100%)",
+          background:
+            "linear-gradient(135deg, #0d0a1a 0%, #1a0e3a 40%, #0f0729 70%, #060312 100%)",
         }}
       >
         <StarsCanvas />
@@ -108,13 +127,13 @@ export function IntegrationsMarketplace() {
               <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
                 Conecte o NASA ao seu
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#c4b5fd] to-[#a78bfa]">
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-[#c4b5fd] to-[#a78bfa]">
                   ecossistema de vendas
                 </span>
               </h1>
               <p className="text-sm text-white/60 max-w-md leading-relaxed">
-                Integre mensageiros, gateways de pagamento, chatbots, e-commerce e muito mais
-                para automatizar sua operação comercial.
+                Integre mensageiros, gateways de pagamento, chatbots, e-commerce
+                e muito mais para automatizar sua operação comercial.
               </p>
             </div>
 
@@ -127,7 +146,9 @@ export function IntegrationsMarketplace() {
                 >
                   <Icon className="size-4 text-[#a78bfa]" />
                   <div>
-                    <p className="text-lg font-bold text-white leading-none">{value}</p>
+                    <p className="text-lg font-bold text-white leading-none">
+                      {value}
+                    </p>
                     <p className="text-[10px] text-white/50">{label}</p>
                   </div>
                 </div>
@@ -139,11 +160,10 @@ export function IntegrationsMarketplace() {
 
       {/* Platform integrations (META Ads, Instagram DM, TikTok, etc.) */}
       <div className="border rounded-2xl p-6 bg-card">
-        <PlatformIntegrationsSection />
+        {/* Marketplace Grid */}
+        <IntegrationGrid />
       </div>
-
-      {/* Marketplace Grid */}
-      <IntegrationGrid />
+      <PlatformIntegrationsSection />
     </div>
   );
 }

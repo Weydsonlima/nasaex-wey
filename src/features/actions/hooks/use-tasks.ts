@@ -55,9 +55,19 @@ export const useListActionByColumn = (columnId: string) => {
 
 export const useInfiniteActionsByStatus = ({
   columnId,
+  filters,
   enabled = true,
 }: {
   columnId: string;
+  filters?: {
+    participantIds?: string[];
+    tagIds?: string[];
+    dueDateFrom?: Date | null;
+    dueDateTo?: Date | null;
+    sortBy?: "createdAt" | "dueDate" | "priority" | "title";
+    sortOrder?: "asc" | "desc";
+    isArchived?: boolean;
+  };
   enabled?: boolean;
 }) => {
   const query = orpc.action.listByColumn.infiniteOptions({
@@ -65,8 +75,25 @@ export const useInfiniteActionsByStatus = ({
       columnId,
       cursor,
       limit: 6,
+      participantIds: filters?.participantIds ?? [],
+      tagIds: filters?.tagIds ?? [],
+      ...(filters?.dueDateFrom != null && { dueDateFrom: filters.dueDateFrom }),
+      ...(filters?.dueDateTo != null && { dueDateTo: filters.dueDateTo }),
+      ...(filters?.sortBy != null && { sortBy: filters.sortBy }),
+      sortOrder: filters?.sortOrder ?? "desc",
+      isArchived: filters?.isArchived ?? false,
     }),
-    queryKey: ["action.listByColumn", columnId],
+    queryKey: [
+      "action.listByColumn",
+      columnId,
+      filters?.participantIds?.join(",") ?? "",
+      filters?.tagIds?.join(",") ?? "",
+      filters?.dueDateFrom?.toISOString() ?? "",
+      filters?.dueDateTo?.toISOString() ?? "",
+      filters?.sortBy ?? "",
+      filters?.sortOrder ?? "",
+      String(filters?.isArchived ?? false),
+    ],
     enabled,
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -93,12 +120,26 @@ interface ListActionByWorkspace {
   workspaceId: string;
   limit?: number;
   page?: number;
+  participantIds?: string[];
+  tagIds?: string[];
+  dueDateFrom?: Date | null;
+  dueDateTo?: Date | null;
+  sortBy?: "createdAt" | "dueDate" | "priority" | "title";
+  sortOrder?: "asc" | "desc";
+  isArchived?: boolean;
 }
 
 export const useListActionByWorkspace = ({
   workspaceId,
   limit = 20,
   page = 1,
+  participantIds = [],
+  tagIds = [],
+  dueDateFrom = null,
+  dueDateTo = null,
+  sortBy = "createdAt",
+  sortOrder = "desc",
+  isArchived = false,
 }: ListActionByWorkspace) => {
   const { data, isLoading } = useQuery(
     orpc.action.listByWorkspace.queryOptions({
@@ -106,6 +147,13 @@ export const useListActionByWorkspace = ({
         workspaceId,
         limit,
         page,
+        participantIds,
+        tagIds,
+        ...(dueDateFrom != null && { dueDateFrom }),
+        ...(dueDateTo != null && { dueDateTo }),
+        sortBy,
+        sortOrder,
+        isArchived,
       },
     }),
   );

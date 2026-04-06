@@ -52,5 +52,5 @@
   <ellipse cx="100" cy="137" rx="16" ry="3.5" fill="white" opacity="0.2"/>
   <!-- Name label -->
   <text x="100" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="15" fill="#b3e5fc" letter-spacing="1">TERRA</text>
-  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0">< 100 pts</text>
+  <text x="100" y="173" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#7a5fc0"> 100 pts</text>
 </svg>

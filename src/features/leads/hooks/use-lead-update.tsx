@@ -20,11 +20,13 @@ export function useMutationLeadUpdate(leadId: string, trackingId: string) {
           queryKey: ["conversations.list", trackingId],
         });
         queryClient.invalidateQueries({
-          queryKey: [
-            "leads.listLeadsByStatus",
-            data.lead.statusId,
-            data.lead.trackingId,
-          ],
+          queryKey: orpc.status.getMany.queryKey({
+            input: { trackingId: data.lead.trackingId },
+          }),
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["leads.listLeadsByStatus"],
         });
       },
       onError: () => {

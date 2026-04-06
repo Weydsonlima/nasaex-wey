@@ -12,7 +12,12 @@ import { PersonalizarMenu } from "./personalizar-menu";
 
 // ─── Filter Bar ───────────────────────────────────────────────────────────────
 
-type Filter = "all" | "installed" | "development" | "available" | "personalizar";
+type Filter =
+  | "all"
+  | "installed"
+  | "development"
+  | "available"
+  | "personalizar";
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "Todos" },
@@ -53,7 +58,7 @@ export function AppsPage() {
   const devCount = APPS.filter((a) => a.status === "development").length;
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-background w-full">
       {/* Hero Header */}
       <div className="relative overflow-hidden border-b bg-linear-to-br from-[#7C3AED]/5 via-background to-background">
         {/* Background decoration */}
@@ -62,7 +67,7 @@ export function AppsPage() {
           <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-[#7C3AED]/3 blur-2xl" />
         </div>
 
-        <div className="relative px-6 py-10 max-w-5xl mx-auto">
+        <div className="relative px-6 py-10 mx-auto">
           <div className="flex items-center justify-end gap-2 mb-4">
             <SpacePointWidget />
             <StarsWidget />
@@ -108,7 +113,7 @@ export function AppsPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="px-6 py-4 max-w-5xl mx-auto">
+      <div className="px-6 py-4 mx-auto">
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((f) => {
             const count =
@@ -148,7 +153,7 @@ export function AppsPage() {
       </div>
 
       {/* Grid / Personalizar */}
-      <div className="px-6 pb-10 max-w-5xl mx-auto">
+      <div className="px-6 pb-10  mx-auto">
         {filter === "personalizar" ? (
           <PersonalizarMenu />
         ) : filteredApps.length === 0 ? (

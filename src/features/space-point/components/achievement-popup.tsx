@@ -105,7 +105,14 @@ function Particle({ delay, color }: { delay: number; color: string }) {
   );
 }
 
-const CONFETTI_COLORS = ["#7a1fe7", "#a855f7", "#ec4899", "#fbbf24", "#34d399", "#60a5fa"];
+const CONFETTI_COLORS = [
+  "#7a1fe7",
+  "#a855f7",
+  "#ec4899",
+  "#fbbf24",
+  "#34d399",
+  "#60a5fa",
+];
 
 export function AchievementPopup({ data, onDismiss }: AchievementPopupProps) {
   const [visible, setVisible] = useState(false);

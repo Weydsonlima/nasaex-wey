@@ -66,6 +66,7 @@ import { useSpacePointCtx } from "@/features/space-point/components/space-point-
 import { NBoxItemType } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { useConstructUrl } from "@/hooks/use-construct-url";
+import { HeaderTracking } from "@/features/leads/components/header-tracking";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -741,7 +742,7 @@ export function NBoxApp() {
   return (
     <div className="flex h-svh min-h-0 overflow-hidden">
       {/* ── Left Sidebar ── */}
-      <aside className="w-56 shrink-0 flex flex-col border-r bg-sidebar">
+      <aside className="w-56 shrink-0 hidden flex-col border-r bg-sidebar sm:flex">
         {/* Header */}
         <div className="px-4 py-4 border-b">
           <div className="flex items-center gap-2">
@@ -828,23 +829,12 @@ export function NBoxApp() {
       {/* ── Main Content ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Toolbar */}
+        <HeaderTracking title="NBox" />
+
         <div className="flex items-center gap-3 px-6 py-3 border-b bg-background shrink-0">
           {/* Breadcrumb */}
           <div className="flex items-center gap-1 text-sm text-muted-foreground flex-1 min-w-0">
-            <button
-              onClick={() => setSelectedFolderId(null)}
-              className="hover:text-foreground transition-colors"
-            >
-              N-Box
-            </button>
-            {selectedFolder && (
-              <>
-                <ChevronRightIcon className="size-3.5 shrink-0" />
-                <span className="text-foreground font-medium truncate">
-                  {selectedFolder.name}
-                </span>
-              </>
-            )}
+            <div />
           </div>
 
           {/* Search */}

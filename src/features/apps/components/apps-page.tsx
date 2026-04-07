@@ -9,6 +9,7 @@ import { SpacePointWidget } from "@/features/space-point";
 import { APPS, type AppDef } from "./apps-data";
 import { AppCard, ComingSoonModal } from "./app-card";
 import { PersonalizarMenu } from "./personalizar-menu";
+import { HeaderTracking } from "@/features/leads/components/header-tracking";
 
 // ─── Filter Bar ───────────────────────────────────────────────────────────────
 

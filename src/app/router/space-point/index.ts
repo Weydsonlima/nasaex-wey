@@ -31,40 +31,71 @@ const DEFAULT_LEVELS = [
 
 // ─── Default rules ─────────────────────────────────────────────────────────────
 export const DEFAULT_RULES = [
-  // Leads & Tracking
-  { action: "lead_won",              label: "Lead marcado como ganho",              points: 10, cooldownHours: null, category: "leads"     },
-  { action: "first_lead",            label: "Cadastrar primeiro lead",              points: 20, cooldownHours: null, category: "leads"     },
-  { action: "create_lead",           label: "Criar lead",                           points: 5,  cooldownHours: null, category: "leads"     },
-  { action: "update_lead",           label: "Atualizar lead",                       points: 3,  cooldownHours: 1,    category: "leads"     },
-  { action: "close_tracking",        label: "Fechar tracking (todas as etapas)",    points: 25, cooldownHours: null, category: "leads"     },
-  // Agenda & Eventos
-  { action: "create_event",          label: "Criar evento na agenda",               points: 5,  cooldownHours: 24,   category: "agenda"    },
-  { action: "create_agenda",         label: "Criar agenda",                         points: 8,  cooldownHours: null, category: "agenda"    },
+  // Leads & Tracking (XLSX: Space Points sheet)
+  { action: "lead_won",               label: "Fechar venda (won)",                    points: 100, cooldownHours: null, category: "leads"     },
+  { action: "create_lead",            label: "Criar novo lead",                       points: 10,  cooldownHours: null, category: "leads"     },
+  { action: "lead_attended_5min",     label: "Atender lead em até 5 min",             points: 25,  cooldownHours: null, category: "leads"     },
+  { action: "lead_attended_1min",     label: "Atender lead em até 1 min",             points: 50,  cooldownHours: null, category: "leads"     },
+  { action: "lead_stage_final",       label: "Mover lead para etapa final",           points: 20,  cooldownHours: null, category: "leads"     },
+  { action: "lead_import_batch",      label: "Importar leads (batch)",                points: 30,  cooldownHours: null, category: "leads"     },
+  { action: "first_lead",             label: "Primeiro lead criado (badge)",          points: 50,  cooldownHours: null, category: "leads"     },
+  { action: "first_sale",             label: "Primeira venda fechada (badge)",        points: 200, cooldownHours: null, category: "leads"     },
+  { action: "leads_100_monthly",      label: "100 leads criados no mês",              points: 150, cooldownHours: null, category: "leads"     },
+  { action: "update_lead",            label: "Atualizar lead",                        points: 3,   cooldownHours: 1,    category: "leads"     },
+  // Forge
+  { action: "proposal_sent",          label: "Criar e enviar proposta",               points: 30,  cooldownHours: null, category: "forge"     },
+  { action: "proposal_accepted",      label: "Proposta aceita pelo cliente",          points: 80,  cooldownHours: null, category: "forge"     },
+  { action: "contract_signed",        label: "Gerar contrato assinado",               points: 60,  cooldownHours: null, category: "forge"     },
+  // Workflows & Automações
+  { action: "automation_created",     label: "Criar automação",                       points: 20,  cooldownHours: null, category: "automation" },
+  { action: "automation_executed",    label: "Automação executada com sucesso",       points: 5,   cooldownHours: 1,    category: "automation" },
+  { action: "automations_5_monthly",  label: "5 automações criadas no mês (desafio)", points: 50,  cooldownHours: null, category: "automation" },
+  // NASA Planner
+  { action: "post_scheduled",         label: "Criar post e agendar",                  points: 15,  cooldownHours: null, category: "planner"   },
+  { action: "post_published",         label: "Post publicado com sucesso",            points: 25,  cooldownHours: null, category: "planner"   },
+  { action: "posts_10_monthly",       label: "Publicar 10 posts no mês (desafio)",    points: 75,  cooldownHours: null, category: "planner"   },
+  { action: "create_planner",         label: "Criar planner / mind map",              points: 10,  cooldownHours: null, category: "planner"   },
+  // Agenda
+  { action: "create_event",           label: "Criar agendamento",                     points: 10,  cooldownHours: 24,   category: "agenda"    },
+  { action: "appointment_confirmed",  label: "Agendamento confirmado",                points: 20,  cooldownHours: null, category: "agenda"    },
+  { action: "appointment_done",       label: "Agendamento concluído (done)",          points: 30,  cooldownHours: null, category: "agenda"    },
+  { action: "zero_noshows_monthly",   label: "Zero no-shows no mês (desafio)",        points: 40,  cooldownHours: null, category: "agenda"    },
+  // Chat
+  { action: "send_message",           label: "Responder mensagem",                    points: 5,   cooldownHours: 0.5,  category: "system"    },
+  { action: "conversation_closed",    label: "Conversa encerrada com sucesso",        points: 15,  cooldownHours: null, category: "system"    },
+  { action: "chat_50_monthly",        label: "Responder 50 mensagens no mês",         points: 60,  cooldownHours: null, category: "system"    },
   // Workspace
-  { action: "create_workspace_card", label: "Criar card no workspace",              points: 2,  cooldownHours: 1,    category: "workspace" },
-  { action: "workspace_cards_10day", label: "10 cards no workspace em 1 dia",       points: 15, cooldownHours: 24,   category: "workspace" },
-  // Formulários
-  { action: "send_form",             label: "Enviar formulário",                    points: 3,  cooldownHours: 12,   category: "form"      },
-  // Engajamento & Sistema
-  { action: "daily_login",           label: "Login diário no sistema",              points: 5,  cooldownHours: 24,   category: "system"    },
-  { action: "active_30min",          label: "30 minutos ativo no sistema",          points: 10, cooldownHours: 4,    category: "system"    },
-  { action: "active_2h",             label: "2 horas ativo no sistema",             points: 20, cooldownHours: 8,    category: "system"    },
-  { action: "send_message",          label: "Enviar mensagem no chat",              points: 2,  cooldownHours: 0.5,  category: "system"    },
-  { action: "complete_profile",      label: "Perfil completo (foto + informações)", points: 30, cooldownHours: null, category: "system"    },
-  // Ferramentas
-  { action: "install_integration",   label: "Instalar integração",                  points: 25, cooldownHours: null, category: "tools"     },
-  { action: "create_planner",        label: "Criar plano de ação (Planner)",        points: 10, cooldownHours: null, category: "tools"     },
-  { action: "upload_nbox",           label: "Upload de arquivo no N.Box",           points: 5,  cooldownHours: 2,    category: "tools"     },
+  { action: "create_workspace_card",  label: "Criar tarefa/card",                     points: 5,   cooldownHours: 1,    category: "workspace" },
+  { action: "task_done",              label: "Concluir tarefa",                       points: 15,  cooldownHours: null, category: "workspace" },
+  { action: "tasks_20_monthly",       label: "Concluir 20 tarefas no mês (desafio)",  points: 50,  cooldownHours: null, category: "workspace" },
+  // Forms
+  { action: "send_form",              label: "Criar formulário",                      points: 10,  cooldownHours: null, category: "form"      },
+  { action: "form_10_responses",      label: "Receber 10 respostas no formulário",    points: 25,  cooldownHours: null, category: "form"      },
+  { action: "form_100_responses",     label: "Receber 100 respostas (desafio)",       points: 75,  cooldownHours: null, category: "form"      },
+  // N.Box
+  { action: "upload_nbox",            label: "Upload de arquivo no N.Box",            points: 5,   cooldownHours: 2,    category: "tools"     },
+  { action: "files_10_organized",     label: "Organizar 10 arquivos",                 points: 20,  cooldownHours: null, category: "tools"     },
+  // Integrações
+  { action: "install_integration",    label: "Ativar integração",                     points: 30,  cooldownHours: null, category: "tools"     },
+  { action: "integrations_3",         label: "Ativar 3 integrações (desafio)",        points: 80,  cooldownHours: null, category: "tools"     },
+  // Sistema / Engajamento
+  { action: "daily_login",            label: "Login diário no sistema",               points: 5,   cooldownHours: 24,   category: "system"    },
+  { action: "streak_30_days",         label: "Login 30 dias consecutivos (desafio)",  points: 200, cooldownHours: null, category: "system"    },
+  { action: "complete_profile",       label: "Perfil completo (foto + informações)",  points: 30,  cooldownHours: null, category: "system"    },
+  { action: "use_all_apps",           label: "Usar todos os apps do NASA (desafio)",  points: 300, cooldownHours: null, category: "system"    },
 ];
 
 const CATEGORY_LABEL: Record<string, string> = {
-  leads:     "Leads & Tracking",
-  agenda:    "Agenda & Eventos",
-  workspace: "Workspace",
-  form:      "Formulários",
-  system:    "Engajamento",
-  tools:     "Ferramentas",
-  custom:    "Personalizada",
+  leads:      "Leads & Tracking",
+  forge:      "Forge",
+  automation: "Workflows & Automações",
+  planner:    "NASA Planner",
+  agenda:     "Agenda",
+  workspace:  "Workspace",
+  form:       "Formulários",
+  system:     "Engajamento",
+  tools:      "Ferramentas",
+  custom:     "Personalizada",
 };
 
 // ─── Ensure levels ────────────────────────────────────────────────────────────
@@ -498,31 +529,49 @@ export const adminAdjustUserPoints = base
     return { success: true, newTotal };
   });
 
+const ruleOutput = z.object({
+  id: z.string(), action: z.string(), label: z.string(),
+  points: z.number(), cooldownHours: z.number().nullable(),
+  isActive: z.boolean(), popupTemplateId: z.string().nullable(),
+  popupTemplateName: z.string().nullable(),
+});
+
 export const adminGetOrgRules = base
   .use(requireAdminMiddleware)
   .route({ method: "GET", summary: "Admin: org rules" })
   .input(z.object({ orgId: z.string() }))
-  .output(z.array(z.object({ id: z.string(), action: z.string(), label: z.string(), points: z.number(), cooldownHours: z.number().nullable(), isActive: z.boolean() })))
+  .output(z.array(ruleOutput))
   .handler(async ({ input }) => {
     const rules = await prisma.spacePointRule.findMany({ where: { orgId: input.orgId }, orderBy: { label: "asc" } });
-    return rules.map((r) => ({ id: r.id, action: r.action, label: r.label, points: r.points, cooldownHours: r.cooldownHours, isActive: r.isActive }));
+    const tplIds = [...new Set(rules.map((r) => r.popupTemplateId).filter(Boolean))] as string[];
+    const tplMap: Record<string, string> = {};
+    if (tplIds.length) {
+      const tpls = await prisma.achievementPopupTemplate.findMany({ where: { id: { in: tplIds } }, select: { id: true, name: true } });
+      tpls.forEach((t) => { tplMap[t.id] = t.name; });
+    }
+    return rules.map((r) => ({
+      id: r.id, action: r.action, label: r.label, points: r.points,
+      cooldownHours: r.cooldownHours, isActive: r.isActive,
+      popupTemplateId: r.popupTemplateId ?? null,
+      popupTemplateName: r.popupTemplateId ? (tplMap[r.popupTemplateId] ?? null) : null,
+    }));
   });
 
 export const adminCreateOrgRule = base
   .use(requireAdminMiddleware)
   .route({ method: "POST", summary: "Admin: create rule for org" })
-  .input(z.object({ orgId: z.string(), action: z.string().min(1), label: z.string().min(1), points: z.number().min(1), cooldownHours: z.number().nullable().optional() }))
+  .input(z.object({ orgId: z.string(), action: z.string().min(1), label: z.string().min(1), points: z.number().min(1), cooldownHours: z.number().nullable().optional(), popupTemplateId: z.string().nullable().optional() }))
   .output(z.object({ success: z.boolean(), id: z.string().optional() }))
   .handler(async ({ input }) => {
     const { orgId, ...data } = input;
-    const created = await prisma.spacePointRule.create({ data: { orgId, ...data, cooldownHours: data.cooldownHours ?? null } });
+    const created = await prisma.spacePointRule.create({ data: { orgId, ...data, cooldownHours: data.cooldownHours ?? null, popupTemplateId: data.popupTemplateId ?? null } });
     return { success: true, id: created.id };
   });
 
 export const adminUpdateOrgRule = base
   .use(requireAdminMiddleware)
   .route({ method: "PATCH", summary: "Admin: update org rule" })
-  .input(z.object({ id: z.string(), points: z.number().min(0).optional(), cooldownHours: z.number().nullable().optional(), isActive: z.boolean().optional(), label: z.string().optional() }))
+  .input(z.object({ id: z.string(), points: z.number().min(0).optional(), cooldownHours: z.number().nullable().optional(), isActive: z.boolean().optional(), label: z.string().optional(), popupTemplateId: z.string().nullable().optional() }))
   .output(z.object({ success: z.boolean() }))
   .handler(async ({ input }) => {
     const { id, ...data } = input;

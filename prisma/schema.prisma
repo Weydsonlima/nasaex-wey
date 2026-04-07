@@ -2109,15 +2109,16 @@ model SpacePointLevel {
 
 /// Per-org configurable rules: which actions earn how many points
 model SpacePointRule {
-  id            String   @id @default(cuid())
-  orgId         String   @map("org_id")
-  action        String   // "lead_won" | "create_event" | "create_agenda" | "create_workspace_card" …
-  label         String   // human-readable, shown in settings
-  points        Int      @default(0)
-  cooldownHours Int?     @map("cooldown_hours") // null = unlimited
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt      @map("updated_at")
+  id                String   @id @default(cuid())
+  orgId             String   @map("org_id")
+  action            String   // "lead_won" | "create_event" | "create_agenda" | "create_workspace_card" …
+  label             String   // human-readable, shown in settings
+  points            Int      @default(0)
+  cooldownHours     Int?     @map("cooldown_hours") // null = unlimited
+  isActive          Boolean  @default(true) @map("is_active")
+  popupTemplateId   String?  @map("popup_template_id") // optional linked popup template
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt      @map("updated_at")
 
   org          Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   transactions SpacePointTransaction[]

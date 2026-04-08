@@ -165,6 +165,7 @@ model Organization {
   sentShares       ActionShare[]     @relation("SentShares")
   receivedShares   ActionShare[]     @relation("ReceivedShares")
   spacePointRules  SpacePointRule[]
+  starRules        StarRule[]
   spacePoints      UserSpacePoint[]
   spacePointPrizes SpacePointRankingPrize[]
 
@@ -2105,6 +2106,26 @@ model SpacePointLevel {
   seals          UserSpacePointSeal[]
 
   @@map("space_point_level")
+}
+
+/// Per-org Star consumption rules (debits per action)
+model StarRule {
+  id                String   @id @default(cuid())
+  orgId             String   @map("org_id")
+  action            String
+  label             String
+  stars             Int      @default(0)  // 0 = free
+  cooldownHours     Int?     @map("cooldown_hours")
+  isActive          Boolean  @default(true) @map("is_active")
+  popupTemplateId   String?  @map("popup_template_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt      @map("updated_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, action])
+  @@index([orgId])
+  @@map("star_rule")
 }
 
 /// Per-org configurable rules: which actions earn how many points

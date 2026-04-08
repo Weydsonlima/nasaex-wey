@@ -8,6 +8,7 @@ import { AchievementPopup, type AchievementData } from "./achievement-popup";
 import { useEarnSpacePoints, useSpacePoint } from "../hooks/use-space-point";
 
 interface PopupTemplateData {
+  id: string;
   name: string;
   title: string;
   message: string;
@@ -35,7 +36,7 @@ export function SpacePointProvider({ children }: { children: React.ReactNode }) 
   const { data: sp } = useSpacePoint();
 
   useEffect(() => {
-    fetch("/api/admin/popup-templates")
+    fetch("/api/popup-templates")
       .then((r) => r.json())
       .then((data) => Array.isArray(data) && setPopupTemplates(data))
       .catch(() => {});
@@ -58,6 +59,27 @@ export function SpacePointProvider({ children }: { children: React.ReactNode }) 
       const result = await earnMutation({ action, description, metadata });
       if (!result.awarded) return;
 
+      const isPenalty = result.awarded < 0;
+
+      // Show rule-specific popup template if configured
+      if (result.popupTemplateId) {
+        const tpl = popupTemplates.find((t) => t.id === result.popupTemplateId) ?? getTemplate(isPenalty ? "penalty" : "achievement");
+        setAchievement({
+          type:    isPenalty ? "achievement" : "achievement",
+          title:   isPenalty ? "Penalidade aplicada" : description ?? `+${result.awarded} pts ✨`,
+          message: isPenalty ? `${Math.abs(result.awarded)} SPs debitados.` : `+${result.awarded} Space Points conquistados!`,
+          template: tpl as AchievementData["template"],
+          vars: {
+            nova_conquista:          description ?? action,
+            quantidade_space_points: String(result.totalPoints),
+            quantidade_stars:        String(Math.abs(result.awarded)),
+            nome_plano:              sp?.currentLevel?.name ?? "",
+            meu_ranking:             "",
+          },
+        });
+        return;
+      }
+
       if (result.newSeals.length > 0) {
         const seal = result.newSeals[result.newSeals.length - 1];
         const tpl = getTemplate("level_up");
@@ -77,11 +99,13 @@ export function SpacePointProvider({ children }: { children: React.ReactNode }) 
             meu_ranking:             "",
           },
         });
+      } else if (isPenalty) {
+        toast.error(`${result.awarded} pts ⚠️`, { description: description, duration: 3500 });
       } else {
         toast(`+${result.awarded} pts ✨`, { duration: 2500 });
       }
     } catch { /* silently fail */ }
-  }, [earnMutation]);
+  }, [earnMutation, popupTemplates, sp]);
 
   // ── Near-level notification ────────────────────────────────────────────────
   useEffect(() => {

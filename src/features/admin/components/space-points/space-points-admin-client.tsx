@@ -2,364 +2,14 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
-import {
-  Search, Plus, ChevronRight,
-  Users, Settings, BarChart2, Zap, Bell,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Search, ChevronRight, Users, Settings, BarChart2 } from "lucide-react";
+import { OrgUsersTab } from "./org-users-tab";
+import { OrgRulesTab } from "./org-rules-tab";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-interface TopOrg {
-  orgId: string; orgName: string; orgLogo: string | null;
-  totalPoints: number; userCount: number;
-}
-
+interface TopOrg { orgId: string; orgName: string; orgLogo: string | null; totalPoints: number; userCount: number }
 interface OrgOption { id: string; name: string; slug: string }
 
-// ── Hooks ──────────────────────────────────────────────────────────────────────
-function useAdminOrgUsers(orgId: string | null, page: number) {
-  return useQuery({
-    ...orpc.spacePoint.adminOrgUsers.queryOptions({ input: { orgId: orgId ?? "", page, limit: 20 } }),
-    queryKey: ["admin", "spacePoints", "orgUsers", orgId, page],
-    enabled: !!orgId,
-    staleTime: 30_000,
-  });
-}
-
-function useAdminOrgRules(orgId: string | null) {
-  return useQuery({
-    ...orpc.spacePoint.adminOrgRules.queryOptions({ input: { orgId: orgId ?? "" } }),
-    queryKey: ["admin", "spacePoints", "orgRules", orgId],
-    enabled: !!orgId,
-    staleTime: 30_000,
-  });
-}
-
-function useAdminAdjust() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { userId: string; orgId: string; points: number; description: string }) =>
-      orpc.spacePoint.adminAdjust.call(vars),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["admin", "spacePoints", "orgUsers", vars.orgId] });
-      toast.success("Pontos ajustados!");
-    },
-    onError: () => toast.error("Erro ao ajustar pontos"),
-  });
-}
-
-function useAdminCreateRule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { orgId: string; action: string; label: string; points: number; cooldownHours?: number | null; popupTemplateId?: string | null }) =>
-      orpc.spacePoint.adminCreateRule.call(vars),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["admin", "spacePoints", "orgRules", vars.orgId] });
-      toast.success("Regra criada!");
-    },
-    onError: () => toast.error("Erro ao criar regra"),
-  });
-}
-
-function useAdminUpdateRule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: { id: string; orgId: string; points?: number; isActive?: boolean; label?: string; cooldownHours?: number | null; popupTemplateId?: string | null }) =>
-      orpc.spacePoint.adminUpdateRule.call({ id: vars.id, points: vars.points, isActive: vars.isActive, label: vars.label, cooldownHours: vars.cooldownHours, popupTemplateId: vars.popupTemplateId }),
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["admin", "spacePoints", "orgRules", vars.orgId] });
-    },
-  });
-}
-
-function usePopupTemplates() {
-  return useQuery({
-    queryKey: ["admin", "popupTemplates"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/popup-templates");
-      const data = await res.json();
-      return (data as { id: string; name: string }[]) ?? [];
-    },
-    staleTime: 60_000,
-  });
-}
-
-// ── Adjust modal ───────────────────────────────────────────────────────────────
-function AdjustModal({ userId, orgId, userName, totalPoints, onClose }: {
-  userId: string; orgId: string; userName: string; totalPoints: number; onClose: () => void;
-}) {
-  const [amount, setAmount]   = useState(0);
-  const [reason, setReason]   = useState("");
-  const { mutateAsync, isPending } = useAdminAdjust();
-
-  const handleSubmit = async () => {
-    if (amount === 0) return toast.error("Insira um valor diferente de 0");
-    await mutateAsync({ userId, orgId, points: amount, description: reason || (amount > 0 ? "Pontos adicionados pelo admin" : "Pontos removidos pelo admin") });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-80 space-y-4">
-        <h3 className="text-sm font-bold text-white">Ajustar pontos — {userName}</h3>
-        <p className="text-xs text-zinc-400">Total atual: <span className="text-violet-300 font-bold">{totalPoints.toLocaleString("pt-BR")} pts</span></p>
-
-        <div className="space-y-2">
-          <label className="text-xs text-zinc-400">Valor (positivo = adicionar, negativo = remover)</label>
-          <input type="number" value={amount} onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
-            className="w-full text-sm bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs text-zinc-400">Motivo (opcional)</label>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex: Premiação do mês"
-            className="w-full text-sm bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-        </div>
-
-        <div className="flex gap-2 pt-2">
-          <button onClick={onClose} className="flex-1 text-sm py-2 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700">Cancelar</button>
-          <button onClick={handleSubmit} disabled={isPending || amount === 0}
-            className="flex-1 text-sm py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
-            {isPending ? "..." : "Confirmar"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Org users list ─────────────────────────────────────────────────────────────
-function OrgUsersTab({ orgId }: { orgId: string }) {
-  const [page, setPage]           = useState(1);
-  const [search, setSearch]       = useState("");
-  const [adjusting, setAdjusting] = useState<{ userId: string; name: string; total: number } | null>(null);
-  const { data, isLoading } = useAdminOrgUsers(orgId, page);
-
-  const filtered = (data?.users ?? []).filter((u) =>
-    !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="space-y-3">
-      {adjusting && (
-        <AdjustModal
-          userId={adjusting.userId} orgId={orgId}
-          userName={adjusting.name} totalPoints={adjusting.total}
-          onClose={() => setAdjusting(null)}
-        />
-      )}
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar usuário..."
-          className="w-full pl-8 pr-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-12 rounded-lg bg-zinc-800 animate-pulse" />)}</div>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-zinc-500 text-center py-6">Nenhum usuário encontrado.</p>
-      ) : (
-        <div className="space-y-1">
-          {filtered.map((u, idx) => (
-            <div key={u.userId} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-all">
-              <span className="text-xs text-zinc-500 w-5 shrink-0">{(page - 1) * 20 + idx + 1}</span>
-              <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 border border-zinc-700">
-                {u.image
-                  ? <Image src={u.image} alt={u.name} fill className="object-cover" />
-                  : <div className="w-full h-full bg-violet-900 flex items-center justify-center text-xs text-white font-bold">
-                      {u.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-                    </div>
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{u.name}</p>
-                <p className="text-[10px] text-zinc-500 truncate">{u.email} {u.levelName ? `· ${u.levelName}` : ""}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-violet-300">{u.totalPoints.toLocaleString("pt-BR")} pts</p>
-                <p className="text-[10px] text-zinc-500">{u.weeklyPoints} esta semana</p>
-              </div>
-              <button onClick={() => setAdjusting({ userId: u.userId, name: u.name, total: u.totalPoints })}
-                title="Ajustar pontos"
-                className="shrink-0 h-8 w-8 flex items-center justify-center rounded-lg bg-zinc-700 hover:bg-violet-600/30 transition-all text-zinc-400 hover:text-violet-300">
-                <Zap className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {data && data.total > 20 && (
-        <div className="flex items-center justify-between pt-2">
-          <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-40">← Anterior</button>
-          <span className="text-xs text-zinc-500">Página {page} · {data.total} total</span>
-          <button disabled={page * 20 >= data.total} onClick={() => setPage((p) => p + 1)}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-40">Próximo →</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Org rules tab ──────────────────────────────────────────────────────────────
-function OrgRulesTab({ orgId }: { orgId: string }) {
-  const { data: rules, isLoading } = useAdminOrgRules(orgId);
-  const { data: popupTemplates = [] } = usePopupTemplates();
-  const { mutateAsync: updateRule } = useAdminUpdateRule();
-  const { mutateAsync: createRule, isPending: creating } = useAdminCreateRule();
-  const [expandedRule, setExpandedRule] = useState<string | null>(null);
-  const [showCreate, setShowCreate]   = useState(false);
-  const [newAction, setNewAction]     = useState("");
-  const [newLabel, setNewLabel]       = useState("");
-  const [newPoints, setNewPoints]     = useState(5);
-  const [newCooldown, setNewCooldown] = useState("");
-  const [newTemplateId, setNewTemplateId] = useState<string>("");
-
-  const handleCreate = async () => {
-    if (!newAction.trim() || !newLabel.trim()) return toast.error("Preencha os campos obrigatórios");
-    await createRule({
-      orgId,
-      action: newAction.toLowerCase().replace(/\s+/g, "_"),
-      label: newLabel,
-      points: newPoints,
-      cooldownHours: newCooldown ? parseFloat(newCooldown) : null,
-      popupTemplateId: newTemplateId || null,
-    });
-    setShowCreate(false); setNewAction(""); setNewLabel(""); setNewPoints(5); setNewCooldown(""); setNewTemplateId("");
-  };
-
-  return (
-    <div className="space-y-3">
-      {isLoading ? (
-        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-12 rounded-lg bg-zinc-800 animate-pulse" />)}</div>
-      ) : (
-        <div className="space-y-1.5">
-          {(rules ?? []).map((rule) => {
-            const isExpanded = expandedRule === rule.id;
-            return (
-              <div key={rule.id} className={cn("rounded-lg border transition-all",
-                rule.isActive ? "bg-zinc-800/50 border-zinc-700" : "bg-zinc-900 border-zinc-800 opacity-50")}>
-                {/* Row */}
-                <div className="flex items-center gap-3 px-3 py-2.5">
-                  {/* Active toggle */}
-                  <button
-                    onClick={() => updateRule({ id: rule.id, orgId, isActive: !rule.isActive })}
-                    className={cn("w-8 h-5 rounded-full transition-all shrink-0", rule.isActive ? "bg-violet-600" : "bg-zinc-700")}>
-                    <div className={cn("w-4 h-4 rounded-full bg-white shadow mx-0.5 transition-transform", rule.isActive ? "translate-x-3" : "")} />
-                  </button>
-
-                  {/* Label + action */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{rule.label}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[10px] text-zinc-500 font-mono">{rule.action}{rule.cooldownHours ? ` · ⏱ ${rule.cooldownHours}h` : ""}</p>
-                      {rule.popupTemplateId && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
-                          <Bell className="w-2.5 h-2.5" /> {rule.popupTemplateName ?? "Template"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <span className="text-sm font-bold text-violet-300 shrink-0">{rule.points} pts</span>
-
-                  {/* Expand to configure template */}
-                  <button
-                    onClick={() => setExpandedRule(isExpanded ? null : rule.id)}
-                    title="Configurar template de popup"
-                    className={cn("shrink-0 h-6 w-6 flex items-center justify-center rounded transition-all",
-                      rule.popupTemplateId ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20" : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700"
-                    )}
-                  >
-                    <Bell className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* Expanded: template selector */}
-                {isExpanded && (
-                  <div className="px-3 pb-3 pt-0 border-t border-zinc-700/50 mt-0">
-                    <p className="text-[11px] text-zinc-400 mt-2 mb-1.5 font-medium flex items-center gap-1.5">
-                      <Bell className="w-3 h-3 text-amber-400" />
-                      Template de popup ao ganhar pontos nesta regra
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={rule.popupTemplateId ?? ""}
-                        onChange={(e) => updateRule({ id: rule.id, orgId, popupTemplateId: e.target.value || null })}
-                        className="flex-1 text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                      >
-                        <option value="">— Sem popup —</option>
-                        {popupTemplates.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                      {rule.popupTemplateId && (
-                        <button
-                          onClick={() => updateRule({ id: rule.id, orgId, popupTemplateId: null })}
-                          className="text-[10px] text-red-400 hover:text-red-300 px-2 py-1.5 rounded hover:bg-red-500/10 transition-all shrink-0"
-                        >
-                          Remover
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {showCreate ? (
-        <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 space-y-2">
-          <p className="text-xs font-semibold text-violet-400">Nova regra</p>
-          <div className="grid grid-cols-2 gap-2">
-            <input placeholder="Identificador (ex: minha_acao)" value={newAction} onChange={(e) => setNewAction(e.target.value)}
-              className="col-span-2 text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-            <input placeholder="Descrição" value={newLabel} onChange={(e) => setNewLabel(e.target.value)}
-              className="col-span-2 text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-            <input type="number" min={1} placeholder="Pontos" value={newPoints} onChange={(e) => setNewPoints(parseInt(e.target.value) || 1)}
-              className="text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-            <input type="number" min={0} step={0.5} placeholder="Cooldown (h)" value={newCooldown} onChange={(e) => setNewCooldown(e.target.value)}
-              className="text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-violet-500" />
-            <div className="col-span-2">
-              <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 mb-1">
-                <Bell className="w-3 h-3 text-amber-400" /> Template de popup (opcional)
-              </label>
-              <select
-                value={newTemplateId}
-                onChange={(e) => setNewTemplateId(e.target.value)}
-                className="w-full text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-              >
-                <option value="">— Sem popup —</option>
-                {popupTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => setShowCreate(false)} className="text-xs text-zinc-400 hover:text-white px-3 py-1">Cancelar</button>
-            <button onClick={handleCreate} disabled={creating} className="text-xs bg-violet-600 text-white px-3 py-1.5 rounded-lg hover:bg-violet-700 disabled:opacity-50">
-              {creating ? "..." : "Criar"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setShowCreate(true)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-violet-500/30 text-violet-400 hover:bg-violet-500/10 transition-all text-xs">
-          <Plus className="w-3.5 h-3.5" /> Nova regra para esta empresa
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ── Org panel ──────────────────────────────────────────────────────────────────
 function OrgPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
   const [tab, setTab] = useState<"users" | "rules">("users");
 
@@ -368,11 +18,11 @@ function OrgPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-800/50">
         <p className="text-sm font-semibold text-white">{orgName}</p>
         <div className="flex gap-1 bg-zinc-900 rounded-lg p-0.5">
-          {[
+          {([
             { key: "users", icon: Users,    label: "Usuários" },
             { key: "rules", icon: Settings, label: "Regras"   },
-          ].map(({ key, icon: Icon, label }) => (
-            <button key={key} onClick={() => setTab(key as "users" | "rules")}
+          ] as const).map(({ key, icon: Icon, label }) => (
+            <button key={key} onClick={() => setTab(key)}
               className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
                 tab === key ? "bg-violet-600 text-white" : "text-zinc-400 hover:text-white")}>
               <Icon className="w-3 h-3" />{label}
@@ -387,25 +37,18 @@ function OrgPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
   );
 }
 
-// ── Main client ────────────────────────────────────────────────────────────────
-interface Props {
-  topOrgs: TopOrg[];
-  allOrgs: OrgOption[];
-}
+interface Props { topOrgs: TopOrg[]; allOrgs: OrgOption[] }
 
 export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [search, setSearch]           = useState("");
 
-  const filteredOrgs = allOrgs.filter((o) =>
-    !search || o.name.toLowerCase().includes(search.toLowerCase())
-  );
-
+  const filteredOrgs   = allOrgs.filter((o) => !search || o.name.toLowerCase().includes(search.toLowerCase()));
   const selectedOrgName = allOrgs.find((o) => o.id === selectedOrg)?.name ?? "";
 
   return (
     <div className="grid grid-cols-[280px_1fr] gap-6">
-      {/* ── Left: Top orgs + selector ── */}
+      {/* Left: top orgs + selector */}
       <div className="space-y-4">
         <div>
           <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Top Empresas</h2>
@@ -416,13 +59,9 @@ export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
                   selectedOrg === org.orgId ? "bg-violet-600/20 border border-violet-500/40" : "bg-zinc-900 border border-zinc-800 hover:bg-zinc-800")}>
                 <span className="text-xs text-zinc-500 w-4 shrink-0">#{idx + 1}</span>
                 {org.orgLogo ? (
-                  <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0">
-                    <Image src={org.orgLogo} alt={org.orgName} fill className="object-cover" />
-                  </div>
+                  <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0"><Image src={org.orgLogo} alt={org.orgName} fill className="object-cover" /></div>
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-violet-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0">
-                    {org.orgName[0]}
-                  </div>
+                  <div className="w-6 h-6 rounded-full bg-violet-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0">{org.orgName[0]}</div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-white truncate">{org.orgName}</p>
@@ -454,7 +93,7 @@ export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
         </div>
       </div>
 
-      {/* ── Right: org panel ── */}
+      {/* Right: org panel */}
       <div>
         {selectedOrg ? (
           <OrgPanel orgId={selectedOrg} orgName={selectedOrgName} />

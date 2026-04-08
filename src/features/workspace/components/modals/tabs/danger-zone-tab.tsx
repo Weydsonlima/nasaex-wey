@@ -12,8 +12,15 @@ export function DangerZoneTab({ workspace, onDeleted }: Props) {
   const deleteWorkspace = useDeleteWorkspace();
 
   const handleDelete = () => {
-    if (confirm("Tem certeza que deseja deletar este workspace? Esta ação é irreversível.")) {
-      deleteWorkspace.mutate({ workspaceId: workspace.id }, { onSuccess: onDeleted });
+    if (
+      confirm(
+        "Tem certeza que deseja deletar este workspace? Esta ação é irreversível.",
+      )
+    ) {
+      deleteWorkspace.mutate(
+        { workspaceId: workspace.id },
+        { onSuccess: onDeleted },
+      );
     }
   };
 
@@ -21,13 +28,21 @@ export function DangerZoneTab({ workspace, onDeleted }: Props) {
     <div className="max-w-2xl space-y-6">
       <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-lg space-y-4">
         <div>
-          <h3 className="text-lg font-medium text-destructive">Deletar Workspace</h3>
+          <h3 className="text-lg font-medium text-destructive">
+            Deletar Workspace
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Uma vez deletado, todos os dados relacionados ao workspace serão perdidos. Você não poderá deletar se houver ações vinculadas.
+            Uma vez deletado, todos os dados relacionados ao workspace serão
+            perdidos. Você não poderá deletar se houver ações vinculadas.
           </p>
         </div>
-        <Button variant="destructive" onClick={handleDelete} disabled={deleteWorkspace.isPending}>
-          {deleteWorkspace.isPending ? "Deletando..." : "Deletar Workspace Permanentemente"}
+        <Button
+          variant="destructive"
+          onClick={handleDelete}
+          disabled={deleteWorkspace.isPending}
+          className="w-full sm:w-auto"
+        >
+          {deleteWorkspace.isPending ? "Deletando..." : "Deletar"}
         </Button>
       </div>
     </div>

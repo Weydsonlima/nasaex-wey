@@ -75,7 +75,7 @@ export function LabelsTab({ workspaceId }: { workspaceId: string }) {
       </div>
 
       {/* Create */}
-      <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 border rounded-lg bg-muted/30">
         <div className="flex items-center gap-2 flex-wrap">
           {PRESET_COLORS.map((c) => (
             <button
@@ -125,7 +125,7 @@ export function LabelsTab({ workspaceId }: { workspaceId: string }) {
             className="flex items-center gap-3 p-3 border rounded-lg bg-background group flex-col sm:flex-row"
           >
             {editingId === tag.id ? (
-              <div className="">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {PRESET_COLORS.map((c) => (
                     <button
@@ -153,22 +153,24 @@ export function LabelsTab({ workspaceId }: { workspaceId: string }) {
                   autoFocus
                   onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
                 />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-8 text-emerald-600"
-                  onClick={handleSaveEdit}
-                >
-                  <Check className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-8"
-                  onClick={() => setEditingId(null)}
-                >
-                  <X className="size-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 text-emerald-600"
+                    onClick={handleSaveEdit}
+                  >
+                    <Check className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8"
+                    onClick={() => setEditingId(null)}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <>

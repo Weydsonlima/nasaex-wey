@@ -13,7 +13,11 @@ import dayjs from "dayjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import "dayjs/locale/pt-br";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import {
   Empty,
@@ -45,6 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useDeleteTracking } from "../hooks/use-trackings";
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
@@ -62,20 +67,18 @@ function TrackingCard({ tracking }: { tracking: Tracking }) {
   const [open, setOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const deleteTracking = useMutation(
-    orpc.tracking.delete.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: orpc.tracking.list.queryKey(),
-        });
-        toast.success(`${data.trackingName} arquivado por 30 dias antes da exclusão permanente`);
-        setShowDeleteConfirm(false);
+  const deleteTracking = useDeleteTracking();
+
+  const handleDeleteTracking = () => {
+    deleteTracking.mutate(
+      { trackingId: tracking.id },
+      {
+        onSuccess: () => {
+          setShowDeleteConfirm(false);
+        },
       },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    })
-  );
+    );
+  };
 
   return (
     <>
@@ -86,17 +89,15 @@ function TrackingCard({ tracking }: { tracking: Tracking }) {
               <div className="flex-1">
                 <CardTitle>{tracking.name}</CardTitle>
                 <CardDescription>
-                  {tracking.description ? tracking.description : "Sem descrição"}
+                  {tracking.description
+                    ? tracking.description
+                    : "Sem descrição"}
                 </CardDescription>
               </div>
               <div onClick={(e) => e.preventDefault()}>
                 <DropdownMenu open={open} onOpenChange={setOpen}>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -132,7 +133,10 @@ function TrackingCard({ tracking }: { tracking: Tracking }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar tracking?</AlertDialogTitle>
             <AlertDialogDescription>
-              O tracking "{tracking.name}" será arquivado por 30 dias. Durante este período, você poderá recuperá-lo. Após 30 dias, será deletado permanentemente. Esta ação pode ser rastreada em Configurações &gt; Histórico.
+              O tracking "{tracking.name}" será arquivado por 30 dias. Durante
+              este período, você poderá recuperá-lo. Após 30 dias, será deletado
+              permanentemente. Esta ação pode ser rastreada em Configurações
+              &gt; Histórico.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
@@ -140,7 +144,7 @@ function TrackingCard({ tracking }: { tracking: Tracking }) {
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteTracking.mutate({ trackingId: tracking.id })}
+              onClick={() => handleDeleteTracking()}
               disabled={deleteTracking.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -159,12 +163,12 @@ export function TrackingList() {
   const { onOpen } = useTracking();
 
   const { data: trackings, isLoading } = useSuspenseQuery(
-    orpc.tracking.list.queryOptions()
+    orpc.tracking.list.queryOptions(),
   );
 
   const trackingList = query
     ? trackings.filter((tracking) =>
-        tracking.name.toLowerCase().includes(query.toLowerCase())
+        tracking.name.toLowerCase().includes(query.toLowerCase()),
       )
     : trackings;
 
@@ -195,8 +199,8 @@ export function TrackingList() {
               </EmptyMedia>
               <EmptyTitle>Nenhum tracking encontrado</EmptyTitle>
               <EmptyDescription>
-                Você não possui nenhum tracking criado ainda. Comece criando
-                seu primeiro tracking
+                Você não possui nenhum tracking criado ainda. Comece criando seu
+                primeiro tracking
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>

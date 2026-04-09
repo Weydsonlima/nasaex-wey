@@ -22,6 +22,26 @@ export const useSuspenseTrackings = () => {
   return useSuspenseQuery(orpc.tracking.list.queryOptions());
 };
 
+export const useDeleteTracking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    orpc.tracking.delete.mutationOptions({
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({
+          queryKey: orpc.tracking.list.queryKey(),
+        });
+        toast.success(
+          `${data.trackingName} arquivado por 30 dias antes da exclusão permanente`,
+        );
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    }),
+  );
+};
+
 export const useSuspenseParticipants = ({
   trackingId,
 }: {

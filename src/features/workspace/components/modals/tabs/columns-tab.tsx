@@ -19,7 +19,6 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Decimal } from "@prisma/client/runtime/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -68,20 +67,10 @@ export function ColumnsTab({ workspaceId }: { workspaceId: string }) {
       const prev = newColumns[newIndex - 1];
       const next = newColumns[newIndex + 1];
 
-      let newOrder: string;
-      if (!prev && next) {
-        newOrder = new Decimal(next.order).minus(1000).toString();
-      } else if (prev && !next) {
-        newOrder = new Decimal(prev.order).plus(1000).toString();
-      } else if (prev && next) {
-        newOrder = new Decimal(prev.order).plus(next.order).div(2).toString();
-      } else {
-        newOrder = "1000";
-      }
-
       reorderColumn.mutate({
         id: active.id as string,
-        order: newOrder,
+        beforeId: prev?.id,
+        afterId: next?.id,
       });
     }
   };

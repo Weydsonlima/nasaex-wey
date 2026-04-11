@@ -3,10 +3,25 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+
+async function resolveApiKey(orgId: string): Promise<string | null> {
+  // 1. Env var (configurado no servidor)
+  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+
+  // 2. Chave configurada em qualquer Planner da organização
+  const planner = await prisma.nasaPlanner.findFirst({
+    where: { organizationId: orgId, anthropicApiKey: { not: null } },
+    select: { anthropicApiKey: true },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return planner?.anthropicApiKey ?? null;
+}
 
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  if (!session?.user || !session.session.activeOrganizationId) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
@@ -15,9 +30,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Informe um Instagram ou URL do site" }, { status: 400 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = await resolveApiKey(session.session.activeOrganizationId);
   if (!apiKey) {
-    return NextResponse.json({ error: "Chave da API Anthropic não configurada" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Chave da API Anthropic não configurada. Acesse um Planner → aba IA e insira sua chave." },
+      { status: 500 }
+    );
   }
 
   const anthropic = createAnthropic({ apiKey });
@@ -61,6 +79,12 @@ Responda APENAS com um JSON válido no seguinte formato (sem markdown, sem expli
     return NextResponse.json({ brand });
   } catch (error: any) {
     console.error("[extract-brand] error:", error);
+    if (error?.status === 401) {
+      return NextResponse.json(
+        { error: "Chave da API Anthropic inválida. Verifique em Planner → aba IA." },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: "Erro ao extrair informações da marca. Tente novamente." },
       { status: 500 }

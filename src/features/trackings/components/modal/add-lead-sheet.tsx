@@ -58,7 +58,7 @@ import {
 
 import { useState, useEffect } from "react";
 import { FieldError } from "@/components/ui/field";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -103,7 +103,8 @@ export default function AddLeadSheet({
   const queryClient = useQueryClient();
   const { earn } = useSpacePointCtx();
   const { status, isLoadingStatus } = useStatus(trackingId ?? "");
-  const { data: projects = [], isLoading: isLoadingProjects } = orpc.orgProjects.list.useQuery();
+  const { data: projectsData, isLoading: isLoadingProjects } = useQuery(orpc.orgProjects.list.queryOptions({ input: {} }));
+  const projects = projectsData?.projects ?? [];
   const [selectedCountry, setSelectedCountry] = useState(countries[0]);
   const [validateNumber, setValidateNumber] = useState(true);
 

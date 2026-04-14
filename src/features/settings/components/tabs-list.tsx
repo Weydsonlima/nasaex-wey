@@ -8,6 +8,7 @@ import {
   FileInput,
   Clock,
   Bell,
+  FolderIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,6 +26,12 @@ const tabsLink = [
     href: "/company",
     icon: Building2Icon,
     singleAllowed: true, // visible but read-only
+  },
+  {
+    label: "Projetos/Clientes",
+    href: "/projects",
+    icon: FolderIcon,
+    singleAllowed: true,
   },
   {
     label: "Membros",

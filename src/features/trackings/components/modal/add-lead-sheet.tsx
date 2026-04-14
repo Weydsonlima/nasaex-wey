@@ -58,7 +58,7 @@ import {
 
 import { useState, useEffect } from "react";
 import { FieldError } from "@/components/ui/field";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -73,6 +73,7 @@ import {
 import { countries } from "@/types/some";
 import { normalizePhone, phoneMask } from "@/utils/format-phone";
 import { Switch } from "@/components/ui/switch-variable";
+import { useOrgProjects } from "@/features/org-projects/hooks/use-org-projects";
 
 const schema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
@@ -84,6 +85,7 @@ const schema = z.object({
   position: z.enum(["first", "last"], {
     error: "Selecione uma posição",
   }),
+  orgProjectId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -102,6 +104,7 @@ export default function AddLeadSheet({
   const queryClient = useQueryClient();
   const { earn } = useSpacePointCtx();
   const { status, isLoadingStatus } = useStatus(trackingId ?? "");
+  const { projects, isLoading: isLoadingProjects } = useOrgProjects();
   const [selectedCountry, setSelectedCountry] = useState(countries[0]);
   const [validateNumber, setValidateNumber] = useState(true);
 
@@ -123,6 +126,7 @@ export default function AddLeadSheet({
       statusId: "",
       tags: [],
       position: "first",
+      orgProjectId: "",
     },
   });
 
@@ -200,6 +204,7 @@ export default function AddLeadSheet({
       position: data.position,
       tagIds: selectedTags,
       validateNumber,
+      orgProjectId: data.orgProjectId || undefined,
     });
   };
 
@@ -374,6 +379,38 @@ export default function AddLeadSheet({
 
             {errors.statusId && (
               <FieldError>{errors.statusId.message}</FieldError>
+            )}
+          </div>
+
+          {/* Projetos/Clientes */}
+          <div className="flex flex-col gap-y-2">
+            <Label>Projetos/Clientes</Label>
+
+            {isLoadingProjects ? (
+              <Skeleton className="h-10" />
+            ) : (
+              <Controller
+                name="orgProjectId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isCreatingLead}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione um projeto/cliente (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects?.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             )}
           </div>
 

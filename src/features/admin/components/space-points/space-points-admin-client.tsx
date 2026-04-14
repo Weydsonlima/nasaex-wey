@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
 import {
   Search,
@@ -17,6 +15,8 @@ import {
   BarChart2,
   Zap,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 import { toast } from "sonner";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -503,22 +503,14 @@ function OrgPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-800/50">
         <p className="text-sm font-semibold text-white">{orgName}</p>
         <div className="flex gap-1 bg-zinc-900 rounded-lg p-0.5">
-          {[
-            { key: "users", icon: Users, label: "Usuários" },
-            { key: "rules", icon: Settings, label: "Regras" },
-          ].map(({ key, icon: Icon, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key as "users" | "rules")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                tab === key
-                  ? "bg-violet-600 text-white"
-                  : "text-zinc-400 hover:text-white",
-              )}
-            >
-              <Icon className="w-3 h-3" />
-              {label}
+          {([
+            { key: "users", icon: Users,    label: "Usuários" },
+            { key: "rules", icon: Settings, label: "Regras"   },
+          ] as const).map(({ key, icon: Icon, label }) => (
+            <button key={key} onClick={() => setTab(key)}
+              className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                tab === key ? "bg-violet-600 text-white" : "text-zinc-400 hover:text-white")}>
+              <Icon className="w-3 h-3" />{label}
             </button>
           ))}
         </div>
@@ -534,11 +526,7 @@ function OrgPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
   );
 }
 
-// ── Main client ────────────────────────────────────────────────────────────────
-interface Props {
-  topOrgs: TopOrg[];
-  allOrgs: OrgOption[];
-}
+interface Props { topOrgs: TopOrg[]; allOrgs: OrgOption[] }
 
 export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
@@ -552,7 +540,7 @@ export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
 
   return (
     <div className="grid grid-cols-[280px_1fr] gap-6">
-      {/* ── Left: Top orgs + selector ── */}
+      {/* Left: top orgs + selector */}
       <div className="space-y-4">
         <div>
           <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
@@ -583,9 +571,7 @@ export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
                     />
                   </div>
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-violet-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0">
-                    {org.orgName[0]}
-                  </div>
+                  <div className="w-6 h-6 rounded-full bg-violet-900 flex items-center justify-center text-[9px] text-white font-bold shrink-0">{org.orgName[0]}</div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-white truncate">
@@ -636,7 +622,7 @@ export function SpacePointsAdminClient({ topOrgs, allOrgs }: Props) {
         </div>
       </div>
 
-      {/* ── Right: org panel ── */}
+      {/* Right: org panel */}
       <div>
         {selectedOrg ? (
           <OrgPanel orgId={selectedOrg} orgName={selectedOrgName} />

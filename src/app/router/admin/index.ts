@@ -26,6 +26,7 @@ import { adminUpdateMember }   from "./update-member";
 import { listPlatformAssets, setPlatformAsset, deletePlatformAsset, listSpaceLevels, updateSpaceLevel } from "./assets";
 import { listGatewayConfigs, setGatewayConfig, deleteGatewayConfig, toggleGatewayActive, listStarsPayments } from "./payments";
 import { listOrgDistributions, setOrgDistribution, setOrgMemberBudget } from "./star-distribution";
+import { adminGetStarRules, adminCreateStarRule, adminUpdateStarRule } from "./star-rules";
 
 export const adminRouter = {
   getDashboard,
@@ -72,4 +73,8 @@ export const adminRouter = {
   listOrgDistributions,
   setOrgDistribution,
   setOrgMemberBudget,
+  // Star rules
+  adminGetStarRules,
+  adminCreateStarRule,
+  adminUpdateStarRule,
 };

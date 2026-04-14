@@ -27,14 +27,16 @@ import { nasaCommandRouter } from "./nasa-command";
 import { permissionsRouter } from "./permissions";
 import { activityRouter } from "./activity";
 import { formRouter } from "./form";
-import { adminRouter } from "./admin";
-import { userNotificationsRouter } from "./user-notifications";
-import { sidebarPrefsRouter } from "./sidebar-prefs";
-import { spacePointRouter } from "./space-point";
-import { userRouter } from "./user";
-import { publicRouter } from "./public";
-import { plansRouter } from "./plans";
-import { paymentRouter } from "./payment";
+import { adminRouter }              from "./admin";
+import { userNotificationsRouter }  from "./user-notifications";
+import { sidebarPrefsRouter }       from "./sidebar-prefs";
+import { spacePointRouter }          from "./space-point";
+import { userRouter }                from "./user";
+import { publicRouter }              from "./public";
+import { plansRouter }               from "./plans";
+import { paymentRouter }             from "./payment";
+import { orgProjectsRouter }         from "./org-projects";
+import { clientPortalRouter }        from "./client-portal";
 import { supportRouter } from "./support";
 
 export const router = {
@@ -70,9 +72,11 @@ export const router = {
   userNotifications: userNotificationsRouter,
   sidebarPrefs: sidebarPrefsRouter,
   spacePoint: spacePointRouter,
-  user: userRouter,
-  public: publicRouter,
-  plans: plansRouter,
-  payment: paymentRouter,
+  user:       userRouter,
+  public:     publicRouter,
+  plans:      plansRouter,
+  payment:    paymentRouter,
+  orgProjects: orgProjectsRouter,
+  clientPortal: clientPortalRouter,
   support: supportRouter,
 };

@@ -27,6 +27,12 @@ const tabsLink = [
     singleAllowed: true, // visible but read-only
   },
   {
+    label: "Projetos/Clientes",
+    href: "/projects",
+    icon: FolderIcon,
+    singleAllowed: true,
+  },
+  {
     label: "Membros",
     href: "/members",
     icon: UsersIcon,

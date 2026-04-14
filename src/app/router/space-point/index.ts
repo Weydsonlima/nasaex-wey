@@ -1,8 +1,26 @@
-import { base } from "@/app/middlewares/base";
-import { requiredAuthMiddleware } from "@/app/middlewares/auth";
-import { requireAdminMiddleware } from "@/app/middlewares/admin";
-import prisma from "@/lib/prisma";
-import { z } from "zod";
+export { DEFAULT_RULES, CATEGORY_LABEL } from "./defaults";
+
+export {
+  getMySpacePoint, earnSpacePoints, getSpacePointRanking, getUserStats,
+  getSpacePointRules, updateSpacePointRule, createSpacePointRule, deleteSpacePointRule,
+  getSpacePointPrizes, upsertSpacePointPrize, deleteSpacePointPrize,
+} from "./user-routes";
+
+export {
+  adminGetSpaceOverview, adminGetOrgUsers, adminAdjustUserPoints,
+  adminGetOrgRules, adminCreateOrgRule, adminUpdateOrgRule,
+} from "./admin-routes";
+
+import {
+  getMySpacePoint, earnSpacePoints, getSpacePointRanking, getUserStats,
+  getSpacePointRules, updateSpacePointRule, createSpacePointRule, deleteSpacePointRule,
+  getSpacePointPrizes, upsertSpacePointPrize, deleteSpacePointPrize,
+} from "./user-routes";
+
+import {
+  adminGetSpaceOverview, adminGetOrgUsers, adminAdjustUserPoints,
+  adminGetOrgRules, adminCreateOrgRule, adminUpdateOrgRule,
+} from "./admin-routes";
 
 // ─── Default levels ────────────────────────────────────────────────────────────
 const DEFAULT_LEVELS = [
@@ -1362,5 +1380,3 @@ export const spacePointRouter = {
   adminCreateRule: adminCreateOrgRule,
   adminUpdateRule: adminUpdateOrgRule,
 };
-
-export { CATEGORY_LABEL };

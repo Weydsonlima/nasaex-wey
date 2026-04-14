@@ -1,21 +1,8 @@
 "use client";
 
+import { ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -24,118 +11,63 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { orpc } from "@/lib/orpc";
-import { FolderOpen, ListFilter, XIcon } from "lucide-react";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Separator } from "@/components/ui/separator";
 import { useActionFilters } from "../hooks/use-action-filters";
+import {
+  ParticipantsFilter,
+  TagsFilter,
+  DateFilter,
+  SortFilter,
+  ArchivedFilter,
+  ProjectsFilter,
+} from "./filters";
 
-export function FiltersSheet() {
-  const { filters, setFilters } = useActionFilters();
-  const { data: projectsData, isLoading: isLoadingProjects } = useQuery(
-    orpc.orgProjects.list.queryOptions({ input: {} })
-  );
-  const projects = projectsData?.projects ?? [];
-  const [search, setSearch] = useState("");
-  const [popoverOpen, setPopoverOpen] = useState(false);
+interface Props {
+  workspaceId: string;
+}
 
-  const selectedProjects = filters.projectIds;
-
-  const handleProjectToggle = (projectId: string) => {
-    const isSelected = selectedProjects.includes(projectId);
-    const newProjects = isSelected
-      ? selectedProjects.filter((p) => p !== projectId)
-      : [...selectedProjects, projectId];
-    setFilters({ ...filters, projectIds: newProjects });
-  };
-
-  const clearProjects = () => {
-    setFilters({ ...filters, projectIds: [] });
-  };
-
-  const filteredProjects = projects.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const selectedCount = selectedProjects.length;
+export function FiltersSheet({ workspaceId }: Props) {
+  const { activeCount, clearFilters } = useActionFilters();
 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button size="icon-sm" variant="ghost">
+        <Button size="icon-sm" variant="ghost" className="relative">
           <ListFilter className="size-4" />
+          {activeCount > 0 && (
+            <Badge className="absolute -top-1 -right-1 size-4 p-0 flex items-center justify-center text-[10px]">
+              {activeCount}
+            </Badge>
+          )}
         </Button>
       </SheetTrigger>
-      <SheetContent hideOverlay>
-        <SheetHeader>
-          <SheetTitle>Filtros</SheetTitle>
-          <SheetDescription>
-            Aplique filtros para refinar sua busca.
-          </SheetDescription>
+      <SheetContent hideOverlay className="flex flex-col gap-0 p-0 sm:max-w-lg">
+        <SheetHeader className="p-4 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <SheetTitle>Filtros</SheetTitle>
+              <SheetDescription>Refine sua busca de ações.</SheetDescription>
+            </div>
+            {activeCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground hover:text-destructive"
+                onClick={clearFilters}
+              >
+                Limpar tudo ({activeCount})
+              </Button>
+            )}
+          </div>
         </SheetHeader>
 
-        <div className="flex flex-col gap-2 px-4">
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant={selectedCount > 0 ? "default" : "outline"}
-                className="justify-start"
-                size="sm"
-              >
-                <FolderOpen className="size-4" />
-                Projetos/Clientes
-                {selectedCount > 0 && (
-                  <span className="text-xs font-medium">{selectedCount}</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="p-0">
-              <Command>
-                <CommandInput
-                  value={search}
-                  onValueChange={setSearch}
-                  placeholder="Buscar projetos..."
-                />
-                <CommandList>
-                  <CommandEmpty>
-                    {isLoadingProjects
-                      ? "Carregando projetos..."
-                      : "Nenhum projeto encontrado."}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {filteredProjects.map((project) => {
-                      const isSelected = selectedProjects.includes(project.id);
-                      return (
-                        <CommandItem
-                          key={project.id}
-                          value={project.id}
-                          className="cursor-pointer"
-                          onSelect={() => handleProjectToggle(project.id)}
-                        >
-                          <Checkbox checked={isSelected} />
-                          {project.name}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-                <CommandSeparator />
-                <div className="p-2 flex justify-end items-center gap-2">
-                  {selectedCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1"
-                      onClick={clearProjects}
-                    >
-                      <XIcon className="size-3" />
-                      Limpar
-                    </Button>
-                  )}
-                </div>
-              </Command>
-            </PopoverContent>
-          </Popover>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <ProjectsFilter variant="list" />
+          <ParticipantsFilter workspaceId={workspaceId} variant="list" />
+          <TagsFilter workspaceId={workspaceId} variant="list" />
+          <DateFilter variant="list" />
+          <SortFilter variant="list" />
+          <ArchivedFilter variant="list" />
         </div>
       </SheetContent>
     </Sheet>

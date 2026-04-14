@@ -110,7 +110,9 @@ const KanbanBoard = ({ workspaceId }: Props) => {
       const type = event.active.data?.current?.type;
 
       if (type === "Action" && filters.sortBy !== "order") {
-        toast.info("A ordenação manual só é refletida quando o filtro de ordenação está em 'Manual'.");
+        toast.info(
+          "A ordenação manual só é refletida quando o filtro de ordenação está em 'Manual'.",
+        );
       }
 
       setIsDragging(true);
@@ -190,7 +192,9 @@ const KanbanBoard = ({ workspaceId }: Props) => {
 
         if (overType === "Action") {
           targetColumnId =
-            useActionKanbanStore.getState().findActionColumn(over.id as string) ??
+            useActionKanbanStore
+              .getState()
+              .findActionColumn(over.id as string) ??
             over.data?.current?.action.columnId;
         } else if (overType === "Column") {
           targetColumnId = over.data?.current?.column.id;
@@ -302,7 +306,9 @@ const KanbanBoard = ({ workspaceId }: Props) => {
         createPortal(
           <DragOverlay>
             {activeColumn && <WorkspaceColumn {...activeColumn} isOverlay />}
-            {activeAction && <KanbanCard action={activeAction} />}
+            {activeAction && (
+              <KanbanCard action={activeAction} isOverlay={true} />
+            )}
           </DragOverlay>,
           document.body,
         )}

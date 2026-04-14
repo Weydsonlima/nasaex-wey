@@ -47,7 +47,10 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
 
           {/* Filters bar */}
           <div className="px-4 py-2 border-b bg-background/80 flex items-center justify-between gap-2 flex-wrap">
-            <FiltersBar workspaceId={workspaceId} />
+            <div className="flex items-center gap-2">
+              <FiltersBar workspaceId={workspaceId} />
+              <FiltersSheet workspaceId={workspaceId} />
+            </div>
             <Button
               size="sm"
               className="w-full lg:w-auto"
@@ -59,10 +62,10 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
           </div>
 
           {/* Filters bar */}
-          <div className="px-4 py-2 border-b bg-background/80 flex items-center gap-2 flex-wrap">
-            <FiltersSheet />
+          {/* <div className="px-4 py-2 border-b bg-background/80 flex items-center gap-2 flex-wrap">
+            <FiltersSheet workspaceId={workspaceId} />
             <FiltersBar workspaceId={workspaceId} />
-          </div>
+          </div> */}
 
           <div className="flex-1 overflow-auto">
             <div className={cn("h-full", view !== "list" && "hidden")}>

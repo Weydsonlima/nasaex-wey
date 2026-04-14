@@ -26,6 +26,7 @@ import { useActionStore } from "../../context/use-action";
 
 interface Props {
   action: Action;
+  isOverlay?: boolean;
 }
 
 const PRIORITY_COLOR: Record<ActionPriority, string> = {
@@ -59,15 +60,21 @@ function formatDueDate(date: Date) {
 // Placeholder cover shown when card has no image
 const PLACEHOLDER_BG = "bg-linear-to-br from-muted to-muted/40";
 
-export function KanbanCard({ action }: Props) {
+export function KanbanCard({ action, isOverlay }: Props) {
   const [open, setOpen] = useState(false);
   const coverUrl = useConstructUrl((action as any).coverImage || "");
 
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({
-      id: action.id,
-      data: { type: "Action", action },
-    });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: action.id,
+    data: { type: "Action", action },
+  });
 
   const style = { transition, transform: CSS.Translate.toString(transform) };
 
@@ -99,6 +106,7 @@ export function KanbanCard({ action }: Props) {
           action.isDone && "opacity-60",
           selected && "ring-0.5 ring-foreground/10 border-foreground/10",
           // isDragging && "opacity-60",
+          isDragging && "opacity-50",
         )}
       >
         {/* ── COVER IMAGE ─────────────────────────────────── */}
@@ -184,47 +192,37 @@ export function KanbanCard({ action }: Props) {
                   {tag.name}
                 </span>
               ))}
-
-            {/* {!hasCover && (
-              <div
-                className="ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <CardActionsMenu
-                  actionId={action.id}
-                  workspaceId={action.workspaceId}
-                  isFavorited={(action as any).isFavorited}
-                  isArchived={(action as any).isArchived}
-                  className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
-                />
-              </div>
-            )} */}
           </div>
 
           {/* Title */}
           <div className="relative flex items-start gap-2">
-            <div
-              className={cn(
-                "absolute left-0 top-1 transition-all duration-300 cursor-pointer z-20",
-                selected
-                  ? "opacity-100 translate-x-0"
-                  : "opacity-0 -translate-x-4 group-hover/card:translate-x-0 group-hover/card:opacity-100",
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleAction(action.id);
-              }}
-            >
-              {selected ? (
-                <CircleCheckIcon className="size-4 text-primary fill-primary/10 drop-shadow-sm" />
-              ) : (
-                <CircleIcon className="size-4 text-primary drop-shadow-sm" />
-              )}
-            </div>
+            {(!isOverlay || selected) && (
+              <div
+                className={cn(
+                  "absolute left-0 top-1 transition-all duration-300 cursor-pointer z-20",
+                  selected
+                    ? "opacity-100 translate-x-0"
+                    : "opacity-0 -translate-x-4 group-hover/card:translate-x-0 group-hover/card:opacity-100",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleAction(action.id);
+                }}
+              >
+                {selected ? (
+                  <CircleCheckIcon className="size-4 text-primary fill-primary/10 drop-shadow-sm" />
+                ) : (
+                  <CircleIcon className="size-4 text-primary drop-shadow-sm" />
+                )}
+              </div>
+            )}
             <p
               className={cn(
                 "text-sm font-semibold leading-snug line-clamp-2 transition-transform duration-300",
-                (selected || true) && "group-hover/card:translate-x-5 pr-3",
+
+                (selected || true) &&
+                  !isOverlay &&
+                  "group-hover/card:translate-x-5 pr-3",
                 selected && "translate-x-5",
                 action.isDone && "line-through text-muted-foreground",
               )}

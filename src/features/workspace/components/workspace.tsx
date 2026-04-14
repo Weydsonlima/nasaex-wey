@@ -1,10 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
 import { ActionsViewSwitcher } from "@/features/actions/components/actions-view-switcher";
 import { useWorkspace } from "../hooks/use-workspace";
 import { useConstructUrl } from "@/hooks/use-construct-url";
-import { IncomingSharesPanel } from "./incoming-shares-panel";
 import { NavWorkspace } from "@/features/actions/components/nav-workspace";
 
 interface Props {

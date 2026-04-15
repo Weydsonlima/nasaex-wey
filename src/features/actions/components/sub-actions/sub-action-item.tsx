@@ -24,6 +24,7 @@ import {
   XIcon,
   UserPlusIcon,
   CheckIcon,
+  EditIcon,
 } from "lucide-react";
 import { Action } from "../../types";
 
@@ -78,7 +79,12 @@ export function SubActionItem({
     : "";
 
   return (
-    <div className="rounded-md border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+    <div
+      className={cn(
+        "rounded-md border border-transparent hover:border-border hover:bg-muted/40 transition-colors",
+        isExpanded && "border-border",
+      )}
+    >
       <div className="flex items-center gap-2 px-2 py-1.5 group">
         <Checkbox
           checked={sub.isDone}
@@ -160,14 +166,17 @@ export function SubActionItem({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={onEditTitleStart} className="gap-2">
-              <PlusIcon className="size-3.5 rotate-45" />
+            <DropdownMenuItem
+              onClick={onEditTitleStart}
+              className="cursor-pointer"
+            >
+              <EditIcon className="size-3.5" />
               Renomear
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onPromote(sub.id)}
               disabled={isUpdating}
-              className="gap-2"
+              className="cursor-pointer"
             >
               <ArrowUpRightIcon className="size-3.5" />
               Transformar em ação
@@ -176,7 +185,8 @@ export function SubActionItem({
             <DropdownMenuItem
               onClick={() => onDelete(sub.id)}
               disabled={isDeleting}
-              className="gap-2 text-destructive focus:text-destructive"
+              variant="destructive"
+              className="cursor-pointer"
             >
               <XIcon className="size-3.5" />
               Deletar

@@ -28,6 +28,7 @@ import { ActiveOrganization } from "@/lib/auth-types";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Update
 export function TeamSwitcher() {
@@ -36,6 +37,7 @@ export function TeamSwitcher() {
     React.useState<ActiveOrganization | null>();
   const { data: organizations } = authClient.useListOrganizations();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const organizationsSorted = organizations?.sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -58,6 +60,7 @@ export function TeamSwitcher() {
     setOrganizationActive(organization);
     toast.success("Sucesso!");
 
+    queryClient.invalidateQueries();
     router.refresh();
   };
 

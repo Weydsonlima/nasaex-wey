@@ -1,6 +1,7 @@
 import { NavWorkspace } from "@/features/workspace/components/nav-workspace";
 import { WorkspaceBoard } from "@/features/workspace/components/workspace";
 import { client } from "@/lib/orpc";
+import { redirect } from "next/navigation";
 
 interface Props {
   params: Promise<{ workspaceId: string }>;
@@ -10,16 +11,21 @@ interface Props {
 export default async function Page({ params }: Props) {
   const { workspaceId } = await params;
 
-  const { workspace } = await client.workspace.get({
-    workspaceId,
-  });
+  try {
+    const { workspace } = await client.workspace.get({
+      workspaceId,
+    });
 
-  return (
-    <>
-      <NavWorkspace workspaceId={workspaceId} title={workspace.name} />
-      <WorkspaceBoard workspaceId={workspaceId} />
-    </>
-  );
+    return (
+      <>
+        <NavWorkspace workspaceId={workspaceId} title={workspace.name} />
+        <WorkspaceBoard workspaceId={workspaceId} />
+      </>
+    );
+  } catch (error) {
+    console.error("Erro ao carregar workspace:", error);
+    redirect("/workspaces");
+  }
 }
 
 // function getMetadataBaseUrl() {

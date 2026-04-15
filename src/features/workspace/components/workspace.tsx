@@ -10,12 +10,12 @@ interface Props {
 }
 
 export function WorkspaceBoard({ workspaceId }: Props) {
-  const { data } = useWorkspace(workspaceId);
-  const coverImageUrl = useConstructUrl(data?.workspace?.coverImage || "");
+  const { workspace } = useWorkspace(workspaceId);
+  const coverImageUrl = useConstructUrl(workspace?.coverImage || "");
 
   return (
     <div className="h-full w-full relative overflow-x-auto scroll-cols-tracking">
-      {data?.workspace?.coverImage && (
+      {workspace?.coverImage && (
         <div
           className="absolute inset-0 z-0 pointer-events-none opacity-[0.08] dark:opacity-[0.12] bg-cover bg-center"
           style={{

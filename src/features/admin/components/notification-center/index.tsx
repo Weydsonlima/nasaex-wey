@@ -20,7 +20,8 @@ import {
   NOTIFICATION_TEMPLATES,
   interpolateTemplate,
   type NotificationTemplate,
-} from "../lib/notification-templates";
+} from "../../lib/notification-templates";
+import { DeleteNotification } from "./delete-notification";
 
 interface Notification {
   id: string;
@@ -463,12 +464,17 @@ export function NotificationCenterV2({
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-xs text-zinc-500">
-                    {new Date(n.createdAt).toLocaleDateString("pt-BR")}
-                  </p>
-                  <p className="text-xs text-zinc-600 mt-1">
-                    {n.readCount} leitura(s)
-                  </p>
+                  <div className="flex flex-col items-end gap-2">
+                    <p className="text-xs text-zinc-500">
+                      {new Date(n.createdAt).toLocaleDateString("pt-BR")}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-zinc-600">
+                        {n.readCount} leitura(s)
+                      </p>
+                      <DeleteNotification notificationId={n.id} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -79,7 +79,7 @@ export const updateLeadAction = base
         leadAction === "WON" ? "lead_won" : "penalty_lead_lost_nofollowup";
 
       try {
-        const result = await awardPoints(
+        await awardPoints(
           userId,
           leadExists.tracking.organizationId,
           spAction,
@@ -87,30 +87,6 @@ export const updateLeadAction = base
             ? "Lead marcado como ganho 🎉"
             : "Lead marcado como perdido ❌",
         );
-
-        if (result.points !== 0 || result.newSeals.length > 0) {
-          const channelName = `private-user-${userId}`;
-          console.log(
-            `[leads/update-action] Disparando Pusher para ${channelName}`,
-            {
-              points: result.points,
-              action: spAction,
-            },
-          );
-
-          await pusherServer.trigger(channelName, "points:updated", {
-            spAwarded: result.points,
-            starsDebited: 0,
-            totalSP: result.totalPoints,
-            popupTemplateId: result.popupTemplateId,
-            newSeals: result.newSeals,
-            action: spAction,
-          });
-        } else {
-          console.log(
-            `[leads/update-action] Nenhuma pontuação a atribuir para ${userId}`,
-          );
-        }
       } catch (spErr) {
         console.error("[leads/update-action] SpacePoint award error:", spErr);
       }

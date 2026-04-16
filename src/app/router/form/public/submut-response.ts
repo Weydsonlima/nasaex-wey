@@ -143,28 +143,13 @@ export const submitResponse = base
               : "form_100_responses";
 
           try {
-            const result = await awardPoints(
+            await awardPoints(
               updatedForm.userId,
               updatedForm.organizationId,
               action,
               undefined,
               { formId: id },
             );
-
-            if (result.points > 0 || result.newSeals.length > 0) {
-              await pusherServer.trigger(
-                `private-user-${updatedForm.userId}`,
-                "points:updated",
-                {
-                  spAwarded: result.points,
-                  starsDebited: 0,
-                  totalSP: result.totalPoints,
-                  popupTemplateId: result.popupTemplateId,
-                  newSeals: result.newSeals,
-                  action,
-                },
-              );
-            }
           } catch (spErr) {
             console.error("[form/submit] SpacePoint award error:", spErr);
             // Não bloqueia o submit do formulário se a pontuação falhar

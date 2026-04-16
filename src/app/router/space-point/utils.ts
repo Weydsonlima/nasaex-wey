@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { DEFAULT_LEVELS, DEFAULT_RULES } from "./defaults";
 import { DEFAULT_STAR_RULES } from "@/data/star-rules";
+import { pusherServer } from "@/lib/pusher";
 
 const EXPECTED_LEVEL_COUNT = DEFAULT_LEVELS.length;
 
@@ -186,6 +187,22 @@ export async function awardPoints(
       badgeUrl: resolveBadgeUrl(lvl.badgeNumber, badgeMap),
     });
   }
+  if (rule.points !== 0 || newSeals.length > 0) {
+    try {
+      const channelName = `private-user-${userId}`;
+      await pusherServer.trigger(channelName, "points:updated", {
+        spAwarded: rule.points,
+        starsDebited: 0,
+        totalSP: newTotal,
+        popupTemplateId: rule.popupTemplateId ?? null,
+        newSeals: newSeals,
+        action: action,
+      });
+    } catch (err) {
+      console.error("[space-point/utils] Pusher trigger error:", err);
+    }
+  }
+
   return {
     points: rule.points,
     newSeals,

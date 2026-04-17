@@ -16,7 +16,7 @@ export const getPublicAppointment = base
             name: true,
             slug: true,
             slotDuration: true,
-            organization: { select: { slug: true, name: true, logoUrl: true } },
+            organization: { select: { slug: true, name: true, logo: true } },
           },
         },
         lead: { select: { name: true, phone: true, email: true } },

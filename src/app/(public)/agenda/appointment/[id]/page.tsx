@@ -90,8 +90,8 @@ export default function PublicAppointmentPage() {
     <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4 gap-6">
       {/* Org header */}
       <div className="flex items-center gap-3">
-        {org.logoUrl ? (
-          <img src={org.logoUrl} alt={org.name} className="size-10 rounded-full object-cover" />
+        {org.logo ? (
+          <img src={org.logo} alt={org.name} className="size-10 rounded-full object-cover" />
         ) : (
           <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
             <BuildingIcon className="size-5 text-primary" />

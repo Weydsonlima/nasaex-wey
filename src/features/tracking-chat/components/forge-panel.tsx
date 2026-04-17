@@ -336,8 +336,9 @@ function ProposalsTab({
   }
 
   return (
-    <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-hidden">
-      <div className="px-3 pt-2 shrink-0">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Search */}
+      <div className="px-3 pt-2 pb-2 shrink-0">
         <div className="relative">
           <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
@@ -349,8 +350,11 @@ function ProposalsTab({
         </div>
       </div>
 
-      {/* Lista com scroll fixo */}
-      <div className="overflow-y-auto px-3 pb-3 flex flex-col gap-1.5" style={{ maxHeight: 340 }}>
+      {/* Lista com scroll — ocupa todo o espaço restante */}
+      <div
+        className="flex flex-col gap-1.5 overflow-y-auto px-3 pb-3"
+        style={{ flex: 1, minHeight: 0 }}
+      >
         {isLoading && (
           <p className="text-xs text-muted-foreground text-center py-4">
             Carregando...
@@ -368,75 +372,78 @@ function ProposalsTab({
           );
           const isExpanded = expandedId === p.id;
           return (
-            <div key={p.id} className="rounded-lg border bg-card overflow-hidden">
-              {/* Header do card — sempre visível */}
-              <div className="flex items-center gap-1 px-3 py-2.5">
+            <div key={p.id} className="rounded-lg border bg-card overflow-hidden shrink-0">
+              {/* Linha principal */}
+              <div className="flex items-center px-2 py-2 gap-2">
+                {/* Chevron + título */}
                 <button
-                  className="flex-1 flex items-center gap-2 text-left min-w-0"
+                  className="flex items-center gap-1.5 text-left flex-1 min-w-0"
                   onClick={() => setExpandedId(isExpanded ? null : p.id)}
                 >
-                  {isExpanded ? (
-                    <ChevronDownIcon className="size-4 text-muted-foreground shrink-0" />
-                  ) : (
-                    <ChevronRightIcon className="size-4 text-muted-foreground shrink-0" />
-                  )}
-                  <span className="text-sm font-medium truncate">
-                    Proposta #{String(p.number).padStart(4, "0")} - {p.title}
-                  </span>
+                  {isExpanded
+                    ? <ChevronDownIcon className="size-3.5 text-muted-foreground shrink-0" />
+                    : <ChevronRightIcon className="size-3.5 text-muted-foreground shrink-0" />
+                  }
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-semibold truncate">
+                      #{String(p.number).padStart(4, "0")} — {p.title}
+                    </span>
+                    <span className="text-xs text-primary font-medium">
+                      {formatBRL(total)}
+                    </span>
+                  </div>
                 </button>
 
-                {/* Botão enviar link sempre visível */}
-                <Button
-                  size="sm"
-                  className="h-7 text-xs shrink-0 gap-1 ml-1"
-                  title="Enviar link no chat"
-                  onClick={() => handleShare(p.publicToken, p.number, p.title)}
-                >
-                  <Share2Icon className="size-3" />
-                  Enviar link
-                </Button>
+                {/* Ações rápidas */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-6"
+                    title="Visualizar proposta"
+                    onClick={() => handleView(p.publicToken)}
+                  >
+                    <EyeIcon className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-6"
+                    title="Copiar link"
+                    onClick={() => handleCopy(p.publicToken)}
+                  >
+                    <LinkIcon className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-6 text-[11px] px-2 gap-1 shrink-0"
+                    title="Enviar link no chat"
+                    onClick={() => handleShare(p.publicToken, p.number, p.title)}
+                  >
+                    <Share2Icon className="size-3" />
+                    Enviar
+                  </Button>
+                </div>
               </div>
 
               {/* Detalhes expandidos */}
               {isExpanded && (
-                <div className="px-3 pb-3 flex flex-col gap-2 border-t">
-                  <p className="text-base font-bold text-primary pt-2">
-                    {formatBRL(total)}
-                  </p>
+                <div className="px-3 pb-2 pt-1 border-t flex flex-col gap-1">
                   {p.responsible && (
                     <p className="text-xs text-muted-foreground">
-                      👤 Responsável: {p.responsible.name}
+                      👤 {p.responsible.name}
                     </p>
                   )}
                   {p.validUntil && (
                     <p className="text-xs text-muted-foreground">
-                      📅 Válida até{" "}
-                      {new Date(p.validUntil).toLocaleDateString("pt-BR")}
+                      📅 Válida até {new Date(p.validUntil).toLocaleDateString("pt-BR")}
                     </p>
                   )}
-                  <div className="flex items-center gap-1.5 pt-1">
+                  <div className="flex justify-end pt-1">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="size-7"
-                      title="Visualizar"
-                      onClick={() => handleView(p.publicToken)}
-                    >
-                      <EyeIcon className="size-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-7"
-                      title="Copiar link"
-                      onClick={() => handleCopy(p.publicToken)}
-                    >
-                      <LinkIcon className="size-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-7 text-destructive hover:text-destructive"
+                      className="size-6 text-destructive hover:text-destructive"
                       onClick={() => deleteProposal.mutate({ id: p.id })}
                       disabled={deleteProposal.isPending}
                     >
@@ -625,7 +632,7 @@ export function ForgePanel({
   }
 
   return (
-    <div className="absolute bottom-full left-0 mb-2 w-[360px] bg-popover border rounded-xl shadow-lg z-50 flex flex-col overflow-hidden max-h-[520px]">
+    <div className="absolute bottom-full left-0 mb-2 w-[380px] bg-popover border rounded-xl shadow-lg z-50 flex flex-col overflow-hidden" style={{ height: 480 }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
@@ -690,7 +697,7 @@ export function ForgePanel({
           </div>
 
           {/* Tab Content */}
-          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex flex-col overflow-hidden" style={{ flex: 1, minHeight: 0 }}>
             {tab === "painel" && <DashboardTab />}
             {tab === "produtos" && <ProductsTab />}
             {tab === "propostas" && (

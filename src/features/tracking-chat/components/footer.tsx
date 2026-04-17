@@ -3,6 +3,7 @@
 import {
   CalendarIcon,
   FileIcon,
+  FileTextIcon,
   HammerIcon,
   ImageIcon,
   MicIcon,
@@ -46,6 +47,7 @@ import { ComposeResponse } from "./compose-response";
 import { ScriptsPanel } from "./scripts-panel";
 import { ForgePanel } from "./forge-panel";
 import { AgendaPanel } from "./agenda-panel";
+import { FormsPanel } from "./forms-panel";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -99,6 +101,7 @@ export function Footer({
   const [showScripts, setShowScripts] = useState(false);
   const [showForge, setShowForge] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
+  const [showForms, setShowForms] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -189,6 +192,15 @@ export function Footer({
         )}
 
         <div className="w-full h-full flex items-center gap-2 lg:gap-4 relative">
+          {showForms && (
+            <FormsPanel
+              onClose={() => setShowForms(false)}
+              onSendLink={(text) => {
+                setMessage((prev) => (prev ? prev + "\n" + text : text));
+                setShowForms(false);
+              }}
+            />
+          )}
           {showScripts && (
             <ScriptsPanel
               trackingId={trackingId}
@@ -242,9 +254,23 @@ export function Footer({
                         <div
                           className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
                           onClick={() => {
+                            setShowForms((v) => !v);
+                            setShowAgenda(false);
+                            setShowScripts(false);
+                            setShowForge(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <FileTextIcon className="size-4" />
+                          <p className="text-sm">Formulários</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
                             setShowAgenda((v) => !v);
                             setShowScripts(false);
                             setShowForge(false);
+                            setShowForms(false);
                             setOpen(false);
                           }}
                         >
@@ -257,6 +283,7 @@ export function Footer({
                             setShowScripts((v) => !v);
                             setShowForge(false);
                             setShowAgenda(false);
+                            setShowForms(false);
                             setOpen(false);
                           }}
                         >
@@ -269,6 +296,7 @@ export function Footer({
                             setShowForge((v) => !v);
                             setShowScripts(false);
                             setShowAgenda(false);
+                            setShowForms(false);
                             setOpen(false);
                           }}
                         >

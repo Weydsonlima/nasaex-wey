@@ -27,6 +27,7 @@ interface AppTemplatesGalleryProps {
   appType: AppType;
   organizationId: string;
   onDuplicate?: (templateId: string) => void;
+  showDelete?: boolean;
 }
 
 interface Template {
@@ -43,6 +44,7 @@ export function AppTemplatesGallery({
   appType,
   organizationId,
   onDuplicate,
+  showDelete = false,
 }: AppTemplatesGalleryProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +85,27 @@ export function AppTemplatesGallery({
 
     fetchTemplates();
   }, [appType, toast]);
+
+  const handleDelete = async (templateId: string) => {
+    setIsDeleting(templateId);
+    try {
+      const response = await fetch(
+        `/api/admin/app-template/${appType}/${templateId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ templateMarkedByModerator: false }),
+        },
+      );
+      if (!response.ok) throw new Error();
+      setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+      toast.success("Padrão removido com sucesso!");
+    } catch {
+      toast.error("Erro ao remover padrão");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   const handleDuplicate = async (templateId: string) => {
     setIsDuplicating(templateId);
@@ -175,6 +198,14 @@ export function AppTemplatesGallery({
               <Copy className="w-3 h-3" />
               {isDuplicating === template.id ? "Duplicando..." : "Duplicar"}
             </button>
+            {showDelete && (
+              <button
+                onClick={() => handleDelete(template.id)}
+                disabled={isDeleting === template.id}
+                className="flex items-center justify-center gap-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3 h-3" />
+                {isDeleting === template.id ? "..." : "Excluir"}
 
             {canManage && (
               <button

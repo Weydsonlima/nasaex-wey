@@ -12,6 +12,7 @@ export function useInfinityConversation(
   currentConversationId?: string,
 ) {
   const queryClient = useQueryClient();
+  const reopenLead = useMutation(orpc.leads.update.mutationOptions({}));
 
   useEffect(() => {
     if (!trackingId) return;
@@ -43,6 +44,7 @@ export function useInfinityConversation(
 
     const messageHandler = (message: any) => {
       let found = false;
+      let reopenLeadId: string | null = null;
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
 
@@ -51,10 +53,23 @@ export function useInfinityConversation(
         const newPages = old.pages.map((page: any) => {
           const newItems = page.items.filter((item: any) => {
             if (item.id === message.conversationId) {
+              const shouldReopen =
+                item?.lead?.statusFlow === "FINISHED";
+
+              if (shouldReopen) {
+                reopenLeadId = item.leadId ?? item?.lead?.id ?? null;
+              }
+
               conversationToMove = {
                 ...item,
                 lastMessage: message,
                 lastMessageAt: message.createdAt,
+                lead: shouldReopen
+                  ? {
+                      ...item.lead,
+                      statusFlow: "ACTIVE",
+                    }
+                  : item.lead,
                 unreadCount:
                   message.conversationId === currentConversationId
                     ? 0
@@ -83,6 +98,13 @@ export function useInfinityConversation(
       if (!found) {
         queryClient.invalidateQueries({ queryKey });
       }
+
+      // Se a conversa estava finalizada e o lead voltou a falar,
+      // reabra o lead no backend para ele sair de "Finalizados".
+      if (reopenLeadId) {
+        reopenLead.mutate({ id: reopenLeadId, statusFlow: "ACTIVE" } as any);
+        queryClient.invalidateQueries({ queryKey: ["conversations.list"] });
+      }
     };
 
     const leadUpdatedHandler = () => {
@@ -98,7 +120,14 @@ export function useInfinityConversation(
       pusherClient.unbind("message:new", messageHandler);
       pusherClient.unbind("lead:updated", leadUpdatedHandler);
     };
-  }, [trackingId, statusId, search, queryClient, currentConversationId]);
+  }, [
+    trackingId,
+    statusId,
+    search,
+    queryClient,
+    currentConversationId,
+    reopenLead,
+  ]);
 }
 
 export function useCreateConversation({ trackingId }: { trackingId: string }) {

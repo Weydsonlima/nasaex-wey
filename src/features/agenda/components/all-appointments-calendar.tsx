@@ -97,7 +97,19 @@ function EventChip({ event }: { event: CalendarEvent }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function AllAppointmentsCalendar() {
+interface AllAppointmentsCalendarProps {
+  leadName?: string;
+  leadPhone?: string;
+  leadEmail?: string;
+  onAppointmentCreated?: (appointmentId: string) => void;
+}
+
+export function AllAppointmentsCalendar({
+  leadName,
+  leadPhone,
+  leadEmail,
+  onAppointmentCreated,
+}: AllAppointmentsCalendarProps = {}) {
   const [value, setValue] = useState<Date>(new Date());
   const { appointments } = useQueryAppointmentsByOrg();
   const reschedule = useRescheduleAppointment();
@@ -275,11 +287,18 @@ export function AllAppointmentsCalendar() {
       )}
 
       {/* Criar agendamento — sem trackingId pré-definido (step 0 selecionará o tracking) */}
-      <CreateAppointmentModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        initialDate={createInitialDate}
-      />
+      {createOpen && (
+        <CreateAppointmentModal
+          key={`create-${leadName ?? ""}-${String(createOpen)}`}
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          initialDate={createInitialDate}
+          initialName={leadName}
+          initialPhone={leadPhone}
+          initialEmail={leadEmail}
+          onSuccess={onAppointmentCreated}
+        />
+      )}
 
       {/* Detalhar agendamento — sempre montado para o Radix animar o fechamento corretamente */}
       <ViewAppointment

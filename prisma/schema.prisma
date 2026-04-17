@@ -276,6 +276,7 @@ model Tracking {
   aiSettings     AiSettings?
   trackingConsultants TrackingConsultant[]
   workspaces     Workspace[]
+  scripts        Script[]
 
   @@map("tracking")
 }
@@ -1133,6 +1134,7 @@ model Appointment {
   startsAt    DateTime          @map("starts_at")
   endsAt      DateTime          @map("ends_at")
   status      AppointmentStatus @default(PENDING)
+  cancelledBy String?           @map("cancelled_by") // "CLIENT" | "SYSTEM"
   agendaId    String            @map("agenda_id")
   leadId      String?           @map("lead_id")
   userId      String?           @map("user_id")
@@ -2880,4 +2882,23 @@ model SupportTicket {
   @@index([userId])
   @@index([status])
   @@map("support_tickets")
+}
+
+
+// ─────────────────────────────────────────────
+// SCRIPTS
+// ─────────────────────────────────────────────
+
+model Script {
+  id         String   @id @default(cuid())
+  name       String
+  content    String   @db.Text
+  trackingId String   @map("tracking_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  @@index([trackingId])
+  @@map("scripts")
 }

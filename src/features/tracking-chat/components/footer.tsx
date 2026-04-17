@@ -1,10 +1,15 @@
 "use client";
 
 import {
+  ArchiveIcon,
+  CalendarIcon,
   FileIcon,
+  FileTextIcon,
+  HammerIcon,
   ImageIcon,
   MicIcon,
   PlusIcon,
+  ScrollTextIcon,
   SendIcon,
   SparklesIcon,
   StickerIcon,
@@ -40,6 +45,11 @@ import { cn } from "@/lib/utils";
 import { EmojiData } from "emoji-picker-react/dist/types/exposedTypes";
 import { MessageSelected } from "./message-selected";
 import { ComposeResponse } from "./compose-response";
+import { ScriptsPanel } from "./scripts-panel";
+import { ForgePanel } from "./forge-panel";
+import { AgendaPanel } from "./agenda-panel";
+import { FormsPanel } from "./forms-panel";
+import { NBoxPanel } from "./nbox-panel";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -90,6 +100,11 @@ export function Footer({
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [message, setMessage] = useState("");
   const [fileName, setFileName] = useState<string | undefined>(undefined);
+  const [showScripts, setShowScripts] = useState(false);
+  const [showForge, setShowForge] = useState(false);
+  const [showAgenda, setShowAgenda] = useState(false);
+  const [showForms, setShowForms] = useState(false);
+  const [showNBox, setShowNBox] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -180,6 +195,57 @@ export function Footer({
         )}
 
         <div className="w-full h-full flex items-center gap-2 lg:gap-4 relative">
+          {showNBox && (
+            <NBoxPanel
+              onClose={() => setShowNBox(false)}
+              onSendItem={(text) => {
+                setMessage((prev) => (prev ? prev + "\n" + text : text));
+                setShowNBox(false);
+              }}
+            />
+          )}
+          {showForms && (
+            <FormsPanel
+              onClose={() => setShowForms(false)}
+              onSendLink={(text) => {
+                setMessage((prev) => (prev ? prev + "\n" + text : text));
+                setShowForms(false);
+              }}
+            />
+          )}
+          {showScripts && (
+            <ScriptsPanel
+              trackingId={trackingId}
+              onClose={() => setShowScripts(false)}
+              onSelectScript={(content) => {
+                setMessage((prev) => prev + content);
+                setShowScripts(false);
+              }}
+              leadName={lead.name}
+              leadPhone={lead.phone ?? undefined}
+            />
+          )}
+          {showForge && (
+            <ForgePanel
+              onClose={() => setShowForge(false)}
+              onInsertLink={(text) => {
+                setMessage((prev) => (prev ? prev + "\n" + text : text));
+                setShowForge(false);
+              }}
+              leadId={lead.id}
+              leadName={lead.name}
+            />
+          )}
+          {showAgenda && (
+            <AgendaPanel
+              onClose={() => setShowAgenda(false)}
+              lead={lead}
+              onInsertLink={(text) => {
+                setMessage((prev) => (prev ? prev + "\n" + text : text));
+                setShowAgenda(false);
+              }}
+            />
+          )}
           {!showAudioRecorder ? (
             <InputGroup
               className={cn(
@@ -197,6 +263,76 @@ export function Footer({
                         <PlusIcon className="cursor-pointer size-4" />
                       </PopoverTrigger>
                       <PopoverContent className="w-fit h-fit p-0">
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowNBox((v) => !v);
+                            setShowForms(false);
+                            setShowAgenda(false);
+                            setShowScripts(false);
+                            setShowForge(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <ArchiveIcon className="size-4" />
+                          <p className="text-sm">N-Box</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowForms((v) => !v);
+                            setShowNBox(false);
+                            setShowAgenda(false);
+                            setShowScripts(false);
+                            setShowForge(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <FileTextIcon className="size-4" />
+                          <p className="text-sm">Formulários</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowAgenda((v) => !v);
+                            setShowScripts(false);
+                            setShowForge(false);
+                            setShowForms(false);
+                            setShowNBox(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <CalendarIcon className="size-4" />
+                          <p className="text-sm">Agenda</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowScripts((v) => !v);
+                            setShowForge(false);
+                            setShowAgenda(false);
+                            setShowForms(false);
+                            setShowNBox(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <ScrollTextIcon className="size-4" />
+                          <p className="text-sm">Scripts</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowForge((v) => !v);
+                            setShowScripts(false);
+                            setShowAgenda(false);
+                            setShowForms(false);
+                            setShowNBox(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <HammerIcon className="size-4" />
+                          <p className="text-sm">Forge</p>
+                        </div>
                         <div className="relative w-full h-full cursor-pointer overflow-hidden">
                           <div className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4">
                             <FileIcon className="size-4" />

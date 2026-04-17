@@ -213,16 +213,7 @@ export function Footer({
             />
           )}
           {showAgenda && (
-            <AgendaPanel
-              onClose={() => setShowAgenda(false)}
-              onInsertLink={(text) => {
-                setMessage((prev) => (prev ? prev + "\n" + text : text));
-                setShowAgenda(false);
-              }}
-              trackingId={trackingId}
-              leadName={lead.name}
-              leadPhone={lead.phone ?? undefined}
-            />
+            <AgendaPanel onClose={() => setShowAgenda(false)} />
           )}
           {!showAudioRecorder ? (
             <InputGroup

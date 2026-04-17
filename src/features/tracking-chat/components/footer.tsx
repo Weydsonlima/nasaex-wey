@@ -2,6 +2,7 @@
 
 import {
   FileIcon,
+  HammerIcon,
   ImageIcon,
   MicIcon,
   PlusIcon,
@@ -42,6 +43,7 @@ import { EmojiData } from "emoji-picker-react/dist/types/exposedTypes";
 import { MessageSelected } from "./message-selected";
 import { ComposeResponse } from "./compose-response";
 import { ScriptsPanel } from "./scripts-panel";
+import { ForgePanel } from "./forge-panel";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -93,6 +95,7 @@ export function Footer({
   const [message, setMessage] = useState("");
   const [fileName, setFileName] = useState<string | undefined>(undefined);
   const [showScripts, setShowScripts] = useState(false);
+  const [showForge, setShowForge] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -195,6 +198,17 @@ export function Footer({
               leadPhone={lead.phone ?? undefined}
             />
           )}
+          {showForge && (
+            <ForgePanel
+              onClose={() => setShowForge(false)}
+              onInsertLink={(text) => {
+                setMessage((prev) => (prev ? prev + "\n" + text : text));
+                setShowForge(false);
+              }}
+              leadId={lead.id}
+              leadName={lead.name}
+            />
+          )}
           {!showAudioRecorder ? (
             <InputGroup
               className={cn(
@@ -216,11 +230,23 @@ export function Footer({
                           className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
                           onClick={() => {
                             setShowScripts((v) => !v);
+                            setShowForge(false);
                             setOpen(false);
                           }}
                         >
                           <ScrollTextIcon className="size-4" />
                           <p className="text-sm">Scripts</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowForge((v) => !v);
+                            setShowScripts(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <HammerIcon className="size-4" />
+                          <p className="text-sm">Forge</p>
                         </div>
                         <div className="relative w-full h-full cursor-pointer overflow-hidden">
                           <div className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4">

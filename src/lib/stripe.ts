@@ -22,17 +22,14 @@ import Stripe from "stripe";
 
 export const STRIPE_PRICE_IDS = {
   plans: {
-    earth: process.env.STRIPE_PRICE_EARTH ?? "price_earth_placeholder",
-    explore: process.env.STRIPE_PRICE_EXPLORE ?? "price_explore_placeholder",
-    constellation:
-      process.env.STRIPE_PRICE_CONSTELLATION ??
-      "price_constellation_placeholder",
+    earth:         process.env.STRIPE_PRICE_EARTH         ?? "price_earth_placeholder",
+    explore:       process.env.STRIPE_PRICE_EXPLORE       ?? "price_explore_placeholder",
+    constellation: process.env.STRIPE_PRICE_CONSTELLATION ?? "price_constellation_placeholder",
   },
   topups: {
-    pkg_100: process.env.STRIPE_PRICE_TOPUP_100 ?? "price_topup100_placeholder",
-    pkg_500: process.env.STRIPE_PRICE_TOPUP_500 ?? "price_topup500_placeholder",
-    pkg_1000:
-      process.env.STRIPE_PRICE_TOPUP_1000 ?? "price_topup1000_placeholder",
+    pkg_100:  process.env.STRIPE_PRICE_TOPUP_100  ?? "price_topup100_placeholder",
+    pkg_500:  process.env.STRIPE_PRICE_TOPUP_500  ?? "price_topup500_placeholder",
+    pkg_1000: process.env.STRIPE_PRICE_TOPUP_1000 ?? "price_topup1000_placeholder",
   },
 } as const;
 
@@ -41,13 +38,13 @@ export const STRIPE_PRICE_IDS = {
 
 const globalForStripe = global as unknown as { _stripe: Stripe | undefined };
 
-export function getStripe(): Stripe {
+function getStripe(): Stripe {
   if (globalForStripe._stripe) return globalForStripe._stripe;
 
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) {
     throw new Error(
-      "STRIPE_SECRET_KEY não configurada. Adicione ao .env para habilitar pagamentos.",
+      "STRIPE_SECRET_KEY não configurada. Adicione ao .env para habilitar pagamentos."
     );
   }
 
@@ -79,7 +76,7 @@ export interface CreateCheckoutParams {
  * Lança erro se STRIPE_SECRET_KEY não estiver configurada.
  */
 export async function createCheckoutSession(
-  params: CreateCheckoutParams,
+  params: CreateCheckoutParams
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
 
@@ -113,7 +110,7 @@ export type StripeWebhookEvent = Stripe.Event;
  */
 export function constructWebhookEvent(
   payload: string | Buffer,
-  signature: string,
+  signature: string
 ): StripeWebhookEvent {
   const stripe = getStripe();
   const secret = process.env.STRIPE_WEBHOOK_SECRET;

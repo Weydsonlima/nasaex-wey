@@ -51,7 +51,6 @@ import {
   type PlanDetail,
 } from "@/components/plan-detail-modal";
 import { PlanPurchaseModal } from "@/features/stars/components/plan-purchase-modal";
-import { useRouter } from "next/navigation";
 
 // ─── CSS Animations ───────────────────────────────────────────────────────────
 const STYLES = `
@@ -2533,7 +2532,7 @@ function PublicPlanCard({
           </Button>
         ) : (
           <Button
-            onClick={() => onPurchase?.(slug)}
+            asChild
             className={cn(
               "w-full font-bold text-sm rounded-xl",
               plan.highlighted
@@ -2545,8 +2544,10 @@ function PublicPlanCard({
                     : "bg-zinc-700/80 hover:bg-zinc-700 text-white border border-zinc-600/50",
             )}
           >
-            {plan.ctaLabel}
-            <ArrowRight className="size-3.5 ml-1.5" />
+            <Link href={plan.ctaHref}>
+              {plan.ctaLabel}
+              <ArrowRight className="size-3.5 ml-1.5" />
+            </Link>
           </Button>
         )}
       </div>
@@ -2571,20 +2572,10 @@ function PlansPublicSection({ isLoggedIn }: { isLoggedIn: boolean }) {
     enabled: isLoggedIn,
   });
   const currentPlanSlug = balanceData?.planSlug;
-  const router = useRouter();
 
   const handlePurchase = (planSlug: string) => {
-    const confirmationUrl = `/subscription/confirm?plan=${planSlug}`;
-
-    if (!isLoggedIn) {
-      // Redirect to sign-in with intent
-      router.push(
-        `/sign-in?callbackUrl=${encodeURIComponent(confirmationUrl)}`,
-      );
-    } else {
-      // Go directly to confirmation page
-      router.push(confirmationUrl);
-    }
+    setPurchasePlanSlug(planSlug);
+    setPurchaseOpen(true);
   };
 
   // Map DB plans → PublicPlanCard shape, fall back to hardcoded

@@ -37,12 +37,13 @@ export function WorkspaceSettingsModal({
   open,
   onOpenChange,
 }: Props) {
-  const { workspace, isLoading } = useWorkspace(workspaceId);
+  const { data: workspaceData, isLoading } = useWorkspace(workspaceId);
   const [view, setView] = useQueryState("workspace_settings", {
     defaultValue: "general",
   });
 
-  if (isLoading || !workspace) return null;
+  if (isLoading || !workspaceData?.workspace) return null;
+  const workspace = workspaceData.workspace;
 
   return (
     <ToastProvider>

@@ -3,6 +3,9 @@ import { requireAuth } from "@/lib/auth-utils";
 import prisma from "@/lib/prisma";
 import { OnboardingGate } from "@/features/onboarding/components/onboarding-gate";
 
+
+
+
 export default async function RouteLayout({
   children,
 }: {
@@ -11,7 +14,7 @@ export default async function RouteLayout({
   const session = await requireAuth();
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where:  { id: session.user.id },
     select: { onboardingCompletedAt: true },
   });
 

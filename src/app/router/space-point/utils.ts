@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import { DEFAULT_LEVELS, DEFAULT_RULES } from "./defaults";
+import { DEFAULT_STAR_RULES } from "@/data/star-rules";
+import { pusherServer } from "@/lib/pusher";
 
 const EXPECTED_LEVEL_COUNT = DEFAULT_LEVELS.length;
 
@@ -12,20 +14,31 @@ export async function ensureLevelsSeed() {
   }
 }
 
-export async function ensureOrgRules(orgId: string) {
+export async function ensureGlobalSpacePointRules() {
   // for (const rule of DEFAULT_RULES) {
-  //   const { category: _cat, ...ruleData } = rule;
+  //   const { category: _cat, ...data } = rule;
   //   await prisma.spacePointRule.upsert({
-  //     where:  { orgId_action: { orgId, action: rule.action } },
-  //     create: { ...ruleData, orgId },
+  //     where: { action: rule.action },
+  //     create: data,
   //     update: {},
   //   });
   // }
 }
 
+export async function ensureOrgStarRules(orgId: string) {
+  for (const rule of DEFAULT_STAR_RULES) {
+    const { category: _cat, ...data } = rule;
+    await prisma.starRule.upsert({
+      where: { orgId_action: { orgId, action: rule.action } },
+      create: { ...data, orgId },
+      update: {},
+    });
+  }
+}
+
 export async function ensureUserPoint(userId: string, orgId: string) {
   return prisma.userSpacePoint.upsert({
-    where: { userId_orgId: { userId, orgId } },
+    where: { userId },
     create: { userId, orgId },
     update: {},
   });
@@ -87,10 +100,11 @@ export async function awardPoints(
   popupTemplateId: string | null;
 }> {
   await ensureLevelsSeed();
-  await ensureOrgRules(orgId);
+  await ensureGlobalSpacePointRules();
+  await ensureOrgStarRules(orgId);
 
-  const rule = await prisma.spacePointRule.findFirst({
-    where: { orgId, action, isActive: true },
+  const rule = await prisma.spacePointRule.findUnique({
+    where: { action, isActive: true },
   });
   if (!rule || rule.points === 0)
     return { points: 0, newSeals: [], totalPoints: 0, popupTemplateId: null };
@@ -100,7 +114,7 @@ export async function awardPoints(
     const recent = await prisma.spacePointTransaction.findFirst({
       where: {
         rule: { action },
-        userPoint: { userId, orgId },
+        userPoint: { userId },
         createdAt: { gte: cutoff },
       },
     });
@@ -136,6 +150,7 @@ export async function awardPoints(
     prisma.spacePointTransaction.create({
       data: {
         userPointId: userPoint.id,
+        orgId,
         ruleId: rule.id,
         points: rule.points,
         description: descriptionOverride ?? rule.label,
@@ -172,6 +187,22 @@ export async function awardPoints(
       badgeUrl: resolveBadgeUrl(lvl.badgeNumber, badgeMap),
     });
   }
+  if (rule.points !== 0 || newSeals.length > 0) {
+    try {
+      const channelName = `private-user-${userId}`;
+      await pusherServer.trigger(channelName, "points:updated", {
+        spAwarded: rule.points,
+        starsDebited: 0,
+        totalSP: newTotal,
+        popupTemplateId: rule.popupTemplateId ?? null,
+        newSeals: newSeals,
+        action: action,
+      });
+    } catch (err) {
+      console.error("[space-point/utils] Pusher trigger error:", err);
+    }
+  }
+
   return {
     points: rule.points,
     newSeals,

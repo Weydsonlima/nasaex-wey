@@ -8,25 +8,18 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useActionStore } from "@/features/actions/context/use-action";
-import { redirect } from "next/navigation";
 
 export const useSuspenseWokspaces = () => {
   return useSuspenseQuery(orpc.workspace.list.queryOptions());
 };
 
 export const useWorkspace = (workspaceId: string) => {
-  const { data, isLoading, error } = useQuery(
+  return useQuery(
     orpc.workspace.get.queryOptions({
       input: { workspaceId },
       enabled: !!workspaceId,
     }),
   );
-
-  if (error) {
-    redirect("/workspaces");
-  }
-
-  return { workspace: data?.workspace, isLoading, error };
 };
 
 export const useSuspenseWorkspace = (workspaceId: string) => {
@@ -81,9 +74,7 @@ export const useColumnsByWorkspace = (
         participantIds: filters?.participantIds ?? [],
         tagIds: filters?.tagIds ?? [],
         projectIds: filters?.projectIds ?? [],
-        ...(filters?.dueDateFrom != null && {
-          dueDateFrom: filters.dueDateFrom,
-        }),
+        ...(filters?.dueDateFrom != null && { dueDateFrom: filters.dueDateFrom }),
         ...(filters?.dueDateTo != null && { dueDateTo: filters.dueDateTo }),
       },
       enabled: !!workspaceId,

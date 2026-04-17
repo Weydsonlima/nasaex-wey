@@ -1,15 +1,9 @@
 import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins";
-import { stripe } from "@better-auth/stripe";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "./prisma";
 import { resend } from "./email/resend";
 import { reactInvitationEmail } from "./email/invitation";
-import Stripe from "stripe";
-
-const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-});
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -53,18 +47,8 @@ export const auth = betterAuth({
               });
               // Upsert presence
               await prisma.userPresence.upsert({
-                where: {
-                  userId_organizationId: {
-                    userId: session.userId,
-                    organizationId: m.organizationId,
-                  },
-                },
-                update: {
-                  lastSeenAt: new Date(),
-                  userName: m.user.name,
-                  userEmail: m.user.email,
-                  userImage: m.user.image,
-                },
+                where: { userId_organizationId: { userId: session.userId, organizationId: m.organizationId } },
+                update: { lastSeenAt: new Date(), userName: m.user.name, userEmail: m.user.email, userImage: m.user.image },
                 create: {
                   organizationId: m.organizationId,
                   userId: session.userId,
@@ -102,36 +86,6 @@ export const auth = betterAuth({
                   }/accept-invitation/${data.id}`,
           }),
         });
-      },
-    }),
-    stripe({
-      stripeClient,
-      stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
-      createCustomerOnSignUp: true,
-      subscription: {
-        enabled: true,
-        plans: async () => {
-          const plans = await prisma.plan.findMany({
-            where: { isActive: true },
-          });
-          return plans.map((p) => ({
-            name: p.name.toLowerCase(),
-            priceId: p.stripePriceId!,
-            limits: {
-              maxUsers: p.maxUsers,
-              monthlyStars: p.monthlyStars,
-              rolloverPct: p.rolloverPct,
-              benefits: p.benefits,
-            },
-          }));
-        },
-        getCheckoutSessionParams: async () => {
-          return {
-            params: {
-              allow_promotion_codes: true,
-            },
-          };
-        },
       },
     }),
   ],

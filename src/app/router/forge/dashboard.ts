@@ -35,6 +35,7 @@ export const getForgeDashboard = base
       activeContracts: z.number(),
       totalProposalValue: z.string(),
       proposalsPaid: z.number(),
+      proposalsExpired: z.number(),
       commissionsGenerated: z.string(),
       recentProposals: z.array(z.any()),
     }),
@@ -43,7 +44,7 @@ export const getForgeDashboard = base
     try {
       const orgId = context.org.id;
 
-      const [proposalsSent, activeContracts, proposalsPaid, recentProposals, settings] =
+      const [proposalsSent, activeContracts, proposalsPaid, proposalsExpired, recentProposals, settings] =
         await Promise.all([
           // Propostas enviadas = qualquer status diferente de rascunho
           prisma.forgeProposal.count({
@@ -59,6 +60,10 @@ export const getForgeDashboard = base
           // Propostas pagas
           prisma.forgeProposal.count({
             where: { organizationId: orgId, status: ForgeProposalStatus.PAGA },
+          }),
+          // Propostas expiradas
+          prisma.forgeProposal.count({
+            where: { organizationId: orgId, status: ForgeProposalStatus.EXPIRADA },
           }),
           // Propostas recentes (todas)
           prisma.forgeProposal.findMany({
@@ -101,6 +106,7 @@ export const getForgeDashboard = base
         activeContracts,
         totalProposalValue: totalProposalValue.toFixed(2),
         proposalsPaid,
+        proposalsExpired,
         commissionsGenerated: commissionsGenerated.toFixed(2),
         recentProposals: recentProposals.map((p) => ({
           ...p,

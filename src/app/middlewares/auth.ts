@@ -8,7 +8,7 @@ export const requiredAuthMiddleware = base.middleware(
     });
 
     if (!sessionData?.session || !sessionData.user) {
-      throw errors.UNAUTHORIZED;
+      throw errors.UNAUTHORIZED({ message: "Não autorizado" });
     }
 
     return next({

@@ -39,6 +39,7 @@ import { orgProjectsRouter }         from "./org-projects";
 import { clientPortalRouter }        from "./client-portal";
 import { supportRouter } from "./support";
 import { scriptsRouter } from "./scripts";
+import { linnkerRouter } from "./linnker";
 
 export const router = {
   tracking: trackingRoutes,
@@ -81,4 +82,5 @@ export const router = {
   clientPortal: clientPortalRouter,
   support: supportRouter,
   scripts: scriptsRouter,
+  linnker: linnkerRouter,
 };

@@ -14,7 +14,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:local:setup": "bash scripts/setup-local.sh",
+    "db:prod:migrate": "bash scripts/migrate-production.sh"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

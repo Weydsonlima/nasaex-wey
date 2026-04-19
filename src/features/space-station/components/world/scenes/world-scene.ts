@@ -156,8 +156,10 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     const startY = OFFICE_H / 2;
     this.player = this.physics.add.image(startX, startY, "__player_idle__");
     this.player.setCollideWorldBounds(true).setDepth(20);
+    // Hitbox: narrower than full sprite width, ignore transparent borders
+    (this.player.body as Phaser.Physics.Arcade.Body).setSize(18, 30).setOffset(7, 22);
 
-    this.playerLabel = this.add.text(startX, startY - 26, "Você", {
+    this.playerLabel = this.add.text(startX, startY - 32, "Você", {
       fontSize: "10px", color: "#c4b5fd",
       backgroundColor: "#00000099", padding: { x: 3, y: 1 },
     }).setOrigin(0.5).setDepth(21);
@@ -633,167 +635,133 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
 
   // ─── Player textures ──────────────────────────────────────────
 
-  private generatePlayerTextures(this: Phaser.Scene & WorldScene) {
-    // Try SVG-based avatar first; fall back to programmatic if not available
-    const useProfilePhoto = this.avatarConfig?.useProfilePhoto ?? false;
-    const profilePhoto    = useProfilePhoto ? (this.avatarConfig as AvatarConfig & { _photoUrl?: string })._photoUrl : undefined;
-
-    if (!this.textures.exists("__player_idle__")) {
-      this.buildSvgAvatarTextures(profilePhoto);
-    }
-  }
-
   /**
-   * Renders the astronaut SVG onto an HTML5 Canvas, composites the profile
-   * photo into the visor area, then registers three Phaser textures
-   * (__player_idle__, __player_walk_a__, __player_walk_b__).
-   *
-   * Face circle in the 576×576 SVG (rendered to 64×64 canvas):
-   *   cx = 50.65%  cy = 23.33%  r = 19.31%
+   * Builds three animated astronaut textures on transparent HTML5 canvases.
+   * Body is drawn with pixel-art shapes (legs animate per frame).
+   * Profile photo (or skin tone) is composited into the face circle.
    */
-  private buildSvgAvatarTextures(this: Phaser.Scene & WorldScene, photoUrl?: string) {
-    const SIZE = 64;
-    const suitHex  = this.avatarConfig?.suitColor  ?? "#7c3aed";
-    const skinHex  = this.avatarConfig?.skinTone   ?? "#FFDBB4";
-    const acc      = this.avatarConfig?.accessory  ?? "none";
+  private generatePlayerTextures(this: Phaser.Scene & WorldScene) {
+    const cfg       = this.avatarConfig;
+    const suitHex   = cfg?.suitColor   ?? "#3b6fd4";
+    const helmHex   = cfg?.helmetColor ?? "#06b6d4";
+    const skinHex   = cfg?.skinTone    ?? "#FFDBB4";
+    const acc       = cfg?.accessory   ?? "none";
+    const photoUrl  = cfg?.useProfilePhoto
+      ? (cfg as AvatarConfig & { _photoUrl?: string })._photoUrl
+      : undefined;
 
-    // face position within SIZE×SIZE canvas
-    const fcx = SIZE * 0.5065;
-    const fcy = SIZE * 0.2333;
-    const fr  = SIZE * 0.1931;
+    // Parse hex → r,g,b
+    const hex2rgb = (h: string) => {
+      const v = parseInt(h.replace("#",""), 16);
+      return { r: (v>>16)&255, g: (v>>8)&255, b: v&255 };
+    };
+    const suit = hex2rgb(suitHex);
+    const helm = hex2rgb(helmHex);
+    const dark = { r: Math.round(suit.r*0.6), g: Math.round(suit.g*0.6), b: Math.round(suit.b*0.6) };
 
-    const keys = ["__player_idle__", "__player_walk_a__", "__player_walk_b__"];
+    // Canvas size
+    const W = 32, H = 54;
+    // Head / face circle centre and radius
+    const HX = 16, HY = 11, HR = 10;
 
-    const drawFrame = (key: string, legOffset: number) => {
+    const frames: { key: string; lLeg: number; rLeg: number; lArm: number; rArm: number }[] = [
+      { key: "__player_idle__",   lLeg:  0, rLeg:  0, lArm:  0, rArm:  0 },
+      { key: "__player_walk_a__", lLeg: -4, rLeg:  4, lArm: -2, rArm:  2 },
+      { key: "__player_walk_b__", lLeg:  4, rLeg: -4, lArm:  2, rArm: -2 },
+    ];
+
+    const buildFrame = (frame: typeof frames[0], photo?: HTMLImageElement | null) => {
       const canvas = document.createElement("canvas");
-      canvas.width  = SIZE;
-      canvas.height = SIZE;
-      const ctx = canvas.getContext("2d")!;
+      canvas.width = W; canvas.height = H;
+      const c = canvas.getContext("2d")!;
 
-      // ── Draw SVG astronaut body ───────────────────────────────
-      const img = new Image();
-      img.src = "/astronauta.svg";
-
-      const finalize = () => {
-        ctx.clearRect(0, 0, SIZE, SIZE);
-
-        // Suit color tint filter via off-screen canvas
-        const tmp = document.createElement("canvas");
-        tmp.width = SIZE; tmp.height = SIZE;
-        const tc = tmp.getContext("2d")!;
-        tc.drawImage(img, 0, 0, SIZE, SIZE + legOffset * 0.5);
-        // Apply color blend
-        tc.globalCompositeOperation = "color";
-        tc.globalAlpha = 0.35;
-        tc.fillStyle = suitHex;
-        // mask out face area
-        tc.save();
-        tc.beginPath();
-        tc.arc(fcx, fcy, fr + 2, 0, Math.PI * 2);
-        tc.closePath();
-        // invert: fill everywhere EXCEPT the face circle
-        const bigRect = new Path2D(); bigRect.rect(0,0,SIZE,SIZE);
-        const faceCirc = new Path2D(); faceCirc.arc(fcx, fcy, fr+2, 0, Math.PI*2);
-        // subtract
-        tc.save();
-        tc.clip(bigRect, "nonzero");
-        tc.fillRect(0, 0, SIZE, SIZE);
-        tc.restore();
-        tc.restore();
-
-        // Draw tinted astronaut onto main canvas
-        ctx.drawImage(tmp, 0, 0);
-
-        // ── Face / visor area ───────────────────────────────────
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(fcx, fcy, fr, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-
-        if (photoUrl) {
-          const photo = new Image();
-          photo.crossOrigin = "anonymous";
-          photo.onload = () => {
-            ctx.drawImage(photo, fcx - fr, fcy - fr, fr * 2, fr * 2);
-            finalizeFaceAccessory();
-          };
-          photo.onerror = () => {
-            ctx.fillStyle = skinHex;
-            ctx.fillRect(fcx - fr, fcy - fr, fr * 2, fr * 2);
-            finalizeFaceAccessory();
-          };
-          photo.src = photoUrl;
-        } else {
-          ctx.fillStyle = skinHex;
-          ctx.fillRect(fcx - fr, fcy - fr, fr * 2, fr * 2);
-          ctx.restore();
-          finalizeFaceAccessory();
-        }
+      // Helper: draw a filled rect with rgba
+      const fr = (r: number, g: number, b: number, a: number, x: number, y: number, w: number, h: number) => {
+        c.fillStyle = `rgba(${r},${g},${b},${a})`;
+        c.fillRect(x, y, w, h);
       };
+      const s = suit, d = dark, hc = helm;
 
-      const finalizeFaceAccessory = () => {
-        ctx.restore(); // clip restore
-
-        // Accessory (flag/jetpack label)
-        if (acc === "flag") {
-          ctx.fillStyle = "#cc0000";
-          ctx.fillRect(SIZE - 12, 0, 2, 10);
-          ctx.fillRect(SIZE - 10, 0, 8, 6);
-        }
-
-        // Helmet in hand (small at bottom-left)
-        ctx.font = `${SIZE * 0.18}px serif`;
-        ctx.textBaseline = "bottom";
-        ctx.fillText("⛑️", 2, SIZE - 2);
-
-        if (this.textures.exists(key)) this.textures.remove(key);
-        this.textures.addCanvas(key, canvas);
-      };
-
-      if (img.complete) {
-        finalize();
-      } else {
-        img.onload  = finalize;
-        img.onerror = () => {
-          // SVG failed — fallback to programmatic pixel-art
-          this.buildFallbackTexture(key, suitHex, acc, legOffset);
-        };
+      // ── Jetpack (behind body) ──
+      if (acc === "jetpack") {
+        fr(40, 55, 90, 1,  9, 18,  6, 18);
+        fr(255,100,  0,.8, 11, 34,  4,  5);
       }
+
+      // ── Legs (animated) ──
+      const ll = frame.lLeg, rl = frame.rLeg;
+      // left leg
+      fr(s.r,s.g,s.b,1, 7, 38+ll, 7, 12);
+      fr(d.r,d.g,d.b,1, 7, 49+ll, 7,  3);  // boot
+      // right leg
+      fr(s.r,s.g,s.b,1,18, 38+rl, 7, 12);
+      fr(d.r,d.g,d.b,1,18, 49+rl, 7,  3);  // boot
+
+      // ── Torso ──
+      fr(s.r,s.g,s.b,1, 5, 22, 22, 18);
+      // chest detail stripe
+      fr(255,255,255,.15, 9,26, 14,  4);
+      // chest badge
+      fr(255, 80, 80, .7,  9,27,  4,  3);
+
+      // ── Arms (animated) ──
+      const la = frame.lArm, ra = frame.rArm;
+      fr(s.r,s.g,s.b,1, -1+la, 22, 7, 16);
+      fr(255,255,255,.6,  0+la, 36, 5,  3);  // glove
+      fr(s.r,s.g,s.b,1, 26+ra, 22, 7, 16);
+      fr(255,255,255,.6, 27+ra, 36, 5,  3);  // glove
+
+      // ── Helmet (no visor — face visible, helmet in hand) ──
+      // Just a small rim ring at the neck
+      fr(hc.r,hc.g,hc.b, 1, 8, 21, 16, 3);
+      fr(hc.r,hc.g,hc.b, .5, 6, 20, 20, 2);
+
+      // ── Face circle (skin / photo) ──
+      c.save();
+      c.beginPath();
+      c.arc(HX, HY, HR, 0, Math.PI * 2);
+      c.clip();
+      if (photo) {
+        c.drawImage(photo, HX - HR, HY - HR, HR * 2, HR * 2);
+      } else {
+        c.fillStyle = skinHex;
+        c.fillRect(HX - HR, HY - HR, HR * 2, HR * 2);
+      }
+      c.restore();
+
+      // Face ring (outline)
+      c.strokeStyle = `rgba(${hc.r},${hc.g},${hc.b},0.8)`;
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(HX, HY, HR, 0, Math.PI * 2); c.stroke();
+
+      // ── Helmet in hand (right side, bottom) ──
+      fr(hc.r,hc.g,hc.b, 1, 22, 42, 10,  7);  // helmet body
+      fr(hc.r,hc.g,hc.b,.5, 23, 43,  8,  4);  // helmet visor shine
+      fr(170,220,255,.5,   24, 44,  6,  3);    // visor glass
+
+      // ── Flag accessory ──
+      if (acc === "flag") {
+        fr(180,20, 0,1, 26, 0, 2, 11);
+        fr(220,20, 0,1, 28, 0, 8,  7);
+        fr(255,255,255,1, 28, 0, 8,  3);
+      }
+
+      // Refresh texture
+      if (this.textures.exists(frame.key)) this.textures.remove(frame.key);
+      this.textures.addCanvas(frame.key, canvas);
     };
 
-    drawFrame("__player_idle__",   0);
-    drawFrame("__player_walk_a__", -3);
-    drawFrame("__player_walk_b__",  3);
-
-    // Ensure walk textures exist immediately (will be replaced when img loads)
-    for (const key of keys) {
-      if (!this.textures.exists(key)) {
-        this.buildFallbackTexture(key, suitHex, acc, 0);
-      }
+    if (photoUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload  = () => { for (const f of frames) buildFrame(f, img); };
+      img.onerror = () => { for (const f of frames) buildFrame(f, null); };
+      img.src = photoUrl;
+      // Build immediately without photo so textures exist right away
+      for (const f of frames) buildFrame(f, null);
+    } else {
+      for (const f of frames) buildFrame(f, null);
     }
-  }
-
-  private buildFallbackTexture(this: Phaser.Scene & WorldScene, key: string, suitHex: string, acc: string, _legOff: number) {
-    if (this.textures.exists(key)) return;
-    const suitColor = parseInt(suitHex.replace("#",""), 16);
-    const helmColor = parseInt((this.avatarConfig?.helmetColor ?? "#06b6d4").replace("#",""), 16);
-    const skinColor = parseInt((this.avatarConfig?.skinTone    ?? "#FFDBB4").replace("#",""), 16);
-    const g = this.add.graphics();
-    if (acc === "jetpack") { g.fillStyle(0x334466,1); g.fillRect(8,16,8,20); g.fillStyle(0xff6600,0.8); g.fillRect(10,34,4,6); }
-    g.fillStyle(suitColor,1); g.fillRect(8,38,7,13); g.fillRect(17,38,7,13);
-    g.fillStyle(0x222222,1); g.fillRect(7,50,9,3); g.fillRect(16,50,9,3);
-    g.fillStyle(suitColor,1); g.fillRect(5,18,22,22);
-    g.fillStyle(0xffffff,0.12); g.fillRect(11,22,10,6);
-    g.fillStyle(suitColor,1); g.fillRect(0,20,6,17); g.fillRect(26,20,6,17);
-    g.fillStyle(0xffffff,0.6); g.fillRect(1,35,4,4); g.fillRect(27,35,4,4);
-    g.fillStyle(helmColor,1); g.fillCircle(16,12,13);
-    g.fillStyle(0x88ccff,0.7); g.fillEllipse(16,11,14,10);
-    g.fillStyle(0xffffff,0.35); g.fillEllipse(13,8,6,4);
-    g.fillStyle(skinColor,0.4); g.fillEllipse(16,12,10,7);
-    if (acc === "flag") { g.fillStyle(0xcc2200,1); g.fillRect(26,0,2,12); g.fillRect(28,0,10,7); g.fillStyle(0xffffff,1); g.fillRect(28,0,10,3); }
-    g.generateTexture(key, 32, 54);
-    g.destroy();
   }
 
   // ─── Galaxy portal ────────────────────────────────────────────
@@ -921,7 +889,7 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
       this.player.setTexture("__player_idle__");
     }
 
-    this.playerLabel.setPosition(this.player.x, this.player.y - 30);
+    this.playerLabel.setPosition(this.player.x, this.player.y - 36);
 
     if (this.game.getFrame() % 6 === 0 && moving) {
       window.dispatchEvent(new CustomEvent("space-station:player-moved", {

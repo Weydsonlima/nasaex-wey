@@ -64,6 +64,7 @@ model User {
   nasaCampaignTasksAssigned NasaCampaignTask[] @relation("NasaCampaignTaskAssignee")
   supportTickets SupportTicket[]
   linnkerPages   LinnkerPage[]
+  spaceStation   SpaceStation?
 
   @@unique([email])
   @@map("user")
@@ -193,6 +194,9 @@ model Organization {
 
   // Linnker
   linnkerPages LinnkerPage[]
+
+  // Space Station
+  spaceStation SpaceStation?
 
   // Marca / Brand
   brandSlogan         String?  @map("brand_slogan")
@@ -2974,4 +2978,121 @@ model Script {
 
   @@index([trackingId])
   @@map("scripts")
+}
+
+// ─────────────────────────────────────────────
+// SPACE STATION
+// ─────────────────────────────────────────────
+
+enum StationType {
+  USER
+  ORG
+}
+
+enum StationRank {
+  COMMANDER
+  CREW
+}
+
+enum StationModule {
+  FORM
+  CHAT
+  AGENDA
+  INTEGRATION
+  NBOX
+  FORGE
+  APPS
+  NOTIFICATIONS
+}
+
+model SpaceStation {
+  id          String      @id @default(cuid())
+  type        StationType
+  userId      String?     @unique @map("user_id")
+  orgId       String?     @unique @map("org_id")
+  nick        String      @unique
+  isPublic    Boolean     @default(false) @map("is_public")
+  bio         String?
+  avatarUrl   String?     @map("avatar_url")
+  bannerUrl   String?     @map("banner_url")
+  theme       Json?
+  rank        StationRank @default(CREW)
+  starsReceived Int       @default(0) @map("stars_received")
+  config      Json?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org         Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  receivedStars SpaceStationStar[] @relation("ReceivedStars")
+  sentStars     SpaceStationStar[] @relation("SentStars")
+  worldConfig   SpaceStationWorld?
+  publicModules StationPublicModule[]
+
+  @@map("space_stations")
+}
+
+model SpaceStationWorld {
+  id            String   @id @default(cuid())
+  stationId     String   @unique @map("station_id")
+  mapData       Json?    @map("map_data")
+  planetColor   String   @default("#4B0082") @map("planet_color")
+  ambientTheme  String   @default("space") @map("ambient_theme")
+  avatarConfig  Json?    @map("avatar_config")
+  npcConfig     Json?    @map("npc_config")
+  meetingPoints Json?    @map("meeting_points")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  station SpaceStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@map("space_station_worlds")
+}
+
+model SpaceStationStar {
+  id        String   @id @default(cuid())
+  fromId    String   @map("from_id")
+  toId      String   @map("to_id")
+  amount    Int
+  message   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  from SpaceStation @relation("SentStars", fields: [fromId], references: [id], onDelete: Cascade)
+  to   SpaceStation @relation("ReceivedStars", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId])
+  @@index([toId])
+  @@map("space_station_stars")
+}
+
+model StationPublicModule {
+  id         String        @id @default(cuid())
+  stationId  String        @map("station_id")
+  module     StationModule
+  resourceId String?       @map("resource_id")
+  isActive   Boolean       @default(true) @map("is_active")
+  config     Json?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  station SpaceStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@unique([stationId, module])
+  @@index([stationId])
+  @@map("station_public_modules")
+}
+
+model WorldGameAsset {
+  id          String   @id @default(cuid())
+  type        String   // "furniture" | "chair" | "desk" | "computer" | "game_view"
+  name        String
+  imageUrl    String   @map("image_url")
+  previewUrl  String?  @map("preview_url")
+  config      Json?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("world_game_assets")
 }

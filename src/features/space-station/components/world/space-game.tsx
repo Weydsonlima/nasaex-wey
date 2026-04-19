@@ -56,7 +56,9 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
         }
       };
 
-      const config = buildGameConfig("phaser-container", 800, 600, [PreloadScene, worldSceneWithData]);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const config = buildGameConfig("phaser-container", w, h, [PreloadScene, worldSceneWithData]);
       game = new Phaser.Game(config);
       gameRef.current = game;
       setLoading(false);
@@ -81,7 +83,7 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
   }
 
   return (
-    <div className="relative w-full h-full min-h-screen bg-slate-950">
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-950">
       {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950">
@@ -94,7 +96,7 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
       )}
 
       {/* Game container */}
-      <div id="phaser-container" ref={containerRef} className="w-full h-screen" />
+      <div id="phaser-container" ref={containerRef} className="absolute inset-0 w-full h-full" />
 
       {/* HUD overlay */}
       {!loading && (

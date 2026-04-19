@@ -20,8 +20,11 @@ export function buildGameConfig(
     pixelArt: true,
     roundPixels: true,
     scale: {
-      mode: globalThis.Phaser?.Scale?.FIT ?? 3,
-      autoCenter: globalThis.Phaser?.Scale?.CENTER_BOTH ?? 1,
+      mode: globalThis.Phaser?.Scale?.RESIZE ?? 4,
+      autoCenter: globalThis.Phaser?.Scale?.NO_CENTER ?? 0,
+      width,
+      height,
+      parent,
     },
   };
 }

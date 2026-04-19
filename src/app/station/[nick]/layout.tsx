@@ -6,5 +6,9 @@ export const metadata: Metadata = {
 };
 
 export default function SpaceStationLayout({ children }: { children: React.ReactNode }) {
-  return <main className="w-full min-h-screen bg-slate-950">{children}</main>;
+  return (
+    <main className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-950 p-0 m-0">
+      {children}
+    </main>
+  );
 }

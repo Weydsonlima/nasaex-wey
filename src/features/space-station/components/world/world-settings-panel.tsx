@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import {
-  X, Settings, Rocket, Star, Globe, User, Palette, Check, AlertCircle,
+  X, Settings, Rocket, Star, Globe, User, Check, AlertCircle,
   LayoutDashboard, Minus, Plus, Eye, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUpdateWorld, useListStations, useWorldAssets } from "../../hooks/use-station";
+import { AstronautAvatar } from "./astronaut-avatar";
 import type {
   AvatarConfig, StationWorldConfig, WorldMapData, WorldElementsConfig,
   RoomConfig, GameView, HairStyle, BeardStyle, FaceAccessory, WorldGameAsset,
@@ -143,14 +144,6 @@ export function WorldSettingsPanel({ stationId, worldConfig, avatarConfig, nick,
   ];
 
   // Avatar preview composto
-  const avatarEmoji = (() => {
-    if (avatar.faceAccessory === "glasses") return "🤓";
-    if (avatar.faceAccessory === "sunglasses") return "😎";
-    if (avatar.hairStyle === "afro") return "👨‍🦱";
-    if (avatar.hairStyle === "long") return "👩";
-    return "👨‍🚀";
-  })();
-
   return (
     <div className="absolute inset-y-0 right-0 z-30 w-96 flex flex-col bg-slate-950/98 backdrop-blur-md border-l border-white/10 shadow-2xl">
       {/* Header */}
@@ -428,29 +421,14 @@ export function WorldSettingsPanel({ stationId, worldConfig, avatarConfig, nick,
         {/* ── Avatar ── */}
         {tab === "avatar" && (
           <div className="space-y-5">
-            {/* Preview do astronauta */}
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                {/* Corpo do traje */}
-                <div className="w-24 h-28 rounded-2xl flex flex-col items-center justify-end pb-2 shadow-lg"
-                  style={{ background: `linear-gradient(180deg, ${avatar.suitColor}cc, ${avatar.suitColor})` }}>
-                  {/* Área do rosto (capacete na mão = rosto visível) */}
-                  <div className="absolute top-1 w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-2"
-                    style={{ borderColor: avatar.helmetColor, backgroundColor: avatar.skinTone }}>
-                    {avatar.useProfilePhoto && userImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={userImage} alt="avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-3xl">{avatarEmoji}</span>
-                    )}
-                  </div>
-                  {/* Capacete na mão */}
-                  <div className="flex items-center gap-1 text-xs">
-                    <span className="text-lg" title="Capacete na mão">⛑️</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-slate-400">Astronauta com capacete na mão</p>
+            {/* Preview real do astronauta */}
+            <div className="flex flex-col items-center gap-2 py-2">
+              <AstronautAvatar
+                avatar={avatar}
+                userImage={userImage}
+                size={180}
+              />
+              <p className="text-xs text-slate-400">Capacete na mão · rosto visível</p>
             </div>
 
             {/* Usar foto do perfil */}

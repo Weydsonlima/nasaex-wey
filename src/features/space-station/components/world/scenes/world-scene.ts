@@ -116,9 +116,13 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     worldConfig: StationWorldConfig;
     avatarConfig?: AvatarConfig;
     channel?: WorldScene["pusherChannel"];
+    userImage?: string | null;
   }) {
     this.worldConfig = data.worldConfig;
-    this.avatarConfig = data.avatarConfig;
+    // Store userImage in avatarConfig for texture generation
+    this.avatarConfig = data.avatarConfig
+      ? { ...data.avatarConfig, _photoUrl: data.userImage ?? undefined } as AvatarConfig
+      : data.avatarConfig;
     this.pusherChannel = data.channel;
   }
 
@@ -630,35 +634,166 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   // ─── Player textures ──────────────────────────────────────────
 
   private generatePlayerTextures(this: Phaser.Scene & WorldScene) {
-    const suitColor = parseInt((this.avatarConfig?.suitColor  ?? "#7c3aed").replace("#",""), 16);
+    // Try SVG-based avatar first; fall back to programmatic if not available
+    const useProfilePhoto = this.avatarConfig?.useProfilePhoto ?? false;
+    const profilePhoto    = useProfilePhoto ? (this.avatarConfig as AvatarConfig & { _photoUrl?: string })._photoUrl : undefined;
+
+    if (!this.textures.exists("__player_idle__")) {
+      this.buildSvgAvatarTextures(profilePhoto);
+    }
+  }
+
+  /**
+   * Renders the astronaut SVG onto an HTML5 Canvas, composites the profile
+   * photo into the visor area, then registers three Phaser textures
+   * (__player_idle__, __player_walk_a__, __player_walk_b__).
+   *
+   * Face circle in the 576×576 SVG (rendered to 64×64 canvas):
+   *   cx = 50.65%  cy = 23.33%  r = 19.31%
+   */
+  private buildSvgAvatarTextures(this: Phaser.Scene & WorldScene, photoUrl?: string) {
+    const SIZE = 64;
+    const suitHex  = this.avatarConfig?.suitColor  ?? "#7c3aed";
+    const skinHex  = this.avatarConfig?.skinTone   ?? "#FFDBB4";
+    const acc      = this.avatarConfig?.accessory  ?? "none";
+
+    // face position within SIZE×SIZE canvas
+    const fcx = SIZE * 0.5065;
+    const fcy = SIZE * 0.2333;
+    const fr  = SIZE * 0.1931;
+
+    const keys = ["__player_idle__", "__player_walk_a__", "__player_walk_b__"];
+
+    const drawFrame = (key: string, legOffset: number) => {
+      const canvas = document.createElement("canvas");
+      canvas.width  = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext("2d")!;
+
+      // ── Draw SVG astronaut body ───────────────────────────────
+      const img = new Image();
+      img.src = "/astronauta.svg";
+
+      const finalize = () => {
+        ctx.clearRect(0, 0, SIZE, SIZE);
+
+        // Suit color tint filter via off-screen canvas
+        const tmp = document.createElement("canvas");
+        tmp.width = SIZE; tmp.height = SIZE;
+        const tc = tmp.getContext("2d")!;
+        tc.drawImage(img, 0, 0, SIZE, SIZE + legOffset * 0.5);
+        // Apply color blend
+        tc.globalCompositeOperation = "color";
+        tc.globalAlpha = 0.35;
+        tc.fillStyle = suitHex;
+        // mask out face area
+        tc.save();
+        tc.beginPath();
+        tc.arc(fcx, fcy, fr + 2, 0, Math.PI * 2);
+        tc.closePath();
+        // invert: fill everywhere EXCEPT the face circle
+        const bigRect = new Path2D(); bigRect.rect(0,0,SIZE,SIZE);
+        const faceCirc = new Path2D(); faceCirc.arc(fcx, fcy, fr+2, 0, Math.PI*2);
+        // subtract
+        tc.save();
+        tc.clip(bigRect, "nonzero");
+        tc.fillRect(0, 0, SIZE, SIZE);
+        tc.restore();
+        tc.restore();
+
+        // Draw tinted astronaut onto main canvas
+        ctx.drawImage(tmp, 0, 0);
+
+        // ── Face / visor area ───────────────────────────────────
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(fcx, fcy, fr, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+
+        if (photoUrl) {
+          const photo = new Image();
+          photo.crossOrigin = "anonymous";
+          photo.onload = () => {
+            ctx.drawImage(photo, fcx - fr, fcy - fr, fr * 2, fr * 2);
+            finalizeFaceAccessory();
+          };
+          photo.onerror = () => {
+            ctx.fillStyle = skinHex;
+            ctx.fillRect(fcx - fr, fcy - fr, fr * 2, fr * 2);
+            finalizeFaceAccessory();
+          };
+          photo.src = photoUrl;
+        } else {
+          ctx.fillStyle = skinHex;
+          ctx.fillRect(fcx - fr, fcy - fr, fr * 2, fr * 2);
+          ctx.restore();
+          finalizeFaceAccessory();
+        }
+      };
+
+      const finalizeFaceAccessory = () => {
+        ctx.restore(); // clip restore
+
+        // Accessory (flag/jetpack label)
+        if (acc === "flag") {
+          ctx.fillStyle = "#cc0000";
+          ctx.fillRect(SIZE - 12, 0, 2, 10);
+          ctx.fillRect(SIZE - 10, 0, 8, 6);
+        }
+
+        // Helmet in hand (small at bottom-left)
+        ctx.font = `${SIZE * 0.18}px serif`;
+        ctx.textBaseline = "bottom";
+        ctx.fillText("⛑️", 2, SIZE - 2);
+
+        if (this.textures.exists(key)) this.textures.remove(key);
+        this.textures.addCanvas(key, canvas);
+      };
+
+      if (img.complete) {
+        finalize();
+      } else {
+        img.onload  = finalize;
+        img.onerror = () => {
+          // SVG failed — fallback to programmatic pixel-art
+          this.buildFallbackTexture(key, suitHex, acc, legOffset);
+        };
+      }
+    };
+
+    drawFrame("__player_idle__",   0);
+    drawFrame("__player_walk_a__", -3);
+    drawFrame("__player_walk_b__",  3);
+
+    // Ensure walk textures exist immediately (will be replaced when img loads)
+    for (const key of keys) {
+      if (!this.textures.exists(key)) {
+        this.buildFallbackTexture(key, suitHex, acc, 0);
+      }
+    }
+  }
+
+  private buildFallbackTexture(this: Phaser.Scene & WorldScene, key: string, suitHex: string, acc: string, _legOff: number) {
+    if (this.textures.exists(key)) return;
+    const suitColor = parseInt(suitHex.replace("#",""), 16);
     const helmColor = parseInt((this.avatarConfig?.helmetColor ?? "#06b6d4").replace("#",""), 16);
     const skinColor = parseInt((this.avatarConfig?.skinTone    ?? "#FFDBB4").replace("#",""), 16);
-    const acc       = this.avatarConfig?.accessory ?? "none";
-
-    const frames = [
-      { key: "__player_idle__",   lLegY: 0,  rLegY: 0,  lArmX: 0,  rArmX: 0 },
-      { key: "__player_walk_a__", lLegY: -5, rLegY: 5,  lArmX: -2, rArmX: 2 },
-      { key: "__player_walk_b__", lLegY: 5,  rLegY: -5, lArmX: 2,  rArmX: -2 },
-    ];
-
-    for (const f of frames) {
-      const g = this.add.graphics();
-      if (acc === "jetpack") { g.fillStyle(0x334466,1); g.fillRect(8,16,8,20); g.fillStyle(0xff6600,0.8); g.fillRect(10,34,4,6); }
-      g.fillStyle(suitColor,1); g.fillRect(8,38+f.lLegY,7,13); g.fillRect(17,38+f.rLegY,7,13);
-      g.fillStyle(0x222222,1); g.fillRect(7,50+f.lLegY,9,3); g.fillRect(16,50+f.rLegY,9,3);
-      g.fillStyle(suitColor,1); g.fillRect(5,18,22,22);
-      g.fillStyle(0xffffff,0.12); g.fillRect(11,22,10,6);
-      g.fillStyle(0xff0000,0.6); g.fillRect(11,23,4,4);
-      g.fillStyle(suitColor,1); g.fillRect(0+f.lArmX,20,6,17); g.fillRect(26+f.rArmX,20,6,17);
-      g.fillStyle(0xffffff,0.6); g.fillRect(1+f.lArmX,35,4,4); g.fillRect(27+f.rArmX,35,4,4);
-      g.fillStyle(helmColor,1); g.fillCircle(16,12,13);
-      g.fillStyle(0x88ccff,0.7); g.fillEllipse(16,11,14,10);
-      g.fillStyle(0xffffff,0.35); g.fillEllipse(13,8,6,4);
-      g.fillStyle(skinColor,0.4); g.fillEllipse(16,12,10,7);
-      if (acc === "flag") { g.fillStyle(0xcc2200,1); g.fillRect(26,0,2,12); g.fillRect(28,0,10,7); g.fillStyle(0xffffff,1); g.fillRect(28,0,10,3); }
-      g.generateTexture(f.key, 32, 54);
-      g.destroy();
-    }
+    const g = this.add.graphics();
+    if (acc === "jetpack") { g.fillStyle(0x334466,1); g.fillRect(8,16,8,20); g.fillStyle(0xff6600,0.8); g.fillRect(10,34,4,6); }
+    g.fillStyle(suitColor,1); g.fillRect(8,38,7,13); g.fillRect(17,38,7,13);
+    g.fillStyle(0x222222,1); g.fillRect(7,50,9,3); g.fillRect(16,50,9,3);
+    g.fillStyle(suitColor,1); g.fillRect(5,18,22,22);
+    g.fillStyle(0xffffff,0.12); g.fillRect(11,22,10,6);
+    g.fillStyle(suitColor,1); g.fillRect(0,20,6,17); g.fillRect(26,20,6,17);
+    g.fillStyle(0xffffff,0.6); g.fillRect(1,35,4,4); g.fillRect(27,35,4,4);
+    g.fillStyle(helmColor,1); g.fillCircle(16,12,13);
+    g.fillStyle(0x88ccff,0.7); g.fillEllipse(16,11,14,10);
+    g.fillStyle(0xffffff,0.35); g.fillEllipse(13,8,6,4);
+    g.fillStyle(skinColor,0.4); g.fillEllipse(16,12,10,7);
+    if (acc === "flag") { g.fillStyle(0xcc2200,1); g.fillRect(26,0,2,12); g.fillRect(28,0,10,7); g.fillStyle(0xffffff,1); g.fillRect(28,0,10,3); }
+    g.generateTexture(key, 32, 54);
+    g.destroy();
   }
 
   // ─── Galaxy portal ────────────────────────────────────────────

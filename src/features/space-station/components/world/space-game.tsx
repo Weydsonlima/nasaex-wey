@@ -52,9 +52,10 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
       const capturedWorldConfig = worldConfig;
       const capturedAvatarConfig = avatarConfig;
 
+      const capturedUserImage = userImage;
       const worldSceneWithData = class extends WorldScene {
         create() {
-          super.init({ worldConfig: capturedWorldConfig, avatarConfig: capturedAvatarConfig, channel });
+          super.init({ worldConfig: capturedWorldConfig, avatarConfig: capturedAvatarConfig, channel, userImage: capturedUserImage });
           super.create();
         }
       };

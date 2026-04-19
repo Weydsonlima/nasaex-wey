@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { X, Globe, Settings } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { X, Globe, Settings, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { StationWorldConfig, AvatarConfig } from "../../types";
 import { StationExplorer } from "../station-explorer";
@@ -24,6 +24,9 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [worldConfig, setWorldConfig] = useState(initialWorldConfig);
   const [avatarConfig, setAvatarConfig] = useState(initialAvatarConfig);
+  const [zoomLevel, setZoomLevel] = useState(1.6);
+  const [zoomMin, setZoomMin] = useState(0.4);
+  const [zoomMax, setZoomMax] = useState(3.5);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -67,10 +70,18 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
     initGame();
 
     const onGalaxy = () => setGalaxyOpen(true);
+    const onZoomChanged = (e: Event) => {
+      const { zoom, min, max } = (e as CustomEvent).detail as { zoom: number; min: number; max: number };
+      setZoomLevel(zoom);
+      setZoomMin(min);
+      setZoomMax(max);
+    };
     window.addEventListener("space-station:open-galaxy", onGalaxy);
+    window.addEventListener("space-station:zoom-changed", onZoomChanged);
 
     return () => {
       window.removeEventListener("space-station:open-galaxy", onGalaxy);
+      window.removeEventListener("space-station:zoom-changed", onZoomChanged);
       game?.destroy(true);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,6 +92,12 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
     setWorldConfig(newWorldConfig);
     setAvatarConfig(newAvatarConfig);
   }
+
+  const handleZoomIn    = useCallback(() => window.dispatchEvent(new Event("space-station:zoom-in")),    []);
+  const handleZoomOut   = useCallback(() => window.dispatchEvent(new Event("space-station:zoom-out")),   []);
+  const handleZoomReset = useCallback(() => window.dispatchEvent(new Event("space-station:zoom-reset")), []);
+
+  const zoomPct = Math.round((zoomLevel / 1.6) * 100);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950">
@@ -147,6 +164,54 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
             </Button>
           </div>
           <StationExplorer />
+        </div>
+      )}
+
+      {/* Zoom controls — canto inferior direito */}
+      {!loading && (
+        <div className="absolute bottom-5 right-5 z-10 flex flex-col items-center gap-1">
+          {/* Zoom in */}
+          <button
+            onClick={handleZoomIn}
+            disabled={zoomLevel >= zoomMax}
+            className="w-9 h-9 rounded-xl bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-white/10 disabled:opacity-30 transition-all backdrop-blur-sm"
+            title="Zoom in (+)"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+
+          {/* Indicador de zoom — clica para resetar */}
+          <button
+            onClick={handleZoomReset}
+            className="w-9 h-9 rounded-xl bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-white/10 transition-all backdrop-blur-sm"
+            title="Resetar zoom (100%)"
+          >
+            <span className="text-[9px] font-bold leading-none tabular-nums">
+              {zoomPct}%
+            </span>
+          </button>
+
+          {/* Zoom out */}
+          <button
+            onClick={handleZoomOut}
+            disabled={zoomLevel <= zoomMin}
+            className="w-9 h-9 rounded-xl bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-white/10 disabled:opacity-30 transition-all backdrop-blur-sm"
+            title="Zoom out (-)"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+
+          {/* Fullscreen toggle */}
+          <button
+            onClick={() => {
+              if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+              else document.exitFullscreen();
+            }}
+            className="w-9 h-9 rounded-xl bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-white/10 transition-all backdrop-blur-sm mt-1"
+            title="Tela cheia"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 

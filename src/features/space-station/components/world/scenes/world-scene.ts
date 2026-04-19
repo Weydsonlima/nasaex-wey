@@ -102,6 +102,14 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   private animTimer = 0;
   private facingDir: "down" | "up" | "left" | "right" = "down";
 
+  // ─── Zoom ─────────────────────────────────────────────────────
+  private currentZoom = 1.6;
+  private readonly ZOOM_MIN = 0.4;
+  private readonly ZOOM_MAX = 3.5;
+  private readonly ZOOM_STEP = 0.15;
+  // Pinch-to-zoom
+  private pinchDist: number | null = null;
+
   constructor() { super({ key: "WorldScene" }); }
 
   init(this: Phaser.Scene & WorldScene, data: {
@@ -155,7 +163,50 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
 
     this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.6);
+    this.cameras.main.setZoom(this.currentZoom);
+
+    // ── Mouse wheel zoom ──────────────────────────────────────────
+    this.input.on("wheel",
+      (_ptr: unknown, _gos: unknown, _dx: number, dy: number) => {
+        this.applyZoom(dy > 0 ? -this.ZOOM_STEP : this.ZOOM_STEP);
+      },
+    );
+
+    // ── Touch pinch-to-zoom ───────────────────────────────────────
+    this.input.on("pointermove", (ptr: Phaser.Input.Pointer) => {
+      if (this.input.pointer1.isDown && this.input.pointer2.isDown) {
+        const p1 = this.input.pointer1;
+        const p2 = this.input.pointer2;
+        const dist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+        if (this.pinchDist !== null) {
+          const delta = dist - this.pinchDist;
+          this.applyZoom(delta * 0.005);
+        }
+        this.pinchDist = dist;
+      } else {
+        this.pinchDist = null;
+      }
+      void ptr;
+    });
+
+    // ── Keyboard zoom  +  /  - ────────────────────────────────────
+    this.input.keyboard!.on("keydown-PLUS",  () => this.applyZoom(this.ZOOM_STEP));
+    this.input.keyboard!.on("keydown-MINUS", () => this.applyZoom(-this.ZOOM_STEP));
+    this.input.keyboard!.on("keydown-NUMPAD_ADD",      () => this.applyZoom(this.ZOOM_STEP));
+    this.input.keyboard!.on("keydown-NUMPAD_SUBTRACT", () => this.applyZoom(-this.ZOOM_STEP));
+
+    // ── External events from React buttons ───────────────────────
+    const onZoomIn  = () => this.applyZoom(this.ZOOM_STEP);
+    const onZoomOut = () => this.applyZoom(-this.ZOOM_STEP);
+    const onZoomReset = () => this.setZoom(1.6);
+    window.addEventListener("space-station:zoom-in",    onZoomIn);
+    window.addEventListener("space-station:zoom-out",   onZoomOut);
+    window.addEventListener("space-station:zoom-reset", onZoomReset);
+    this.events.once("shutdown", () => {
+      window.removeEventListener("space-station:zoom-in",    onZoomIn);
+      window.removeEventListener("space-station:zoom-out",   onZoomOut);
+      window.removeEventListener("space-station:zoom-reset", onZoomReset);
+    });
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
@@ -689,6 +740,21 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     if (!p) return;
     p.gfx.destroy(); p.nameText.destroy();
     this.remotePlayers.delete(data.userId);
+  }
+
+  // ─── Zoom helpers ─────────────────────────────────────────────
+
+  private applyZoom(this: Phaser.Scene & WorldScene, delta: number) {
+    this.setZoom(this.currentZoom + delta);
+  }
+
+  private setZoom(this: Phaser.Scene & WorldScene, value: number) {
+    this.currentZoom = Phaser.Math.Clamp(value, this.ZOOM_MIN, this.ZOOM_MAX);
+    this.cameras.main.setZoom(this.currentZoom);
+    // Notify React of the current zoom level
+    window.dispatchEvent(new CustomEvent("space-station:zoom-changed", {
+      detail: { zoom: this.currentZoom, min: this.ZOOM_MIN, max: this.ZOOM_MAX },
+    }));
   }
 
   // ─── Update ───────────────────────────────────────────────────

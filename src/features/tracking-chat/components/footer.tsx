@@ -212,7 +212,6 @@ export function Footer({
               onSendItem={(text) => {
                 setMessage((prev) => (prev ? prev + "\n" + text : text));
                 setShowNBox(false);
-                            setShowButtons(false);
               }}
             />
           )}
@@ -280,7 +279,6 @@ export function Footer({
                           onClick={() => {
                             setShowButtons((v) => !v);
                             setShowNBox(false);
-                            setShowButtons(false);
                             setShowForms(false);
                             setShowAgenda(false);
                             setShowScripts(false);

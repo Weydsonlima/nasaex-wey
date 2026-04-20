@@ -18,13 +18,21 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSearchModal } from "@/hooks/modal/use-search-modal";
 import { useOrgRole } from "@/hooks/use-org-role";
-import { DownloadCloud, MoreHorizontalIcon, Plus, Search } from "lucide-react";
+import {
+  DownloadCloud,
+  FileSpreadsheet,
+  MoreHorizontalIcon,
+  Plus,
+  Search,
+} from "lucide-react";
 import { LeadImportDialog } from "./lead-import-dialog";
+import { LeadExportDialog } from "./lead-export-dialog";
 import { useState } from "react";
 
 export default function HeadingContacts() {
   const searchLead = useSearchModal();
   const [modalImportIsOpen, setImportIsModal] = useState(false);
+  const [modalExportIsOpen, setExportIsModal] = useState(false);
   const { isSingle } = useOrgRole();
 
   return (
@@ -47,11 +55,20 @@ export default function HeadingContacts() {
 
         <div className="hidden sm:flex items-center gap-2">
           {!isSingle && (
-            <Button variant={"outline"} onClick={() => setImportIsModal(true)}>
-              <DownloadCloud className="size-4" />
-              Importar
-            </Button>
+            <>
+              <Button
+                variant={"outline"}
+                onClick={() => setImportIsModal(true)}
+              >
+                <DownloadCloud className="size-4" />
+                Importar
+              </Button>
+            </>
           )}
+          <Button variant={"outline"} onClick={() => setExportIsModal(true)}>
+            <FileSpreadsheet className="size-4" />
+            Exportar
+          </Button>
           <Button>Adicionar novo lead</Button>
         </div>
 
@@ -70,10 +87,16 @@ export default function HeadingContacts() {
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
             <DropdownMenuGroup>
               {!isSingle && (
-                <DropdownMenuItem onClick={() => setImportIsModal(true)}>
-                  <DownloadCloud className="size-4" />
-                  Importar
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => setImportIsModal(true)}>
+                    <DownloadCloud className="size-4" />
+                    Importar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setExportIsModal(true)}>
+                    <FileSpreadsheet className="size-4" />
+                    Exportar
+                  </DropdownMenuItem>
+                </>
               )}
               <DropdownMenuItem>
                 <Plus className="size-4" />
@@ -89,10 +112,16 @@ export default function HeadingContacts() {
         onOpenChange={searchLead.setIsOpen}
       />
       {!isSingle && (
-        <LeadImportDialog
-          onOpenChange={setImportIsModal}
-          open={modalImportIsOpen}
-        />
+        <>
+          <LeadImportDialog
+            onOpenChange={setImportIsModal}
+            open={modalImportIsOpen}
+          />
+          <LeadExportDialog
+            onOpenChange={setExportIsModal}
+            open={modalExportIsOpen}
+          />
+        </>
       )}
     </>
   );

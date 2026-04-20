@@ -489,7 +489,7 @@ function RescheduleDialog({
                   >
                     <Clock
                       className={cn(
-                        "size-4 flex-shrink-0",
+                        "size-4 shrink-0",
                         selectedTime === slot.startTime
                           ? "text-primary-foreground"
                           : "text-muted-foreground",
@@ -497,7 +497,7 @@ function RescheduleDialog({
                     />
                     <span className="flex-1">{slot.startTime}</span>
                     {selectedTime === slot.startTime && (
-                      <CheckIcon className="size-4 flex-shrink-0" />
+                      <CheckIcon className="size-4 shrink-0" />
                     )}
                   </button>
                 ))}

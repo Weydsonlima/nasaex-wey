@@ -39,6 +39,8 @@ export const createAction = base
       newOrder = new Prisma.Decimal(0);
     }
 
+    console.log("[CREATE TASK]", input);
+
     const action = await prisma.action.create({
       data: {
         title: input.title,

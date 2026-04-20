@@ -28,7 +28,6 @@ function AuthField({
   placeholder: string;
   error?: string;
   disabled?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register: any;
   rightElement?: React.ReactNode;
 }) {
@@ -219,7 +218,7 @@ export function LoginForm() {
           rightElement={<EyeToggle show={showPass} onToggle={() => setShowPass(!showPass)} />}
         />
         <div style={{ textAlign: "right", marginTop: 6 }}>
-          <a href="#" style={{ color: "rgba(167,139,250,0.7)", fontSize: 12, textDecoration: "none" }}
+          <a href="/reset-password" style={{ color: "rgba(167,139,250,0.7)", fontSize: 12, textDecoration: "none" }}
             onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
             onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
           >

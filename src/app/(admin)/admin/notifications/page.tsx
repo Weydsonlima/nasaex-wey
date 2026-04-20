@@ -5,7 +5,7 @@ import { NotificationCenterV2 } from "@/features/admin/components/notification-c
 export default async function NotificationsPage() {
   await requireAdminSession();
 
-  const [notifications, total, orgs] = await Promise.all([
+  const [notifications, total] = await Promise.all([
     prisma.adminNotification.findMany({
       orderBy: { createdAt: "desc" },
       take: 25,
@@ -22,11 +22,6 @@ export default async function NotificationsPage() {
       },
     }),
     prisma.adminNotification.count(),
-    prisma.organization.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-      take: 200,
-    }),
   ]);
 
   return (
@@ -47,7 +42,6 @@ export default async function NotificationsPage() {
           createdAt: n.createdAt.toISOString(),
           readCount: n._count.reads,
         }))}
-        orgs={orgs}
       />
     </div>
   );

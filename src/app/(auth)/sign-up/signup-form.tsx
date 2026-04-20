@@ -37,7 +37,6 @@ function AuthField({
   placeholder: string;
   error?: string;
   disabled?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register: any;
   rightElement?: React.ReactNode;
 }) {

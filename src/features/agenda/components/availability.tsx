@@ -249,7 +249,7 @@ function DiaMode({
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* ── Mini Calendar ── */}
-      <div className="flex-shrink-0 w-full md:w-[280px]">
+      <div className="shrink-0 w-full md:w-[280px]">
         <div className="border rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <Button

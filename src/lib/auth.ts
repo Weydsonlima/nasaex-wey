@@ -4,6 +4,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { stripe } from "@better-auth/stripe";
 import { resend } from "./email/resend";
 import { reactInvitationEmail } from "./email/invitation";
+import { reactResetPasswordEmail } from "./email/reset-password";
 import { stripeClient } from "./stripe";
 import prisma from "./prisma";
 
@@ -24,6 +25,25 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
     minPasswordLength: 6,
+    resetPasswordTokenExpiresIn: 3600,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      void resend.emails
+        .send({
+          from: "Nasaex <noreply@notifications.nasaex.com>",
+          to: user.email,
+          subject: "Redefina sua senha no NASA.ex",
+          react: reactResetPasswordEmail({
+            username: user.name,
+            resetLink: url,
+            appName: "NASA.ex",
+            expirationMinutes: "60",
+          }),
+        })
+        .catch((error) => {
+          console.error("[auth] reset password email failed:", error);
+        });
+    },
   },
   socialProviders: {
     google: {

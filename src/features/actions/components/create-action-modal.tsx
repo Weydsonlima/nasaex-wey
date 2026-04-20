@@ -76,7 +76,7 @@ export const CreateActionModal = ({
   const createAction = useCreateTask();
   const { data } = useSuspenseColumnsByWorkspace(workspaceId);
   const { data: projectsData } = useQuery(
-    orpc.orgProjects.list.queryOptions({ input: {} })
+    orpc.orgProjects.list.queryOptions({ input: {} }),
   );
   const projects = projectsData?.projects ?? [];
 
@@ -89,12 +89,30 @@ export const CreateActionModal = ({
   }, [columns, defaultColumnId, form]);
 
   const onSubmit = (values: FormValues) => {
-    createAction.mutate(values, {
-      onSuccess: () => {
-        onOpenChange(false);
-        form.reset();
+    const normalizedDescription = values.description?.trim();
+
+    createAction.mutate(
+      {
+        ...values,
+        description: normalizedDescription
+          ? JSON.stringify({
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: normalizedDescription }],
+                },
+              ],
+            })
+          : undefined,
       },
-    });
+      {
+        onSuccess: () => {
+          onOpenChange(false);
+          form.reset();
+        },
+      },
+    );
   };
 
   const isPending = createAction.isPending;
@@ -205,7 +223,9 @@ export const CreateActionModal = ({
                 name="orgProjectId"
                 render={({ field }) => (
                   <Select
-                    onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
+                    onValueChange={(v) =>
+                      field.onChange(v === "none" ? undefined : v)
+                    }
                     value={field.value ?? "none"}
                     disabled={isPending}
                   >

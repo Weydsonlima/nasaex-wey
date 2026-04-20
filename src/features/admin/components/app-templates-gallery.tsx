@@ -27,7 +27,6 @@ interface AppTemplatesGalleryProps {
   appType: AppType;
   organizationId: string;
   onDuplicate?: (templateId: string) => void;
-  showDelete?: boolean;
 }
 
 interface Template {
@@ -44,7 +43,6 @@ export function AppTemplatesGallery({
   appType,
   organizationId,
   onDuplicate,
-  showDelete = false,
 }: AppTemplatesGalleryProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,8 +113,8 @@ export function AppTemplatesGallery({
   const templateToDelete = templates.find((t) => t.id === deleteId);
   const deleteConfirmNameMatch =
     templateToDelete &&
-    confirmName.trim().toLowerCase() ===
-      (templateToDelete.name || templateToDelete.title || "").toLowerCase();
+    (templateToDelete.name || templateToDelete.title || "").toLowerCase().trim() ===
+      confirmName.toLowerCase().trim();
 
   if (isLoading) {
     return (

@@ -4,6 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { conversationProps, InfiniteConversations } from "../types";
 import { toast } from "sonner";
+import {
+  playSoundNotification,
+  useSoundNotificationSettings,
+} from "@/features/tracking-settings/hooks/use-sound-notification";
 
 export function useInfinityConversation(
   trackingId: string,
@@ -13,6 +17,7 @@ export function useInfinityConversation(
 ) {
   const queryClient = useQueryClient();
   const reopenLead = useMutation(orpc.leads.update.mutationOptions({}));
+  const { settings } = useSoundNotificationSettings(trackingId);
 
   useEffect(() => {
     if (!trackingId) return;
@@ -20,6 +25,8 @@ export function useInfinityConversation(
     const queryKey = ["conversations.list", trackingId, statusId, search];
 
     const conversationHandler = (body: conversationProps) => {
+      playSoundNotification(settings);
+
       queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
 
@@ -53,8 +60,7 @@ export function useInfinityConversation(
         const newPages = old.pages.map((page: any) => {
           const newItems = page.items.filter((item: any) => {
             if (item.id === message.conversationId) {
-              const shouldReopen =
-                item?.lead?.statusFlow === "FINISHED";
+              const shouldReopen = item?.lead?.statusFlow === "FINISHED";
 
               if (shouldReopen) {
                 reopenLeadId = item.leadId ?? item?.lead?.id ?? null;

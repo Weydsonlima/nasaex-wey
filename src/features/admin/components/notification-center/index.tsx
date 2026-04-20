@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { orpc } from "@/lib/orpc";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Bell,
   Send,
@@ -13,7 +13,10 @@ import {
   Plus,
   Copy,
   Zap,
+  Search,
+  Loader2,
 } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/use-debounced";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -55,10 +58,8 @@ const TARGET_ICON: Record<string, React.ElementType> = {
 
 export function NotificationCenterV2({
   notifications,
-  orgs,
 }: {
   notifications: Notification[];
-  orgs: Org[];
 }) {
   const router = useRouter();
 
@@ -84,6 +85,19 @@ export function NotificationCenterV2({
   });
 
   const [sent, setSent] = useState(false);
+
+  // Organization search state
+  const [searchOrg, setSearchOrg] = useState("");
+  const debouncedSearchOrg = useDebouncedValue(searchOrg, 500);
+
+  const { data: orgsData, isLoading: isLoadingOrgs } = useQuery(
+    orpc.admin.listOrganizationsForSelection.queryOptions({
+      input: {
+        search: debouncedSearchOrg,
+        limit: 100,
+      },
+    }),
+  );
 
   const mut = useMutation({
     mutationFn: () =>
@@ -388,24 +402,54 @@ export function NotificationCenterV2({
           </div>
 
           {form.targetType === "org" && (
-            <div>
-              <label className="block text-xs text-zinc-400 mb-1.5">
-                Empresa
-              </label>
-              <select
-                value={form.targetId}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, targetId: e.target.value }))
-                }
-                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500"
-              >
-                <option value="">Selecione...</option>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5 font-medium">
+                  Pesquisar Empresa
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={searchOrg}
+                    onChange={(e) => setSearchOrg(e.target.value)}
+                    placeholder="Nome da empresa..."
+                    className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-500"
+                  />
+                  {isLoadingOrgs && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 text-zinc-500 animate-spin" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1.5 font-medium">
+                  Selecionar Empresa *
+                </label>
+                <select
+                  value={form.targetId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, targetId: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500"
+                >
+                  <option value="">
+                    {isLoadingOrgs ? "Carregando..." : "Selecione..."}
                   </option>
-                ))}
-              </select>
+                  {orgsData?.organizations.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                  {!isLoadingOrgs &&
+                    orgsData?.organizations.length === 0 &&
+                    searchOrg && (
+                      <option disabled>Nenhuma empresa encontrada</option>
+                    )}
+                </select>
+              </div>
             </div>
           )}
 

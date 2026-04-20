@@ -26,6 +26,7 @@ import { updateAppCost } from "./update-app-cost";
 import { sendNotification } from "./send-notification";
 import { deleteNotification } from "./delete-notification";
 import { listNotifications } from "./list-notifications";
+import { listOrganizationsForSelection } from "./list-organizations-selection";
 import { adminCreateOrgUser } from "./create-org-user";
 import { adminRemoveMember } from "./remove-member";
 import { adminUpdateMember } from "./update-member";
@@ -78,6 +79,7 @@ export const adminRouter = {
   sendNotification,
   deleteNotification,
   listNotifications,
+  listOrganizationsForSelection,
   createOrgUser: adminCreateOrgUser,
   removeMember: adminRemoveMember,
   updateMember: adminUpdateMember,

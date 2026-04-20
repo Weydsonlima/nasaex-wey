@@ -82,7 +82,7 @@ export function AppTemplatesGallery({
     };
 
     fetchTemplates();
-  }, [appType, toast]);
+  }, [appType]);
 
   const handleDuplicate = async (templateId: string) => {
     setIsDuplicating(templateId);
@@ -118,8 +118,8 @@ export function AppTemplatesGallery({
   const templateToDelete = templates.find((t) => t.id === deleteId);
   const deleteConfirmNameMatch =
     templateToDelete &&
-    confirmName.trim().toLowerCase() ===
-      (templateToDelete.name || templateToDelete.title || "").toLowerCase();
+    (templateToDelete.name || templateToDelete.title || "").toLowerCase().trim() ===
+      confirmName.toLowerCase().trim();
 
   if (isLoading) {
     return (

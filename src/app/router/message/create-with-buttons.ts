@@ -4,6 +4,7 @@ import { CreatedMessageProps, MessageStatus } from "@/features/tracking-chat/typ
 import { sendButtons, sendList } from "@/http/uazapi/send-menu";
 import prisma from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
+import { ORPCError } from "@orpc/server";
 import z from "zod";
 import { v4 as uuidv4 } from "uuid";
 
@@ -58,35 +59,49 @@ export const createButtonsMessage = base
     let bodyText: string;
 
     if (input.type === "buttons") {
-      await sendButtons(
-        input.token,
-        {
-          number: input.leadPhone,
-          text: input.text,
-          footer: input.footer,
-          buttons: input.buttons,
-          readchat: true,
-          readmessages: true,
-        },
-        input.baseUrl,
-      ).then((r) => { if (r?.messageid) externalMessageId = r.messageid; });
+      try {
+        const r = await sendButtons(
+          input.token,
+          {
+            number: input.leadPhone,
+            text: input.text,
+            footer: input.footer,
+            buttons: input.buttons,
+            readchat: true,
+            readmessages: true,
+          },
+          input.baseUrl,
+        );
+        if (r?.messageid) externalMessageId = r.messageid;
+      } catch (err: any) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: `UAZAPI: ${err?.message ?? "Erro ao enviar botões"}`,
+        });
+      }
 
       const btnList = input.buttons.map((b) => `• ${b.text}`).join("\n");
       bodyText = `${input.text}\n\n[Botões]\n${btnList}`;
     } else {
-      await sendList(
-        input.token,
-        {
-          number: input.leadPhone,
-          text: input.text,
-          footer: input.footer,
-          button: input.button,
-          sections: input.sections,
-          readchat: true,
-          readmessages: true,
-        },
-        input.baseUrl,
-      ).then((r) => { if (r?.messageid) externalMessageId = r.messageid; });
+      try {
+        const r = await sendList(
+          input.token,
+          {
+            number: input.leadPhone,
+            text: input.text,
+            footer: input.footer,
+            button: input.button,
+            sections: input.sections,
+            readchat: true,
+            readmessages: true,
+          },
+          input.baseUrl,
+        );
+        if (r?.messageid) externalMessageId = r.messageid;
+      } catch (err: any) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: `UAZAPI: ${err?.message ?? "Erro ao enviar lista"}`,
+        });
+      }
 
       const rowList = input.sections
         .flatMap((s) => s.rows)

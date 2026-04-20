@@ -28,6 +28,15 @@ export interface AvatarConfig {
   hairColor: string;
   beardStyle: BeardStyle;
   faceAccessory: FaceAccessory;
+  /**
+   * URL do spritesheet LPC gerado pelo Universal LPC Character Generator.
+   * Quando definido, o Phaser usa este spritesheet animado ao invés do
+   * compositor SVG/Canvas interno. Formato: PNG 64×64 por frame,
+   * rows 8-11 = walk (S/W/N/E), 9 frames por linha.
+   */
+  lpcSpritesheetUrl?: string;
+  /** Nome/rótulo do personagem LPC para exibição no painel */
+  lpcCharacterName?: string;
 }
 
 export interface MeetingPoint {

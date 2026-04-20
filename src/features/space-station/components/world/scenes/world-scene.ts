@@ -1,6 +1,7 @@
 import type Phaser from "phaser";
 import type { AvatarConfig, StationWorldConfig, WorldMapData, WorldElementsConfig, RoomConfig, RoomType } from "../../../types";
 import { DEFAULT_ELEMENTS, DEFAULT_ROOMS, ROOM_META } from "../../../types";
+import { buildVisorSpritesheet } from "../../../utils/composite-visor";
 
 const T = 32;
 const MW = 80;
@@ -88,8 +89,21 @@ const ROOM_FLOOR_COLOR: Record<RoomType, number> = {
 
 interface RemotePlayer { gfx: Phaser.GameObjects.Graphics; nameText: Phaser.GameObjects.Text }
 
+/* ─── LPC spritesheet constants ────────────────────────────────────────── */
+// Standard Universal LPC format: 64×64 px per frame
+// Row  8 = walk south (down),   Row  9 = walk west (left)
+// Row 10 = walk north (up),     Row 11 = walk east (right)
+// 9 frames per row: col 0 = idle, cols 1-8 = walk cycle
+const LPC_FRAME      = 64;
+const LPC_WALK_ROWS  = { down: 8, left: 9, up: 10, right: 11 } as const;
+const LPC_WALK_FRAMES = 9;
+// Player display scale for LPC sprites (64px → 32px logical)
+const LPC_SCALE      = 0.5;
+
 export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   private player!: Phaser.Physics.Arcade.Image;
+  /** Animated LPC sprite — used instead of `player` when lpcSpritesheetUrl is set */
+  private lpcSprite: Phaser.Physics.Arcade.Sprite | null = null;
   private playerLabel!: Phaser.GameObjects.Text;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -101,6 +115,10 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   private animFrame = 0;
   private animTimer = 0;
   private facingDir: "down" | "up" | "left" | "right" = "down";
+
+  // ─── Proximity detection (for WebRTC) ────────────────────────
+  private readonly PROXIMITY_RADIUS = T * 6;   // ~192px — ~6 tiles
+  private nearbyPeers: Set<string> = new Set(); // currently in range
 
   // ─── Zoom ─────────────────────────────────────────────────────
   private currentZoom = 1.6;
@@ -150,25 +168,33 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     else if (scenario === "space")  this.drawSpace();
     else if (scenario === "rocket") this.drawRocket();
 
+    const lpcUrl = (this.avatarConfig as (AvatarConfig & { lpcSpritesheetUrl?: string }) | undefined)?.lpcSpritesheetUrl;
+
     this.generatePlayerTextures();
 
     const startX = WORLD_W / 4;
     const startY = OFFICE_H / 2;
-    this.player = this.physics.add.image(startX, startY, "__player_idle__");
-    this.player.setCollideWorldBounds(true).setDepth(20);
-    // Hitbox: narrower than full sprite width, ignore transparent borders
-    (this.player.body as Phaser.Physics.Arcade.Body).setSize(18, 30).setOffset(7, 22);
+
+    if (lpcUrl) {
+      // ── LPC mode: animated sprite ──────────────────────────────
+      this.loadLpcSpritesheet(lpcUrl, startX, startY);
+    } else {
+      // ── SVG/Canvas mode: static image ─────────────────────────
+      this.player = this.physics.add.image(startX, startY, "__player_idle__");
+      this.player.setCollideWorldBounds(true).setDepth(20);
+      (this.player.body as Phaser.Physics.Arcade.Body).setSize(18, 30).setOffset(7, 22);
+      this.physics.add.collider(this.player, this.walls);
+    }
 
     this.playerLabel = this.add.text(startX, startY - 32, "Você", {
       fontSize: "10px", color: "#c4b5fd",
       backgroundColor: "#00000099", padding: { x: 3, y: 1 },
     }).setOrigin(0.5).setDepth(21);
 
-    // Collision with walls
-    this.physics.add.collider(this.player, this.walls);
-
     this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    // Camera follows lpcSprite if available, otherwise the static image player
+    const cameraTarget = (this.lpcSprite ?? this.player) as Phaser.GameObjects.GameObject;
+    this.cameras.main.startFollow(cameraTarget as Phaser.GameObjects.Image, true, 0.1, 0.1);
     this.cameras.main.setZoom(this.currentZoom);
 
     // ── Mouse wheel zoom ──────────────────────────────────────────
@@ -640,128 +666,283 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
    * Body is drawn with pixel-art shapes (legs animate per frame).
    * Profile photo (or skin tone) is composited into the face circle.
    */
+  // ─── LPC Spritesheet loader ───────────────────────────────────
+  /**
+   * Loads a Universal LPC spritesheet from URL, registers Phaser animations
+   * (walk_down / walk_up / walk_left / walk_right / idle_<dir>) and creates
+   * the physics sprite that replaces the static canvas-based player.
+   */
+  private loadLpcSpritesheet(this: Phaser.Scene & WorldScene, url: string, startX: number, startY: number) {
+    const KEY = "__lpc_sheet__";
+
+    const setupSprite = () => {
+      if (this.lpcSprite) return; // already done
+
+      // Register animations if not yet done
+      const dirs: Array<{ dir: "down"|"up"|"left"|"right"; row: number }> = [
+        { dir: "down",  row: LPC_WALK_ROWS.down  },
+        { dir: "up",    row: LPC_WALK_ROWS.up    },
+        { dir: "left",  row: LPC_WALK_ROWS.left  },
+        { dir: "right", row: LPC_WALK_ROWS.right },
+      ];
+
+      for (const { dir, row } of dirs) {
+        const walkKey = `lpc_walk_${dir}`;
+        const idleKey = `lpc_idle_${dir}`;
+
+        if (!this.anims.exists(walkKey)) {
+          // Walk: frames 1-8 on the given row
+          this.anims.create({
+            key: walkKey,
+            frames: Array.from({ length: 8 }, (_, i) => ({
+              key: KEY,
+              frame: (row * LPC_WALK_FRAMES + 1 + i),
+            })),
+            frameRate: 10,
+            repeat: -1,
+          });
+        }
+
+        if (!this.anims.exists(idleKey)) {
+          // Idle: frame 0 on the given row
+          this.anims.create({
+            key: idleKey,
+            frames: [{ key: KEY, frame: row * LPC_WALK_FRAMES }],
+            frameRate: 1,
+            repeat: -1,
+          });
+        }
+      }
+
+      // Create physics sprite
+      const sprite = this.physics.add.sprite(startX, startY, KEY)
+        .setScale(LPC_SCALE)
+        .setDepth(20)
+        .setCollideWorldBounds(true);
+
+      // Hitbox fits the visible character body (middle portion of 64×64 frame at 0.5 scale)
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      body.setSize(24, 40).setOffset(20, 22);
+
+      this.lpcSprite = sprite;
+      this.physics.add.collider(this.lpcSprite, this.walls);
+
+      // Camera — update target to lpcSprite
+      this.cameras.main.startFollow(this.lpcSprite, true, 0.1, 0.1);
+
+      // Start idle animation
+      this.lpcSprite.anims.play("lpc_idle_down");
+    };
+
+    if (this.textures.exists(KEY)) {
+      setupSprite();
+      return;
+    }
+
+    // Resolve URL — "pixel_astronaut" is a built-in that uses profile photo compositing
+    const PIXEL_ASTRONAUT_BASE = "/lpc_pixel_astronaut.png";
+    const isPixelAstronaut = url === "pixel_astronaut";
+    const profileUrl = (this.avatarConfig as AvatarConfig & { _photoUrl?: string })?._photoUrl;
+
+    const loadFromUrl = (resolvedUrl: string) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        if (this.textures.exists(KEY)) { setupSprite(); return; }
+        const cols = Math.floor(img.naturalWidth  / LPC_FRAME);
+        const rows = Math.floor(img.naturalHeight / LPC_FRAME);
+        const canvas = document.createElement("canvas");
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d")!.drawImage(img, 0, 0);
+        this.textures.addSpriteSheet(KEY, canvas, {
+          frameWidth: LPC_FRAME, frameHeight: LPC_FRAME,
+          startFrame: 0, endFrame: cols * rows - 1,
+        });
+        setupSprite();
+        // Revoke blob URL when done
+        if (resolvedUrl.startsWith("blob:")) URL.revokeObjectURL(resolvedUrl);
+      };
+      img.onerror = () => {
+        console.warn("[WorldScene] Failed to load LPC spritesheet:", resolvedUrl);
+        const canvas = document.createElement("canvas");
+        canvas.width = LPC_FRAME; canvas.height = LPC_FRAME;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = (this.avatarConfig?.suitColor ?? "#7c3aed");
+        ctx.fillRect(16, 20, 32, 40);
+        ctx.fillStyle = (this.avatarConfig?.skinTone ?? "#FFDBB4");
+        ctx.beginPath(); ctx.arc(32, 14, 12, 0, Math.PI * 2); ctx.fill();
+        this.textures.addCanvas(KEY, canvas);
+        setupSprite();
+      };
+      img.src = resolvedUrl;
+    };
+
+    if (isPixelAstronaut) {
+      // Composite profile photo into visor, then load
+      buildVisorSpritesheet(PIXEL_ASTRONAUT_BASE, profileUrl)
+        .then(loadFromUrl)
+        .catch(() => loadFromUrl(PIXEL_ASTRONAUT_BASE));
+    } else {
+      loadFromUrl(url);
+    }
+  }
+
   private generatePlayerTextures(this: Phaser.Scene & WorldScene) {
     const cfg       = this.avatarConfig;
     const suitHex   = cfg?.suitColor   ?? "#3b6fd4";
     const helmHex   = cfg?.helmetColor ?? "#06b6d4";
     const skinHex   = cfg?.skinTone    ?? "#FFDBB4";
+    const hairHex   = cfg?.hairColor   ?? "#3B2A1E";
     const acc       = cfg?.accessory   ?? "none";
     const photoUrl  = cfg?.useProfilePhoto
       ? (cfg as AvatarConfig & { _photoUrl?: string })._photoUrl
       : undefined;
 
-    // Parse hex → r,g,b
-    const hex2rgb = (h: string) => {
-      const v = parseInt(h.replace("#",""), 16);
-      return { r: (v>>16)&255, g: (v>>8)&255, b: v&255 };
+    // ── SVG-based texture generation ──────────────────────────────────────────
+    // Each frame SVG has named <g id="..."> groups with a fill attribute.
+    // We replace the fill color for each group to apply the avatar config.
+    const colorMap: Record<string, string> = {
+      "suit":      suitHex,
+      "suit-arms": suitHex,
+      "suit-legs": suitHex,
+      "helmet":    helmHex,
+      "visor":     "#1B2A4A",
+      "face":      skinHex,
+      "hair":      hairHex,
+      "beard":     hairHex,
+      "gloves":    "#1A2A3A",
+      "boots":     "#1C2A36",
+      "backpack":  "#2A3F60",
+      "detail":    "#FFFFFF",
     };
-    const suit = hex2rgb(suitHex);
-    const helm = hex2rgb(helmHex);
-    const dark = { r: Math.round(suit.r*0.6), g: Math.round(suit.g*0.6), b: Math.round(suit.b*0.6) };
 
-    // Canvas size
-    const W = 32, H = 54;
-    // Head / face circle centre and radius
-    const HX = 16, HY = 11, HR = 10;
+    const recolorSvg = (svgText: string): string => {
+      let out = svgText;
+      for (const [id, color] of Object.entries(colorMap)) {
+        // Replace: <g id="suit" fill="#...">  →  <g id="suit" fill="<newColor>">
+        out = out.replace(
+          new RegExp(`(<g id="${id}"[^>]*fill=")[^"]*(")`,"g"),
+          `$1${color}$2`
+        );
+      }
+      return out;
+    };
 
-    const frames: { key: string; lLeg: number; rLeg: number; lArm: number; rArm: number }[] = [
-      { key: "__player_idle__",   lLeg:  0, rLeg:  0, lArm:  0, rArm:  0 },
-      { key: "__player_walk_a__", lLeg: -4, rLeg:  4, lArm: -2, rArm:  2 },
-      { key: "__player_walk_b__", lLeg:  4, rLeg: -4, lArm:  2, rArm: -2 },
+    const FRAME_FILES: { key: string; file: string }[] = [
+      { key: "__player_idle__",   file: "/astronaut-idle.svg"   },
+      { key: "__player_walk_a__", file: "/astronaut-walk_a.svg" },
+      { key: "__player_walk_b__", file: "/astronaut-walk_b.svg" },
     ];
 
-    const buildFrame = (frame: typeof frames[0], photo?: HTMLImageElement | null) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = W; canvas.height = H;
-      const c = canvas.getContext("2d")!;
+    const W = 32, H = 54;
+    const SVG_W = 320, SVG_H = 540;
 
-      // Helper: draw a filled rect with rgba
-      const fr = (r: number, g: number, b: number, a: number, x: number, y: number, w: number, h: number) => {
-        c.fillStyle = `rgba(${r},${g},${b},${a})`;
-        c.fillRect(x, y, w, h);
+    const loadSvgFrame = (frameKey: string, svgText: string, photo?: HTMLImageElement | null) => {
+      const colored = recolorSvg(svgText);
+      const blob    = new Blob([colored], { type: "image/svg+xml" });
+      const url     = URL.createObjectURL(blob);
+
+      const svgImg = new Image(SVG_W, SVG_H);
+      svgImg.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d")!;
+
+        // Draw scaled SVG onto small canvas (crisp pixels)
+        ctx.drawImage(svgImg, 0, 0, SVG_W, SVG_H, 0, 0, W, H);
+
+        // Composite profile photo into face circle
+        if (photo) {
+          const HX = 16, HY = 11, HR = 9;
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(HX, HY, HR, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(photo, HX - HR, HY - HR, HR * 2, HR * 2);
+          ctx.restore();
+        }
+
+        URL.revokeObjectURL(url);
+        if ((this as unknown as Phaser.Scene).textures?.exists(frameKey)) {
+          (this as unknown as Phaser.Scene).textures.remove(frameKey);
+        }
+        (this as unknown as Phaser.Scene).textures.addCanvas(frameKey, canvas);
+
+        // Refresh player sprite if already created
+        const scene = this as unknown as Phaser.Scene & WorldScene;
+        if (scene.player && scene.player.texture.key !== frameKey) {
+          // player is live — force texture refresh on idle frame
+          if (frameKey === "__player_idle__") {
+            scene.player.setTexture("__player_idle__");
+          }
+        }
       };
-      const s = suit, d = dark, hc = helm;
-
-      // ── Jetpack (behind body) ──
-      if (acc === "jetpack") {
-        fr(40, 55, 90, 1,  9, 18,  6, 18);
-        fr(255,100,  0,.8, 11, 34,  4,  5);
-      }
-
-      // ── Legs (animated) ──
-      const ll = frame.lLeg, rl = frame.rLeg;
-      // left leg
-      fr(s.r,s.g,s.b,1, 7, 38+ll, 7, 12);
-      fr(d.r,d.g,d.b,1, 7, 49+ll, 7,  3);  // boot
-      // right leg
-      fr(s.r,s.g,s.b,1,18, 38+rl, 7, 12);
-      fr(d.r,d.g,d.b,1,18, 49+rl, 7,  3);  // boot
-
-      // ── Torso ──
-      fr(s.r,s.g,s.b,1, 5, 22, 22, 18);
-      // chest detail stripe
-      fr(255,255,255,.15, 9,26, 14,  4);
-      // chest badge
-      fr(255, 80, 80, .7,  9,27,  4,  3);
-
-      // ── Arms (animated) ──
-      const la = frame.lArm, ra = frame.rArm;
-      fr(s.r,s.g,s.b,1, -1+la, 22, 7, 16);
-      fr(255,255,255,.6,  0+la, 36, 5,  3);  // glove
-      fr(s.r,s.g,s.b,1, 26+ra, 22, 7, 16);
-      fr(255,255,255,.6, 27+ra, 36, 5,  3);  // glove
-
-      // ── Helmet (no visor — face visible, helmet in hand) ──
-      // Just a small rim ring at the neck
-      fr(hc.r,hc.g,hc.b, 1, 8, 21, 16, 3);
-      fr(hc.r,hc.g,hc.b, .5, 6, 20, 20, 2);
-
-      // ── Face circle (skin / photo) ──
-      c.save();
-      c.beginPath();
-      c.arc(HX, HY, HR, 0, Math.PI * 2);
-      c.clip();
-      if (photo) {
-        c.drawImage(photo, HX - HR, HY - HR, HR * 2, HR * 2);
-      } else {
-        c.fillStyle = skinHex;
-        c.fillRect(HX - HR, HY - HR, HR * 2, HR * 2);
-      }
-      c.restore();
-
-      // Face ring (outline)
-      c.strokeStyle = `rgba(${hc.r},${hc.g},${hc.b},0.8)`;
-      c.lineWidth = 1.5;
-      c.beginPath(); c.arc(HX, HY, HR, 0, Math.PI * 2); c.stroke();
-
-      // ── Helmet in hand (right side, bottom) ──
-      fr(hc.r,hc.g,hc.b, 1, 22, 42, 10,  7);  // helmet body
-      fr(hc.r,hc.g,hc.b,.5, 23, 43,  8,  4);  // helmet visor shine
-      fr(170,220,255,.5,   24, 44,  6,  3);    // visor glass
-
-      // ── Flag accessory ──
-      if (acc === "flag") {
-        fr(180,20, 0,1, 26, 0, 2, 11);
-        fr(220,20, 0,1, 28, 0, 8,  7);
-        fr(255,255,255,1, 28, 0, 8,  3);
-      }
-
-      // Refresh texture
-      if (this.textures.exists(frame.key)) this.textures.remove(frame.key);
-      this.textures.addCanvas(frame.key, canvas);
+      svgImg.onerror = () => {
+        URL.revokeObjectURL(url);
+        // Fall back to solid-color canvas
+        const canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = suitHex;
+        ctx.fillRect(0, 16, W, H - 16);
+        ctx.fillStyle = skinHex;
+        ctx.beginPath(); ctx.arc(W/2, 11, 9, 0, Math.PI*2); ctx.fill();
+        if ((this as unknown as Phaser.Scene).textures?.exists(frameKey)) {
+          (this as unknown as Phaser.Scene).textures.remove(frameKey);
+        }
+        (this as unknown as Phaser.Scene).textures.addCanvas(frameKey, canvas);
+      };
+      svgImg.src = url;
     };
 
+    const loadAll = (photo?: HTMLImageElement | null) => {
+      for (const { key, file } of FRAME_FILES) {
+        fetch(file)
+          .then(res => res.text())
+          .then(text => loadSvgFrame(key, text, photo))
+          .catch(() => {
+            // file not found — build minimal fallback immediately
+            const canvas = document.createElement("canvas");
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext("2d")!;
+            ctx.fillStyle = suitHex;
+            ctx.fillRect(0, 16, W, H - 16);
+            ctx.fillStyle = skinHex;
+            ctx.beginPath(); ctx.arc(W/2, 11, 9, 0, Math.PI*2); ctx.fill();
+            if ((this as unknown as Phaser.Scene).textures?.exists(key)) {
+              (this as unknown as Phaser.Scene).textures.remove(key);
+            }
+            (this as unknown as Phaser.Scene).textures.addCanvas(key, canvas);
+          });
+      }
+    };
+
+    // Build placeholder textures synchronously so player sprite exists immediately
+    for (const { key } of FRAME_FILES) {
+      const canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = suitHex;
+      ctx.fillRect(4, 16, W - 8, H - 20);
+      ctx.fillStyle = skinHex;
+      ctx.beginPath(); ctx.arc(W/2, 11, 9, 0, Math.PI*2); ctx.fill();
+      if (!(this as unknown as Phaser.Scene).textures.exists(key)) {
+        (this as unknown as Phaser.Scene).textures.addCanvas(key, canvas);
+      }
+    }
+
+    // Then asynchronously load real SVG textures (with optional photo)
     if (photoUrl) {
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.onload  = () => { for (const f of frames) buildFrame(f, img); };
-      img.onerror = () => { for (const f of frames) buildFrame(f, null); };
+      img.onload  = () => loadAll(img);
+      img.onerror = () => loadAll(null);
       img.src = photoUrl;
-      // Build immediately without photo so textures exist right away
-      for (const f of frames) buildFrame(f, null);
     } else {
-      for (const f of frames) buildFrame(f, null);
+      loadAll(null);
     }
+
   }
 
   // ─── Galaxy portal ────────────────────────────────────────────
@@ -843,6 +1024,13 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     if (!p) return;
     p.gfx.destroy(); p.nameText.destroy();
     this.remotePlayers.delete(data.userId);
+    // Notify WebRTC hook to close peer connection
+    if (this.nearbyPeers.has(data.userId)) {
+      this.nearbyPeers.delete(data.userId);
+      window.dispatchEvent(new CustomEvent("space-station:proximity-leave", {
+        detail: { peerId: data.userId },
+      }));
+    }
   }
 
   // ─── Zoom helpers ─────────────────────────────────────────────
@@ -870,32 +1058,103 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     const right = this.cursors.right.isDown || this.wasd.right.isDown;
     const moving = up || down || left || right;
 
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    body.setVelocity(0, 0);
-    if (up)    { body.setVelocityY(-speed); this.facingDir = "up"; }
-    if (down)  { body.setVelocityY(speed);  this.facingDir = "down"; }
-    if (left)  { body.setVelocityX(-speed); this.facingDir = "left"; }
-    if (right) { body.setVelocityX(speed);  this.facingDir = "right"; }
+    if (this.lpcSprite) {
+      // ── LPC sprite movement ──────────────────────────────────────
+      const body = this.lpcSprite.body as Phaser.Physics.Arcade.Body;
+      body.setVelocity(0, 0);
+      if (up)    { body.setVelocityY(-speed); this.facingDir = "up"; }
+      if (down)  { body.setVelocityY(speed);  this.facingDir = "down"; }
+      if (left)  { body.setVelocityX(-speed); this.facingDir = "left"; }
+      if (right) { body.setVelocityX(speed);  this.facingDir = "right"; }
 
-    if (moving) {
-      this.animTimer++;
-      if (this.animTimer % 10 === 0) {
-        this.animFrame = (this.animFrame + 1) % 2;
-        this.player.setTexture(this.animFrame === 0 ? "__player_walk_a__" : "__player_walk_b__");
-        this.player.setFlipX(this.facingDir === "left");
+      const walkKey = `lpc_walk_${this.facingDir}`;
+      const idleKey = `lpc_idle_${this.facingDir}`;
+      const curKey  = this.lpcSprite.anims.currentAnim?.key ?? "";
+
+      if (moving) {
+        if (curKey !== walkKey) this.lpcSprite.anims.play(walkKey, true);
+      } else {
+        if (curKey !== idleKey) this.lpcSprite.anims.play(idleKey, true);
+      }
+
+      this.playerLabel.setPosition(this.lpcSprite.x, this.lpcSprite.y - 44);
+
+      if (this.game.getFrame() % 6 === 0 && moving) {
+        window.dispatchEvent(new CustomEvent("space-station:player-moved", {
+          detail: { x: this.lpcSprite.x, y: this.lpcSprite.y },
+        }));
       }
     } else {
-      this.animFrame = 0; this.animTimer = 0;
-      this.player.setTexture("__player_idle__");
+      // ── Canvas/SVG sprite movement ───────────────────────────────
+      const body = this.player.body as Phaser.Physics.Arcade.Body;
+      body.setVelocity(0, 0);
+      if (up)    { body.setVelocityY(-speed); this.facingDir = "up"; }
+      if (down)  { body.setVelocityY(speed);  this.facingDir = "down"; }
+      if (left)  { body.setVelocityX(-speed); this.facingDir = "left"; }
+      if (right) { body.setVelocityX(speed);  this.facingDir = "right"; }
+
+      if (moving) {
+        this.animTimer++;
+        if (this.animTimer % 10 === 0) {
+          this.animFrame = (this.animFrame + 1) % 2;
+          this.player.setTexture(this.animFrame === 0 ? "__player_walk_a__" : "__player_walk_b__");
+          this.player.setFlipX(this.facingDir === "left");
+        }
+      } else {
+        this.animFrame = 0; this.animTimer = 0;
+        this.player.setTexture("__player_idle__");
+      }
+
+      this.playerLabel.setPosition(this.player.x, this.player.y - 36);
+
+      if (this.game.getFrame() % 6 === 0 && moving) {
+        window.dispatchEvent(new CustomEvent("space-station:player-moved", {
+          detail: { x: this.player.x, y: this.player.y },
+        }));
+      }
     }
 
-    this.playerLabel.setPosition(this.player.x, this.player.y - 36);
-
-    if (this.game.getFrame() % 6 === 0 && moving) {
-      window.dispatchEvent(new CustomEvent("space-station:player-moved", {
-        detail: { x: this.player.x, y: this.player.y },
-      }));
+    // ── Proximity check (every 30 frames ~0.5s) ──────────────────
+    if (this.game.getFrame() % 30 === 0) {
+      this.checkProximity();
     }
+  }
+
+  private checkProximity(this: Phaser.Scene & WorldScene) {
+    const active = this.lpcSprite ?? this.player;
+    const px = active.x;
+    const py = active.y;
+    const r  = this.PROXIMITY_RADIUS;
+    const nowNear = new Set<string>();
+
+    this.remotePlayers.forEach((rp, userId) => {
+      const dx = rp.gfx.x - px;
+      const dy = rp.gfx.y - py;
+      if (Math.sqrt(dx*dx + dy*dy) <= r) {
+        nowNear.add(userId);
+        if (!this.nearbyPeers.has(userId)) {
+          // entered proximity
+          window.dispatchEvent(new CustomEvent("space-station:proximity-enter", {
+            detail: {
+              peerId:    userId,
+              peerName:  rp.nameText.text,
+              peerImage: null,
+            },
+          }));
+        }
+      }
+    });
+
+    // Detect departures
+    this.nearbyPeers.forEach(userId => {
+      if (!nowNear.has(userId)) {
+        window.dispatchEvent(new CustomEvent("space-station:proximity-leave", {
+          detail: { peerId: userId },
+        }));
+      }
+    });
+
+    this.nearbyPeers = nowNear;
   }
 
   // ─── Drawing utils ────────────────────────────────────────────

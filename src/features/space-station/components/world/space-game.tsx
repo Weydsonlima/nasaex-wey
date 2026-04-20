@@ -6,28 +6,45 @@ import { Button } from "@/components/ui/button";
 import type { StationWorldConfig, AvatarConfig } from "../../types";
 import { StationExplorer } from "../station-explorer";
 import { WorldSettingsPanel } from "./world-settings-panel";
+import { MediaBar } from "./media-bar";
+import { MediaSettingsPanel } from "./media-settings-panel";
+import { VideoOverlay } from "./video-overlay";
+import { useWebRTC } from "../../hooks/use-webrtc";
 
 interface Props {
-  worldConfig: StationWorldConfig;
+  worldConfig:   StationWorldConfig;
   avatarConfig?: AvatarConfig;
-  stationId: string;
-  nick: string;
-  isOwner?: boolean;
-  userImage?: string | null;
+  stationId:     string;
+  nick:          string;
+  isOwner?:      boolean;
+  userImage?:    string | null;
+  /** User session data for WebRTC identity */
+  userId?:       string;
+  userName?:     string;
 }
 
-export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initialAvatarConfig, stationId, nick, isOwner, userImage }: Props) {
+export function SpaceGame({
+  worldConfig: initialWorldConfig,
+  avatarConfig: initialAvatarConfig,
+  stationId, nick, isOwner, userImage,
+  userId    = "guest",
+  userName  = nick,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<import("phaser").Game | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [galaxyOpen, setGalaxyOpen] = useState(false);
+  const gameRef      = useRef<import("phaser").Game | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [galaxyOpen, setGalaxyOpen]     = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [worldConfig, setWorldConfig] = useState(initialWorldConfig);
+  const [worldConfig, setWorldConfig]   = useState(initialWorldConfig);
   const [avatarConfig, setAvatarConfig] = useState(initialAvatarConfig);
-  const [zoomLevel, setZoomLevel] = useState(1.6);
-  const [zoomMin, setZoomMin] = useState(0.4);
-  const [zoomMax, setZoomMax] = useState(3.5);
+  const [zoomLevel, setZoomLevel]       = useState(1.6);
+  const [zoomMin,   setZoomMin]         = useState(0.4);
+  const [zoomMax,   setZoomMax]         = useState(3.5);
 
+  // ── WebRTC ─────────────────────────────────────────────────────────────────
+  const webrtc = useWebRTC({ stationId, userId, userName, userImage });
+
+  // ── Phaser game init ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -38,24 +55,32 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
       const PhaserModule = await import("phaser");
       const Phaser = PhaserModule.default ?? PhaserModule;
       const { PreloadScene } = await import("./scenes/preload-scene");
-      const { WorldScene } = await import("./scenes/world-scene");
+      const { WorldScene }   = await import("./scenes/world-scene");
       const { buildGameConfig } = await import("./game-config");
 
       let channel: { bind: (event: string, cb: (data: unknown) => void) => void } | undefined;
       try {
         const { pusherClient } = await import("@/lib/pusher");
+        // ensure auth endpoint
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (pusherClient.config as any).authEndpoint = "/api/pusher/auth";
         channel = pusherClient.subscribe(`presence-world-${stationId}`) as typeof channel;
       } catch {
         // Pusher not configured, single-player mode
       }
 
-      const capturedWorldConfig = worldConfig;
+      const capturedWorldConfig  = worldConfig;
       const capturedAvatarConfig = avatarConfig;
+      const capturedUserImage    = userImage;
 
-      const capturedUserImage = userImage;
       const worldSceneWithData = class extends WorldScene {
         create() {
-          super.init({ worldConfig: capturedWorldConfig, avatarConfig: capturedAvatarConfig, channel, userImage: capturedUserImage });
+          super.init({
+            worldConfig: capturedWorldConfig,
+            avatarConfig: capturedAvatarConfig,
+            channel,
+            userImage: capturedUserImage,
+          });
           super.create();
         }
       };
@@ -102,7 +127,7 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-slate-950">
-      {/* Loading overlay */}
+      {/* ── Loading overlay ── */}
       {loading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950">
           <div className="text-4xl mb-4 animate-pulse">🚀</div>
@@ -113,10 +138,58 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
         </div>
       )}
 
-      {/* Game container */}
+      {/* ── Game canvas ── */}
       <div id="phaser-container" ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* HUD overlay */}
+      {/* ── Media bar (top center) ── */}
+      {!loading && (
+        <MediaBar
+          nick={nick}
+          userName={userName}
+          userImage={userImage}
+          micOn={webrtc.micOn}
+          camOn={webrtc.camOn}
+          onToggleMic={webrtc.toggleMic}
+          onToggleCam={webrtc.toggleCam}
+          onOpenSettings={() => webrtc.setSettingsOpen(o => !o)}
+          onEnterRoom={() => window.dispatchEvent(new Event("space-station:enter-room"))}
+          peers={webrtc.peers}
+          isOwner={isOwner}
+        />
+      )}
+
+      {/* ── Media settings panel (dropdown) ── */}
+      {webrtc.settingsOpen && (
+        <MediaSettingsPanel
+          onClose={() => webrtc.setSettingsOpen(false)}
+          micOn={webrtc.micOn}
+          camOn={webrtc.camOn}
+          camError={webrtc.camError}
+          onToggleMic={webrtc.toggleMic}
+          onToggleCam={webrtc.toggleCam}
+          localStream={webrtc.localStream}
+          devices={webrtc.devices}
+          selectedAudio={webrtc.selectedAudio}
+          setSelectedAudio={webrtc.setSelectedAudio}
+          selectedVideo={webrtc.selectedVideo}
+          setSelectedVideo={webrtc.setSelectedVideo}
+          onApplyDevices={webrtc.applyDeviceChange}
+        />
+      )}
+
+      {/* ── Video overlay (bottom-right) ── */}
+      {!loading && (
+        <VideoOverlay
+          localStream={webrtc.localStream}
+          localMicOn={webrtc.micOn}
+          localCamOn={webrtc.camOn}
+          localName={userName}
+          localImage={userImage}
+          peers={webrtc.peers}
+        />
+      )}
+
+      {/* ── HUD — nick + controls (top-left) ── */}
       {!loading && (
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
           <div className="bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-slate-300">
@@ -128,14 +201,14 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
         </div>
       )}
 
-      {/* Top-right buttons */}
+      {/* ── Top-right: configure + exit ── */}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         {isOwner && !loading && (
           <Button
             size="sm"
             variant="outline"
             className="bg-black/60 border-white/20 text-white hover:bg-white/10"
-            onClick={() => { setSettingsOpen((o) => !o); setGalaxyOpen(false); }}
+            onClick={() => { setSettingsOpen(o => !o); setGalaxyOpen(false); }}
           >
             <Settings className="h-4 w-4 mr-1" />
             Configurar
@@ -152,7 +225,7 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
         </Button>
       </div>
 
-      {/* Galaxy explorer */}
+      {/* ── Galaxy explorer (side panel) ── */}
       {galaxyOpen && !settingsOpen && (
         <div className="absolute inset-y-0 right-0 z-20 w-80 bg-slate-900/95 backdrop-blur-sm border-l border-white/10 p-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
@@ -168,10 +241,9 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
         </div>
       )}
 
-      {/* Zoom controls — canto inferior direito */}
+      {/* ── Zoom controls (bottom-right) ── */}
       {!loading && (
         <div className="absolute bottom-5 right-5 z-10 flex flex-col items-center gap-1">
-          {/* Zoom in */}
           <button
             onClick={handleZoomIn}
             disabled={zoomLevel >= zoomMax}
@@ -180,19 +252,13 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
           >
             <ZoomIn className="h-4 w-4" />
           </button>
-
-          {/* Indicador de zoom — clica para resetar */}
           <button
             onClick={handleZoomReset}
             className="w-9 h-9 rounded-xl bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-white/10 transition-all backdrop-blur-sm"
-            title="Resetar zoom (100%)"
+            title="Resetar zoom"
           >
-            <span className="text-[9px] font-bold leading-none tabular-nums">
-              {zoomPct}%
-            </span>
+            <span className="text-[9px] font-bold leading-none tabular-nums">{zoomPct}%</span>
           </button>
-
-          {/* Zoom out */}
           <button
             onClick={handleZoomOut}
             disabled={zoomLevel <= zoomMin}
@@ -201,8 +267,6 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
           >
             <ZoomOut className="h-4 w-4" />
           </button>
-
-          {/* Fullscreen toggle */}
           <button
             onClick={() => {
               if (!document.fullscreenElement) document.documentElement.requestFullscreen();
@@ -216,7 +280,7 @@ export function SpaceGame({ worldConfig: initialWorldConfig, avatarConfig: initi
         </div>
       )}
 
-      {/* Settings panel */}
+      {/* ── World settings panel ── */}
       {settingsOpen && (
         <WorldSettingsPanel
           stationId={stationId}

@@ -41,8 +41,10 @@ export default async function SpaceStationWorldRoute({ params }: Props) {
     station.orgId === session.session.activeOrganizationId
   );
 
-  // Buscar foto do perfil do usuário logado para o avatar
+  // Dados do usuário para o avatar e WebRTC
   const userImage = session?.user?.image ?? null;
+  const userId    = session?.user?.id    ?? `guest_${station.id.slice(0, 8)}`;
+  const userName  = session?.user?.name  ?? nick;
 
   const defaultWorldConfig: StationWorldConfig = {
     id: "",
@@ -66,6 +68,8 @@ export default async function SpaceStationWorldRoute({ params }: Props) {
       nick={station.nick}
       isOwner={isOwner}
       userImage={userImage}
+      userId={userId}
+      userName={userName}
     />
   );
 }

@@ -3,6 +3,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  async rewrites() {
+    return [
+      {
+        source: "/@:nick/world",
+        destination: "/station/:nick/world",
+      },
+      {
+        source: "/@:nick",
+        destination: "/station/:nick",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

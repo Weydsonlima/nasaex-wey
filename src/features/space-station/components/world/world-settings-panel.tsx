@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useUpdateWorld, useListStations, useWorldAssets } from "../../hooks/use-station";
 import { AstronautAvatar } from "./astronaut-avatar";
+import { LpcAvatarEditor } from "./lpc-avatar-editor";
 import type {
   AvatarConfig, StationWorldConfig, WorldMapData, WorldElementsConfig,
   RoomConfig, GameView, HairStyle, BeardStyle, FaceAccessory, WorldGameAsset,
@@ -421,15 +422,30 @@ export function WorldSettingsPanel({ stationId, worldConfig, avatarConfig, nick,
         {/* ── Avatar ── */}
         {tab === "avatar" && (
           <div className="space-y-5">
-            {/* Preview real do astronauta */}
-            <div className="flex flex-col items-center gap-2 py-2">
-              <AstronautAvatar
-                avatar={avatar}
-                userImage={userImage}
-                size={180}
-              />
-              <p className="text-xs text-slate-400">Capacete na mão · rosto visível</p>
+
+            {/* ── Personagem Pixel Art LPC (topo da aba) ─────────── */}
+            <LpcAvatarEditor
+              avatarConfig={avatar}
+              stationId={stationId}
+              onChange={(partial) => setAvatar(a => ({ ...a, ...partial }))}
+            />
+
+            {/* ── Separador ─────────────────────────────────────────── */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-white/8" />
+              <span className="text-[10px] text-slate-600 whitespace-nowrap">
+                🧑‍🚀 Astronauta SVG customizável
+              </span>
+              <div className="flex-1 h-px bg-white/8" />
             </div>
+
+            {/* ── Preview do astronauta SVG ──────────────────────── */}
+            {!avatar.lpcSpritesheetUrl && (
+              <div className="flex flex-col items-center gap-1 py-1">
+                <AstronautAvatar avatar={avatar} userImage={userImage} size={140} />
+                <p className="text-[10px] text-slate-500">Capacete na mão · rosto visível</p>
+              </div>
+            )}
 
             {/* Usar foto do perfil */}
             <div>

@@ -6,6 +6,7 @@ import {
   FileIcon,
   FileTextIcon,
   HammerIcon,
+  LayoutListIcon,
   ImageIcon,
   MicIcon,
   PlusIcon,
@@ -50,6 +51,7 @@ import { ForgePanel } from "./forge-panel";
 import { AgendaPanel } from "./agenda-panel";
 import { FormsPanel } from "./forms-panel";
 import { NBoxPanel } from "./nbox-panel";
+import { ButtonsPanel } from "./buttons-panel";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -105,6 +107,7 @@ export function Footer({
   const [showAgenda, setShowAgenda] = useState(false);
   const [showForms, setShowForms] = useState(false);
   const [showNBox, setShowNBox] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -195,12 +198,21 @@ export function Footer({
         )}
 
         <div className="w-full h-full flex items-center gap-2 lg:gap-4 relative">
+          {showButtons && (
+            <ButtonsPanel
+              onClose={() => setShowButtons(false)}
+              conversationId={conversationId}
+              trackingId={trackingId}
+              lead={lead}
+            />
+          )}
           {showNBox && (
             <NBoxPanel
               onClose={() => setShowNBox(false)}
               onSendItem={(text) => {
                 setMessage((prev) => (prev ? prev + "\n" + text : text));
                 setShowNBox(false);
+                            setShowButtons(false);
               }}
             />
           )}
@@ -266,7 +278,24 @@ export function Footer({
                         <div
                           className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
                           onClick={() => {
+                            setShowButtons((v) => !v);
+                            setShowNBox(false);
+                            setShowButtons(false);
+                            setShowForms(false);
+                            setShowAgenda(false);
+                            setShowScripts(false);
+                            setShowForge(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <LayoutListIcon className="size-4" />
+                          <p className="text-sm">Botões</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
                             setShowNBox((v) => !v);
+                            setShowButtons(false);
                             setShowForms(false);
                             setShowAgenda(false);
                             setShowScripts(false);
@@ -282,6 +311,7 @@ export function Footer({
                           onClick={() => {
                             setShowForms((v) => !v);
                             setShowNBox(false);
+                            setShowButtons(false);
                             setShowAgenda(false);
                             setShowScripts(false);
                             setShowForge(false);
@@ -299,6 +329,7 @@ export function Footer({
                             setShowForge(false);
                             setShowForms(false);
                             setShowNBox(false);
+                            setShowButtons(false);
                             setOpen(false);
                           }}
                         >
@@ -313,6 +344,7 @@ export function Footer({
                             setShowAgenda(false);
                             setShowForms(false);
                             setShowNBox(false);
+                            setShowButtons(false);
                             setOpen(false);
                           }}
                         >
@@ -327,6 +359,7 @@ export function Footer({
                             setShowAgenda(false);
                             setShowForms(false);
                             setShowNBox(false);
+                            setShowButtons(false);
                             setOpen(false);
                           }}
                         >

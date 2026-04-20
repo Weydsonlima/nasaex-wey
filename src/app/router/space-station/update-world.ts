@@ -14,6 +14,8 @@ const avatarConfigSchema = z.object({
   hairColor: z.string().optional(),
   beardStyle: z.enum(["none", "stubble", "short", "full"]).optional(),
   faceAccessory: z.enum(["none", "glasses", "sunglasses"]).optional(),
+  lpcSpritesheetUrl: z.union([z.string().url(), z.literal("pixel_astronaut")]).optional().nullable(),
+  lpcCharacterName: z.string().max(60).optional().nullable(),
 });
 
 export const updateWorld = base

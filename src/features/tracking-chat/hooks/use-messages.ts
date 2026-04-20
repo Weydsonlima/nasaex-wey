@@ -636,3 +636,22 @@ export function useMutationMarkReadMessage() {
     }),
   );
 }
+
+// ── Buttons / List message ────────────────────────────────────────────────────
+
+export function useMutationButtonsMessage({
+  conversationId,
+}: {
+  conversationId: string;
+}) {
+  return useMutation(
+    orpc.message.createWithButtons.mutationOptions({
+      onSuccess: () => {
+        toast.success("Mensagem enviada!");
+      },
+      onError: (err) => {
+        toast.error("Erro ao enviar botões: " + err.message);
+      },
+    }),
+  );
+}

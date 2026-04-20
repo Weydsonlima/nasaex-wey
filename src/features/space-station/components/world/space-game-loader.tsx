@@ -9,12 +9,14 @@ const SpaceGame = dynamic(
 );
 
 interface Props {
-  worldConfig: StationWorldConfig;
+  worldConfig:  StationWorldConfig;
   avatarConfig?: AvatarConfig;
-  stationId: string;
-  nick: string;
-  isOwner?: boolean;
-  userImage?: string | null;
+  stationId:    string;
+  nick:         string;
+  isOwner?:     boolean;
+  userImage?:   string | null;
+  userId?:      string;
+  userName?:    string;
 }
 
 export function SpaceGameLoader(props: Props) {

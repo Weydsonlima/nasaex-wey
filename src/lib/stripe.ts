@@ -20,7 +20,8 @@ import Stripe from "stripe";
 
 // ─── Price IDs (preencher após criar no Stripe Dashboard) ─────────────────────
 
-export const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// Lazy — evita crash no boot quando STRIPE_SECRET_KEY não está configurada
+export const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_test_placeholder", {
   apiVersion: "2026-03-25.dahlia",
 });
 

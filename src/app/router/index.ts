@@ -40,6 +40,7 @@ import { clientPortalRouter }        from "./client-portal";
 import { supportRouter } from "./support";
 import { scriptsRouter } from "./scripts";
 import { linnkerRouter } from "./linnker";
+import { spaceStationRouter } from "./space-station";
 
 export const router = {
   tracking: trackingRoutes,
@@ -83,4 +84,5 @@ export const router = {
   support: supportRouter,
   scripts: scriptsRouter,
   linnker: linnkerRouter,
+  spaceStation: spaceStationRouter,
 };

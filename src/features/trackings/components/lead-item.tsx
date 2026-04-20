@@ -41,6 +41,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import { useQueryTags } from "@/features/tags/hooks/use-tags";
 import { useParams, useRouter } from "next/navigation";
@@ -55,6 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useView } from "../contexts/use-view";
 import { useMutationLeadUpdate } from "@/features/leads/hooks/use-lead-update";
 import { useDebouncedValue } from "@/hooks/use-debounced";
+import { TagModal } from "@/features/trackings/components/modal/add-tag-sheet";
 
 const TEMP_COLOR = {
   COLD: "#3498db",
@@ -265,6 +267,8 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
   );
 });
 
+LeadItem.displayName = "LeadItem";
+
 interface LeadItemContainerProps extends React.ComponentProps<"div"> {}
 
 function LeadItemContainer({ className, ...props }: LeadItemContainerProps) {
@@ -332,6 +336,7 @@ function AddTagsButton({
 }) {
   const { trackingId } = useParams<{ trackingId: string }>();
   const [open, setOpen] = useState(false);
+  const [openCreateTagSheet, setOpenCreateTagSheet] = useState(false);
   const { tags } = useQueryTags({ trackingId: "ALL" });
 
   const handleOpen = () => {
@@ -358,6 +363,11 @@ function AddTagsButton({
         },
       },
     );
+  };
+
+  const handleOpenCreateTagSheet = () => {
+    setOpen(false);
+    setOpenCreateTagSheet(true);
   };
 
   return (
@@ -408,9 +418,24 @@ function AddTagsButton({
                 );
               })}
             </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup>
+              <CommandItem
+                onSelect={handleOpenCreateTagSheet}
+                className="cursor-pointer"
+              >
+                <PlusIcon className="size-3.5" />
+                <span>Criar nova tag</span>
+              </CommandItem>
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
+      <TagModal
+        open={openCreateTagSheet}
+        onOpenChange={setOpenCreateTagSheet}
+        trackingId={trackingId}
+      />
     </Popover>
   );
 }

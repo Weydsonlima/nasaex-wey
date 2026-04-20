@@ -47,8 +47,8 @@ import { getContrastColor } from "@/utils/get-contrast-color";
 import { DEFAULT_UI_COLORS } from "@/utils/whatsapp-utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckIcon, TagIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { useQueryListTrackings } from "@/features/insights/hooks/use-dashboard";
 import { toast } from "sonner";
@@ -68,6 +68,7 @@ export function TagModal({ open, onOpenChange, trackingId }: Props) {
   const [trackingSelected, setTrackingSelected] = useState<string | undefined>(
     trackingId,
   );
+  const inputRef = useRef<HTMLInputElement>(null);
   const form = useForm<z.infer<typeof tagSchema>>({
     resolver: zodResolver(tagSchema),
     defaultValues: {
@@ -82,8 +83,33 @@ export function TagModal({ open, onOpenChange, trackingId }: Props) {
 
   const { trackings } = useQueryListTrackings();
   const createTag = useCreateTag();
+  const { ref: nameInputRegisterRef, ...nameInputProps } = form.register("name");
+  const tagName = useWatch({
+    control: form.control,
+    name: "name",
+    defaultValue: "",
+  });
+  const tagColor = useWatch({
+    control: form.control,
+    name: "color",
+    defaultValue: DEFAULT_UI_COLORS[0],
+  });
 
-  const watch = form.watch("name");
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 150);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [open]);
+
+  useEffect(() => {
+    setTrackingSelected(trackingId);
+  }, [trackingId]);
 
   const handleCreateTag = (data: z.infer<typeof tagSchema>) => {
     if (!trackingSelected) {
@@ -141,13 +167,13 @@ export function TagModal({ open, onOpenChange, trackingId }: Props) {
                   <PopoverTrigger>
                     <div
                       className="size-5 rounded-sm cursor-pointer"
-                      style={{ backgroundColor: form.watch("color") }}
+                      style={{ backgroundColor: tagColor }}
                     />
                   </PopoverTrigger>
                   <PopoverContent>
                     <div className="flex flex-wrap gap-1.5">
                       {DEFAULT_UI_COLORS.map((color) => {
-                        const isSelected = form.watch("color") === color;
+                        const isSelected = tagColor === color;
                         return (
                           <div
                             key={color}
@@ -165,11 +191,16 @@ export function TagModal({ open, onOpenChange, trackingId }: Props) {
                 </Popover>
               </InputGroupAddon>
               <InputGroupInput
+                ref={(element) => {
+                  nameInputRegisterRef(element);
+                  inputRef.current = element;
+                }}
                 placeholder="Adicionar tag"
-                {...form.register("name")}
+                {...nameInputProps}
+                autoFocus
               />
               <InputGroupAddon align="inline-end">
-                {watch.length > 0 && (
+                {tagName.length > 0 && (
                   <Button size="icon-xs" type="submit">
                     <CheckIcon />
                   </Button>
@@ -239,8 +270,16 @@ export function TagItem(tag: TagItemProps) {
   });
   const updateTag = useUpdateTag();
   const deleteTag = useDeleteTag();
-
-  const watch = form.watch("tagName");
+  const tagName = useWatch({
+    control: form.control,
+    name: "tagName",
+    defaultValue: tag.name,
+  });
+  const tagColor = useWatch({
+    control: form.control,
+    name: "colorName",
+    defaultValue: tag.color,
+  });
 
   const handleDeleteTag = () => {
     deleteTag.mutate(
@@ -292,14 +331,14 @@ export function TagItem(tag: TagItemProps) {
                   <div
                     className="size-5 rounded-sm cursor-pointer"
                     style={{
-                      backgroundColor: form.watch("colorName"),
+                      backgroundColor: tagColor,
                     }}
                   />
                 </PopoverTrigger>
                 <PopoverContent>
                   <div className="flex flex-wrap gap-1.5">
                     {DEFAULT_UI_COLORS.map((color) => {
-                      const isSelected = form.watch("colorName") === color;
+                      const isSelected = tagColor === color;
                       return (
                         <div
                           key={color}
@@ -321,7 +360,7 @@ export function TagItem(tag: TagItemProps) {
               {...form.register("tagName")}
             />
             <InputGroupAddon align="inline-end">
-              {watch.length > 0 && (
+              {tagName.length > 0 && (
                 <Button size="icon-xs" type="submit">
                   <CheckIcon />
                 </Button>

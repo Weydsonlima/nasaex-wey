@@ -38,7 +38,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const locales = { "pt-BR": ptBR };
-const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
 
 // withDragAndDrop must wrap the Calendar
 const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
@@ -59,11 +65,11 @@ interface ShowMoreState {
 
 // Status colour mapping (compact chips)
 const statusChipColors: Record<string, string> = {
-  PENDING:   "bg-yellow-100 border-l-yellow-500 text-yellow-800",
+  PENDING: "bg-yellow-100 border-l-yellow-500 text-yellow-800",
   CONFIRMED: "bg-green-100  border-l-green-500  text-green-800",
   CANCELLED: "bg-red-100    border-l-red-500    text-red-800",
-  NO_SHOW:   "bg-red-100    border-l-red-500    text-red-800",
-  DONE:      "bg-blue-100   border-l-blue-500   text-blue-800",
+  NO_SHOW: "bg-red-100    border-l-red-500    text-red-800",
+  DONE: "bg-blue-100   border-l-blue-500   text-blue-800",
 };
 const defaultChip = "bg-slate-100 border-l-slate-400 text-slate-800";
 
@@ -139,9 +145,12 @@ export function AppointmentCalendar({ trackingId }: Props) {
   };
 
   // Click on event → open detail sheet
-  const handleSelectEvent = useCallback((event: CalendarEvent) => {
-    openAppointment(event.id);
-  }, [openAppointment]);
+  const handleSelectEvent = useCallback(
+    (event: CalendarEvent) => {
+      openAppointment(event.id);
+    },
+    [openAppointment],
+  );
 
   // "Mais X" link → open popup
   const handleShowMore = useCallback((events: CalendarEvent[], date: Date) => {
@@ -153,19 +162,23 @@ export function AppointmentCalendar({ trackingId }: Props) {
   }, []);
 
   // Handle event selected from popup
-  const handlePopupSelectEvent = useCallback((id: string) => {
-    setShowMore(null);
-    setTimeout(() => openAppointment(id), 50);
-  }, [openAppointment]);
+  const handlePopupSelectEvent = useCallback(
+    (id: string) => {
+      setShowMore(null);
+      setTimeout(() => openAppointment(id), 50);
+    },
+    [openAppointment],
+  );
 
   // Drag & drop → persist to DB
   const handleEventDrop = useCallback(
     ({ event, start }: EventInteractionArgs<CalendarEvent>) => {
       const ev = event;
-      const newStart = start instanceof Date ? start : new Date(start as string);
+      const newStart =
+        start instanceof Date ? start : new Date(start as string);
 
       const originalStart = new Date(ev.start);
-      const originalEnd   = new Date(ev.end);
+      const originalEnd = new Date(ev.end);
       const duration = originalEnd.getTime() - originalStart.getTime();
 
       // Keep original time-of-day, only change the date
@@ -184,11 +197,11 @@ export function AppointmentCalendar({ trackingId }: Props) {
             {
               appointmentId: ev.id,
               startsAt: movedStart.toISOString(),
-              endsAt:   movedEnd.toISOString(),
+              endsAt: movedEnd.toISOString(),
             },
             {
               onSuccess: () => resolve(),
-              onError:   (e) => reject(e),
+              onError: (e) => reject(e),
             },
           );
         }),
@@ -203,15 +216,19 @@ export function AppointmentCalendar({ trackingId }: Props) {
   );
 
   const events: CalendarEvent[] = appointments.map((a) => ({
-    start:  new Date(a.startsAt),
-    end:    new Date(a.endsAt),
-    title:  a.title,
-    id:     a.id,
+    start: new Date(a.startsAt),
+    end: new Date(a.endsAt),
+    title: a.title,
+    id: a.id,
     status: a.status,
   }));
 
   return (
-    <div ref={wrapperRef} className="w-full px-4 py-2 pb-8" style={{ height: 780 }}>
+    <div
+      ref={wrapperRef}
+      className="w-full px-4 py-2 pb-8"
+      style={{ height: 780 }}
+    >
       <DnDCalendar
         localizer={localizer}
         date={value}
@@ -233,18 +250,18 @@ export function AppointmentCalendar({ trackingId }: Props) {
             localizer?.format(date, "EEE", culture) ?? "",
         }}
         messages={{
-          today:           "Hoje",
-          previous:        "Anterior",
-          next:            "Próximo",
-          month:           "Mês",
-          week:            "Semana",
-          day:             "Dia",
-          agenda:          "Agenda",
-          date:            "Data",
-          time:            "Hora",
-          event:           "Evento",
+          today: "Hoje",
+          previous: "Anterior",
+          next: "Próximo",
+          month: "Mês",
+          week: "Semana",
+          day: "Dia",
+          agenda: "Agenda",
+          date: "Data",
+          time: "Hora",
+          event: "Evento",
           noEventsInRange: "Nenhum evento neste período",
-          showMore:        (total) => `+ ${total} mais`,
+          showMore: (total) => `+ ${total} mais`,
         }}
         components={{
           // Use `event` (not `eventWrapper`) so the DnD wrapper is preserved
@@ -284,7 +301,9 @@ export function AppointmentCalendar({ trackingId }: Props) {
       {/* Detalhar agendamento — sempre montado para evitar overlay fantasma do Radix */}
       <ViewAppointment
         open={viewOpen}
-        onOpenChange={(o) => { if (!o) closeAppointment(); }}
+        onOpenChange={(o) => {
+          if (!o) closeAppointment();
+        }}
         appointmentId={viewId}
       />
     </div>
@@ -298,21 +317,33 @@ interface CustomToolbarProps {
   onNewAppointment: () => void;
 }
 
-function CustomToolbar({ date, onNavigate, onNewAppointment }: CustomToolbarProps) {
+function CustomToolbar({
+  date,
+  onNavigate,
+  onNewAppointment,
+}: CustomToolbarProps) {
   const { locale } = useLocale();
   return (
     <div className="flex mb-4 gap-x-2 items-center w-full justify-between">
       <div className="flex gap-x-2 items-center">
-        <Button onClick={() => onNavigate("PREV")} variant="outline" size="icon-sm">
+        <Button
+          onClick={() => onNavigate("PREV")}
+          variant="outline"
+          size="icon-sm"
+        >
           <ChevronLeftIcon className="size-4" />
         </Button>
         <div className="flex items-center border border-input rounded-md px-3 py-2 h-8 justify-center capitalize min-w-36">
-          <CalendarIcon className="size-4 mr-2 flex-shrink-0" />
+          <CalendarIcon className="size-4 mr-2 shrink-0" />
           <p className="text-sm font-medium">
             {dayjs(date).locale(locale).format("MMMM YYYY")}
           </p>
         </div>
-        <Button onClick={() => onNavigate("NEXT")} variant="outline" size="icon-sm">
+        <Button
+          onClick={() => onNavigate("NEXT")}
+          variant="outline"
+          size="icon-sm"
+        >
           <ChevronRightIcon className="size-4" />
         </Button>
       </div>

@@ -146,7 +146,7 @@ export const ViewAppointment = ({
               <Skeleton className="h-32 w-full" />
             </div>
           ) : appointment ? (
-            <div className="flex flex-col flex-1 gap-0">
+            <div className="flex flex-col px-4 flex-1 gap-0">
               {/* ── Header ── */}
               <div className="flex flex-col gap-2 px-1">
                 <div className="flex items-start justify-between gap-3">

@@ -44,6 +44,18 @@ const TYPE_COLOR: Record<string, string> = {
   error: "text-red-400",
 };
 
+const TARGET_LABEL: Record<string, string> = {
+  all: "Geral",
+  org: "Empresa",
+  user: "Para você",
+};
+
+const TARGET_STYLE: Record<string, string> = {
+  all: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  org: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  user: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+};
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
@@ -178,6 +190,19 @@ export function NotificationBell() {
                   {TYPE_ICON[n.type] ?? "🔔"}
                 </span>
                 <div className="flex-1 min-w-0">
+                  {n.targetType && (
+                    <div className="mb-1">
+                      <span
+                        className={cn(
+                          "px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-wider border",
+                          TARGET_STYLE[n.targetType] ??
+                            "bg-zinc-800 text-zinc-400 border-zinc-700",
+                        )}
+                      >
+                        {TARGET_LABEL[n.targetType] ?? n.targetType}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-start justify-between gap-2">
                     <p
                       className={cn(

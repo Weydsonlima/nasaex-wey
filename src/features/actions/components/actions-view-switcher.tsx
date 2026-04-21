@@ -12,6 +12,7 @@ import { DataTable } from "./data-table";
 import { FiltersBar } from "./filters-bar";
 import { FiltersSheet } from "./filters-sheet";
 import { cn } from "@/lib/utils";
+import { CreateActionWithAi } from "./create-action-with-ai";
 
 interface Props {
   workspaceId: string;
@@ -51,14 +52,18 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
               <FiltersBar workspaceId={workspaceId} />
               <FiltersSheet workspaceId={workspaceId} />
             </div>
-            <Button
-              size="sm"
-              className="w-full lg:w-auto"
-              onClick={() => setOpen(true)}
-            >
-              <PlusIcon className="size-4" />
-              Nova ação
-            </Button>
+            <div className="flex items-center gap-2">
+              <CreateActionWithAi workspaceId={workspaceId} />
+
+              <Button
+                size="sm"
+                className="w-full lg:w-auto"
+                onClick={() => setOpen(true)}
+              >
+                <PlusIcon className="size-4" />
+                Nova ação
+              </Button>
+            </div>
           </div>
 
           {/* Filters bar */}

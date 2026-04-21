@@ -34,6 +34,7 @@ export const createMessageWithFile = base
   )
   .handler(async ({ input, context }) => {
     try {
+      console.log(input);
       const response = await sendMedia(input.token, {
         file: useConstructUrl(input.mediaUrl),
         text: input.body,

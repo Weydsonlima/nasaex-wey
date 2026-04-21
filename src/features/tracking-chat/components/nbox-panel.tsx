@@ -19,7 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
 import {
   useNBoxFolders,
   useNBoxItems,
@@ -32,16 +31,26 @@ import { Uploader } from "@/components/file-uploader/uploader";
 
 interface NBoxPanelProps {
   onClose: () => void;
-  onSendItem: (text: string) => void;
+  onSendItem: (text: string, name: string) => void;
 }
 
 // ── Ícone por tipo ────────────────────────────────────────────────────────────
-function ItemIcon({ type, className }: { type: NBoxItemType; className?: string }) {
+function ItemIcon({
+  type,
+  className,
+}: {
+  type: NBoxItemType;
+  className?: string;
+}) {
   const cls = cn("size-4 shrink-0", className);
-  if (type === NBoxItemType.IMAGE) return <ImageIcon className={cn(cls, "text-blue-500")} />;
-  if (type === NBoxItemType.LINK) return <LinkIcon className={cn(cls, "text-green-500")} />;
-  if (type === NBoxItemType.CONTRACT) return <FileTextIcon className={cn(cls, "text-purple-500")} />;
-  if (type === NBoxItemType.PROPOSAL) return <FileTextIcon className={cn(cls, "text-orange-500")} />;
+  if (type === NBoxItemType.IMAGE)
+    return <ImageIcon className={cn(cls, "text-blue-500")} />;
+  if (type === NBoxItemType.LINK)
+    return <LinkIcon className={cn(cls, "text-green-500")} />;
+  if (type === NBoxItemType.CONTRACT)
+    return <FileTextIcon className={cn(cls, "text-purple-500")} />;
+  if (type === NBoxItemType.PROPOSAL)
+    return <FileTextIcon className={cn(cls, "text-orange-500")} />;
   return <FileIcon className={cn(cls, "text-muted-foreground")} />;
 }
 
@@ -124,7 +133,10 @@ function AddItemForm({
             {uploadedUrl ? (
               <div className="flex items-center gap-2">
                 {uploadedMime.startsWith("image/") ? (
-                  <img src={uploadedUrl} className="size-10 rounded object-cover" />
+                  <img
+                    src={uploadedUrl}
+                    className="size-10 rounded object-cover"
+                  />
                 ) : (
                   <FileIcon className="size-8 text-muted-foreground/50" />
                 )}
@@ -134,7 +146,10 @@ function AddItemForm({
                   </p>
                   <button
                     className="text-[11px] text-destructive"
-                    onClick={() => { setUploadedUrl(""); setUploadedName(""); }}
+                    onClick={() => {
+                      setUploadedUrl("");
+                      setUploadedName("");
+                    }}
                   >
                     Remover
                   </button>
@@ -217,15 +232,13 @@ export function NBoxPanel({ onClose, onSendItem }: NBoxPanelProps) {
     search: search || undefined,
   });
 
-  const handleSend = (item: { name: string; url?: string | null; type: NBoxItemType }) => {
+  const handleSend = (item: {
+    name: string;
+    url?: string | null;
+    type: NBoxItemType;
+  }) => {
     if (!item.url) return;
-    const emoji =
-      item.type === NBoxItemType.IMAGE
-        ? "🖼️"
-        : item.type === NBoxItemType.LINK
-        ? "🔗"
-        : "📎";
-    onSendItem(`${emoji} ${item.name}\n${item.url}`);
+    onSendItem(item.url, item.name);
     onClose();
   };
 
@@ -260,7 +273,11 @@ export function NBoxPanel({ onClose, onSendItem }: NBoxPanelProps) {
           <div className="flex items-center gap-2">
             {openFolderId && (
               <button
-                onClick={() => { setOpenFolderId(null); setSearch(""); setShowAddItem(false); }}
+                onClick={() => {
+                  setOpenFolderId(null);
+                  setSearch("");
+                  setShowAddItem(false);
+                }}
                 className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
               >
                 <ChevronLeftIcon className="size-4" />
@@ -405,7 +422,11 @@ export function NBoxPanel({ onClose, onSendItem }: NBoxPanelProps) {
                     {search ? "Nenhum item encontrado." : "Pasta vazia."}
                   </p>
                   {!search && (
-                    <Button size="sm" variant="outline" onClick={() => setShowAddItem(true)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowAddItem(true)}
+                    >
                       <PlusIcon className="size-3.5 mr-1.5" />
                       Adicionar item
                     </Button>
@@ -420,9 +441,13 @@ export function NBoxPanel({ onClose, onSendItem }: NBoxPanelProps) {
                     >
                       <ItemIcon type={item.type} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate font-medium">{item.name}</p>
+                        <p className="text-sm truncate font-medium">
+                          {item.name}
+                        </p>
                         {item.url && (
-                          <p className="text-xs text-muted-foreground truncate">{item.url}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {item.url}
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">

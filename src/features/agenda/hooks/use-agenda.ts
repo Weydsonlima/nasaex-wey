@@ -173,9 +173,11 @@ export const useDeleteTimeSlot = () => {
 
 // Appointments
 
-export const useQueryAppointmentsByOrg = () => {
+export const useQueryAppointmentsByOrg = (agendaId?: string) => {
   const { data, isLoading } = useQuery(
-    orpc.agenda.appointments.getManyByOrg.queryOptions({}),
+    orpc.agenda.appointments.getManyByOrg.queryOptions({
+      input: { agendaId },
+    }),
   );
   return {
     appointments: data?.appointments ?? [],
@@ -202,7 +204,7 @@ export const useAdminCreateAppointment = () => {
           }),
         );
         queryClient.invalidateQueries(
-          orpc.agenda.appointments.getManyByOrg.queryOptions({}),
+          orpc.agenda.appointments.getManyByOrg.queryOptions({ input: {} }),
         );
       },
       onError: (error) => {
@@ -251,7 +253,7 @@ export const useRescheduleAppointment = () => {
           }),
         );
         queryClient.invalidateQueries(
-          orpc.agenda.appointments.getManyByOrg.queryOptions({}),
+          orpc.agenda.appointments.getManyByOrg.queryOptions({ input: {} }),
         );
       },
       onError: (error) => {
@@ -265,13 +267,17 @@ export const useRescheduleAppointment = () => {
 
 export const useSuspenseDateAvailabilities = (agendaId: string) => {
   return useSuspenseQuery(
-    orpc.agenda.dateAvailabilities.getMany.queryOptions({ input: { agendaId } }),
+    orpc.agenda.dateAvailabilities.getMany.queryOptions({
+      input: { agendaId },
+    }),
   );
 };
 
 export const useQueryDateAvailabilities = (agendaId: string) => {
   return useQuery(
-    orpc.agenda.dateAvailabilities.getMany.queryOptions({ input: { agendaId } }),
+    orpc.agenda.dateAvailabilities.getMany.queryOptions({
+      input: { agendaId },
+    }),
   );
 };
 
@@ -363,7 +369,7 @@ export const useCancelAppointment = () => {
           }),
         );
         queryClient.invalidateQueries(
-          orpc.agenda.appointments.getManyByOrg.queryOptions({}),
+          orpc.agenda.appointments.getManyByOrg.queryOptions({ input: {} }),
         );
       },
     }),

@@ -198,8 +198,8 @@ export function Footer({
           {showNBox && (
             <NBoxPanel
               onClose={() => setShowNBox(false)}
-              onSendItem={(text) => {
-                setMessage((prev) => (prev ? prev + "\n" + text : text));
+              onSendItem={(text, name) => {
+                handleFileChange(text, "pdf", name);
                 setShowNBox(false);
               }}
             />

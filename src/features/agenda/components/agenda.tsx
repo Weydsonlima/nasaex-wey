@@ -31,11 +31,11 @@ import {
   TrashIcon,
 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { AllAppointmentsCalendar } from "./all-appointments-calendar";
 import {
   DropdownMenu,
@@ -292,20 +292,20 @@ export const AgendaHeader = () => {
 
       <CreateAgendaModal open={open} onOpenChange={setOpen} />
 
-      {/* Dialog do calendário global — tela cheia */}
-      <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-        <DialogContent className="w-screen h-screen max-w-none max-h-none rounded-none inset-0 translate-x-0 translate-y-0 left-0 top-0 flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="shrink-0 px-6 pt-5 pb-4 border-b">
-            <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+      {/* Sheet do calendário global — lateral esquerda */}
+      <Sheet open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <SheetContent className="w-full sm:max-w-3xl flex flex-col p-0 overflow-hidden">
+          <SheetHeader className="shrink-0 px-6 pt-5 pb-4 border-b">
+            <SheetTitle className="flex items-center gap-2 text-base font-semibold text-left">
               <CalendarDays className="size-4" />
               Todos os agendamentos
-            </DialogTitle>
-          </DialogHeader>
+            </SheetTitle>
+          </SheetHeader>
           <div className="flex-1 overflow-y-auto min-h-0">
             <AllAppointmentsCalendar />
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   );
 };

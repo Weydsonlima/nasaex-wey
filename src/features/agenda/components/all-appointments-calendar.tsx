@@ -26,8 +26,17 @@ import {
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  FilterIcon,
   PlusIcon,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSuspenseAgendas } from "../hooks/use-agenda";
 import dayjs from "dayjs";
 import { useLocale } from "react-aria";
 import "dayjs/locale/pt-br";
@@ -111,7 +120,11 @@ export function AllAppointmentsCalendar({
   onAppointmentCreated,
 }: AllAppointmentsCalendarProps = {}) {
   const [value, setValue] = useState<Date>(new Date());
-  const { appointments } = useQueryAppointmentsByOrg();
+  const [agendaId, setAgendaId] = useState<string>("all");
+  const { appointments } = useQueryAppointmentsByOrg(
+    agendaId === "all" ? undefined : agendaId,
+  );
+  const { data: agendasData } = useSuspenseAgendas();
   const reschedule = useRescheduleAppointment();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -261,6 +274,9 @@ export function AllAppointmentsCalendar({
             <CalendarToolbar
               date={value}
               onNavigate={handleNavigate}
+              agendaId={agendaId}
+              onAgendaChange={setAgendaId}
+              agendas={agendasData.agendas}
               onNewAppointment={() => {
                 setCreateInitialDate(new Date());
                 setCreateOpen(true);
@@ -318,17 +334,23 @@ interface CalendarToolbarProps {
   date: Date;
   onNavigate: (action: "PREV" | "NEXT" | "TODAY") => void;
   onNewAppointment: () => void;
+  agendaId: string;
+  onAgendaChange: (id: string) => void;
+  agendas: { id: string; name: string }[];
 }
 
 function CalendarToolbar({
   date,
   onNavigate,
   onNewAppointment,
+  agendaId,
+  onAgendaChange,
+  agendas,
 }: CalendarToolbarProps) {
   const { locale } = useLocale();
   return (
     <div className="flex mb-4 gap-x-2 items-center w-full justify-center sm:justify-between">
-      <div className="flex gap-2 items-center flex-col sm:flex-row ">
+      <div className="flex justify-between w-full gap-2 items-center flex-col sm:flex-row ">
         <div className="flex gap-x-2 items-center ">
           <Button
             onClick={() => onNavigate("PREV")}
@@ -351,15 +373,33 @@ function CalendarToolbar({
             <ChevronRightIcon className="size-4" />
           </Button>
         </div>
+        <div className="w-full flex flex-col sm:flex-row justify-center sm:justify-end gap-2">
+          <Select value={agendaId} onValueChange={onAgendaChange}>
+            <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs overflow-hidden">
+              <div className="flex items-center gap-2 truncate ">
+                <FilterIcon className="size-3 shrink-0" />
+                <SelectValue placeholder="Agenda" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as agendas</SelectItem>
+              {agendas.map((agenda) => (
+                <SelectItem key={agenda.id} value={agenda.id}>
+                  {agenda.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Button
-          onClick={onNewAppointment}
-          size="sm"
-          className="flex items-center gap-1"
-        >
-          <PlusIcon className="size-4" />
-          Novo compromisso
-        </Button>
+          <Button
+            onClick={onNewAppointment}
+            size="sm"
+            className="flex items-center gap-1"
+          >
+            <PlusIcon className="size-4" />
+            Novo compromisso
+          </Button>
+        </div>
       </div>
     </div>
   );

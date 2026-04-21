@@ -52,7 +52,9 @@ const createAgendaSchema = z.object({
   link: z.string().min(1, "Link é obrigatório"),
   description: z.string().optional(),
   duration: z.number().min(1, "Duração é obrigatória"),
-  trackingId: z.string().min(1, "Tracking é obrigatório"),
+  trackingId: z
+    .string("Tracking é obrigatório")
+    .min(1, "Tracking é obrigatório"),
 });
 
 type CreateAgendaSchema = z.infer<typeof createAgendaSchema>;
@@ -69,6 +71,7 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
       link: "",
       description: "",
       duration: 15,
+      trackingId: "",
     },
   });
 
@@ -110,7 +113,7 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar uma nova agenda</DialogTitle>
           <DialogDescription>Crie uma nova agenda</DialogDescription>
@@ -125,6 +128,7 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
                 {...form.register("title")}
                 disabled={isSubmitting}
               />
+              <FieldError>{form.formState.errors.title?.message}</FieldError>
             </Field>
 
             <Field>
@@ -144,6 +148,7 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
                   className="pl-0!"
                 />
               </InputGroup>
+              <FieldError>{form.formState.errors.link?.message}</FieldError>
             </Field>
 
             <Field>
@@ -154,7 +159,6 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
                 disabled={isSubmitting}
               />
             </Field>
-
             <Controller
               control={form.control}
               name="trackingId"
@@ -180,6 +184,9 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
                         ))}
                     </SelectContent>
                   </Select>
+                  <FieldError>
+                    {form.formState.errors.trackingId?.message}
+                  </FieldError>
                 </Field>
               )}
             />
@@ -199,6 +206,7 @@ export function CreateAgendaModal({ open, onOpenChange }: Props) {
                   <InputGroupText>minutos</InputGroupText>
                 </InputGroupAddon>
               </InputGroup>
+              <FieldError>{form.formState.errors.duration?.message}</FieldError>
             </Field>
           </FieldGroup>
 

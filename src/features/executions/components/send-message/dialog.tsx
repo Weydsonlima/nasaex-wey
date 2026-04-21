@@ -52,9 +52,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDownIcon, InfoIcon } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+
+import { VariablePicker } from "./variable-picker";
+import { useVariableAutocomplete } from "./use-variable-autocomplete";
 
 /* ---------- TARGET ---------- */
 
@@ -114,6 +116,76 @@ interface Props {
   onSubmit: (values: SendMessageFormValues) => void;
   defaultValues?: Partial<SendMessageFormValues>;
 }
+
+const VariableTextarea = ({ value, onChange, ...props }: any) => {
+  const {
+    open,
+    setOpen,
+    search,
+    setSearch,
+    inputRef,
+    handleKeyDown,
+    handleSelect,
+    handleValueChange,
+  } = useVariableAutocomplete(value || "", onChange);
+
+  return (
+    <div className="relative">
+      <Textarea
+        {...props}
+        ref={inputRef as any}
+        value={value || ""}
+        onChange={handleValueChange}
+        onKeyDown={handleKeyDown}
+      />
+      <div className="absolute top-0 left-0">
+        <VariablePicker
+          open={open}
+          onOpenChange={setOpen}
+          search={search}
+          onSearchChange={setSearch}
+          onSelect={handleSelect}
+          triggerRef={inputRef}
+        />
+      </div>
+    </div>
+  );
+};
+
+const VariableInput = ({ value, onChange, ...props }: any) => {
+  const {
+    open,
+    setOpen,
+    search,
+    setSearch,
+    inputRef,
+    handleKeyDown,
+    handleSelect,
+    handleValueChange,
+  } = useVariableAutocomplete(value || "", onChange);
+
+  return (
+    <div className="relative">
+      <Input
+        {...props}
+        ref={inputRef as any}
+        value={value || ""}
+        onChange={handleValueChange}
+        onKeyDown={handleKeyDown}
+      />
+      <div className="absolute top-0 left-0">
+        <VariablePicker
+          open={open}
+          onOpenChange={setOpen}
+          search={search}
+          onSearchChange={setSearch}
+          onSelect={handleSelect}
+          triggerRef={inputRef}
+        />
+      </div>
+    </div>
+  );
+};
 
 export const SendMessageDialog = ({
   open,
@@ -303,10 +375,16 @@ export const SendMessageDialog = ({
                   control={form.control}
                   name="payload.message"
                   render={({ field, fieldState }) => (
-                    <Field>
+                    <Field className="gap-3">
                       <FieldLabel>Mensagem</FieldLabel>
-                      <Textarea {...field} placeholder="Digite a mensagem" />
+                      <VariableTextarea
+                        {...field}
+                        placeholder="Digite a mensagem"
+                      />
                       <FieldError errors={[fieldState.error]} />
+                      <FieldDescription>
+                        Clique em "/" para adicionar variáveis.
+                      </FieldDescription>
                     </Field>
                   )}
                 />
@@ -334,7 +412,10 @@ export const SendMessageDialog = ({
                     render={({ field }) => (
                       <Field>
                         <FieldLabel>Legenda</FieldLabel>
-                        <Input {...field} placeholder="Digite a legenda" />
+                        <VariableInput
+                          {...field}
+                          placeholder="Digite a legenda"
+                        />
                       </Field>
                     )}
                   />
@@ -377,7 +458,10 @@ export const SendMessageDialog = ({
                     render={({ field }) => (
                       <Field>
                         <FieldLabel>Legenda</FieldLabel>
-                        <Input {...field} placeholder="Digite a legenda" />
+                        <VariableInput
+                          {...field}
+                          placeholder="Digite a legenda"
+                        />
                       </Field>
                     )}
                   />

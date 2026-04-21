@@ -355,6 +355,10 @@ input::placeholder {
 .tiptap {
   img {
     display: block;
+
+    &.ProseMirror-selectednode {
+      outline: 3px solid var(--primary);
+    }
   }
 
   /* Container gerado pelo ResizableNodeView */
@@ -368,10 +372,6 @@ input::placeholder {
     position: relative;
     display: inline-block;
     line-height: 0;
-  }
-
-  &.ProseMirror-selectednode {
-    outline: 3px solid var(--primary);
   }
 
   /* Handles escondidos por padrão */

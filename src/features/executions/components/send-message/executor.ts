@@ -9,6 +9,8 @@ import { sendDocumentMessage } from "./message/send-document";
 import { sendMessageChannel } from "@/inngest/channels/send-message";
 import { normalizePhone } from "@/utils/format-phone";
 import { countries } from "@/types/some";
+import dayjs from "dayjs";
+import { colorsByTemperature, LeadSourceColors } from "@/features/tracking-chat/utils/card-lead";
 
 type SendMessageNodeData = {
   action?: SendMessageFormValues;
@@ -23,13 +25,41 @@ export const sendMessageExecutor: NodeExecutor<SendMessageNodeData> = async ({
 }) => {
   console.log("Contexto", context);
   const result = await step.run("send-message", async () => {
-    const lead = context.lead as LeadContext;
+    const leadContext = context.lead as LeadContext;
     const realTime = context.realTime as boolean;
+
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadContext.id },
+      include: {
+        status: true,
+        tracking: true,
+      },
+    });
+
+    if (!lead) {
+      if (realTime) {
+        await publish(
+          sendMessageChannel().status({
+            nodeId,
+            status: "error",
+          }),
+        );
+      }
+      throw new NonRetriableError("Lead not found");
+    }
 
     const variables = {
       "{{name}}": lead.name,
-      "{{email}}": lead.email,
-      "{{phone}}": lead.phone,
+      "{{nome}}": lead.name,
+      "{{email}}": lead.email || "",
+      "{{phone}}": lead.phone || "",
+      "{{contato}}": lead.phone || "",
+      "{{data}}": dayjs(lead.createdAt).format("DD/MM/YYYY"),
+      "{{data-t}}": dayjs(lead.createdAt).format("DD/MM/YYYY HH:mm"),
+      "{{temp}}": colorsByTemperature[lead.temperature]?.label || lead.temperature,
+      "{{fonte}}": LeadSourceColors[lead.source]?.label || lead.source,
+      "{{track}}": lead.tracking.name,
+      "{{status}}": lead.status.name,
     };
 
     try {
@@ -42,17 +72,6 @@ export const sendMessageExecutor: NodeExecutor<SendMessageNodeData> = async ({
         );
       }
 
-      if (!lead) {
-        if (realTime) {
-          await publish(
-            sendMessageChannel().status({
-              nodeId,
-              status: "error",
-            }),
-          );
-        }
-        throw new NonRetriableError("Lead not found");
-      }
 
       const instance = await prisma.whatsAppInstance.findFirst({
         where: {
@@ -94,7 +113,19 @@ export const sendMessageExecutor: NodeExecutor<SendMessageNodeData> = async ({
 
       const typeMessage = data.action?.payload.type;
       const target = data.action?.target;
-      let phone = lead.phone;
+      if (!lead.phone) {
+        if (realTime) {
+          await publish(
+            sendMessageChannel().status({
+              nodeId,
+              status: "error",
+            }),
+          );
+        }
+        throw new NonRetriableError("Lead phone is missing");
+      }
+
+      let phone: string = lead.phone;
 
       if (target?.sendMode === "CUSTOM") {
         const country = countries.find((c) => c.code === target.code);

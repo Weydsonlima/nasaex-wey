@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
+import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
 import { z } from "zod";
 
 export const createAction = base
@@ -60,6 +61,16 @@ export const createAction = base
         },
       },
     });
+
+    try {
+      await sendWorkspaceWorkflowEvent({
+        trigger: "WS_ACTION_CREATED",
+        workspaceId: action.workspaceId,
+        actionId: action.id,
+      });
+    } catch (err) {
+      console.error("[workspace-workflow] failed to emit action.created", err);
+    }
 
     return {
       action,

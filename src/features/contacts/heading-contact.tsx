@@ -18,6 +18,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useSearchModal } from "@/hooks/modal/use-search-modal";
 import { useOrgRole } from "@/hooks/use-org-role";
+import { useCheckPermission } from "@/hooks/use-check-permission";
 import {
   DownloadCloud,
   FileSpreadsheet,
@@ -34,6 +35,9 @@ export default function HeadingContacts() {
   const [modalImportIsOpen, setImportIsModal] = useState(false);
   const [modalExportIsOpen, setExportIsModal] = useState(false);
   const { isSingle } = useOrgRole();
+  const { checkPermission } = useCheckPermission();
+
+  const canExport = checkPermission("tracking", "canView");
 
   return (
     <>
@@ -65,10 +69,12 @@ export default function HeadingContacts() {
               </Button>
             </>
           )}
-          <Button variant={"outline"} onClick={() => setExportIsModal(true)}>
-            <FileSpreadsheet className="size-4" />
-            Exportar
-          </Button>
+          {canExport && (
+            <Button variant={"outline"} onClick={() => setExportIsModal(true)}>
+              <FileSpreadsheet className="size-4" />
+              Exportar
+            </Button>
+          )}
           <Button>Adicionar novo lead</Button>
         </div>
 
@@ -87,16 +93,16 @@ export default function HeadingContacts() {
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
             <DropdownMenuGroup>
               {!isSingle && (
-                <>
-                  <DropdownMenuItem onClick={() => setImportIsModal(true)}>
-                    <DownloadCloud className="size-4" />
-                    Importar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setExportIsModal(true)}>
-                    <FileSpreadsheet className="size-4" />
-                    Exportar
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem onClick={() => setImportIsModal(true)}>
+                  <DownloadCloud className="size-4" />
+                  Importar
+                </DropdownMenuItem>
+              )}
+              {canExport && (
+                <DropdownMenuItem onClick={() => setExportIsModal(true)}>
+                  <FileSpreadsheet className="size-4" />
+                  Exportar
+                </DropdownMenuItem>
               )}
               <DropdownMenuItem>
                 <Plus className="size-4" />
@@ -112,16 +118,16 @@ export default function HeadingContacts() {
         onOpenChange={searchLead.setIsOpen}
       />
       {!isSingle && (
-        <>
-          <LeadImportDialog
-            onOpenChange={setImportIsModal}
-            open={modalImportIsOpen}
-          />
-          <LeadExportDialog
-            onOpenChange={setExportIsModal}
-            open={modalExportIsOpen}
-          />
-        </>
+        <LeadImportDialog
+          onOpenChange={setImportIsModal}
+          open={modalImportIsOpen}
+        />
+      )}
+      {canExport && (
+        <LeadExportDialog
+          onOpenChange={setExportIsModal}
+          open={modalExportIsOpen}
+        />
       )}
     </>
   );

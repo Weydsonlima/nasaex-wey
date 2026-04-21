@@ -33,6 +33,8 @@ import { Label } from "@/components/ui/label";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { toast } from "sonner";
+import { useConstructUrl } from "@/hooks/use-construct-url";
+import { useCheckPermission } from "@/hooks/use-check-permission";
 
 interface LeadExportDialogProps {
   open: boolean;
@@ -54,7 +56,10 @@ const EXPORT_FIELDS = [
   { key: "responsibleName", label: "Responsável" },
 ];
 
-export function LeadExportDialog({ open, onOpenChange }: LeadExportDialogProps) {
+export function LeadExportDialog({
+  open,
+  onOpenChange,
+}: LeadExportDialogProps) {
   const [trackingId, setTrackingId] = useState("");
   const [statusId, setStatusId] = useState("all");
   const [format, setFormat] = useState<"csv" | "xlsx">("xlsx");
@@ -67,6 +72,13 @@ export function LeadExportDialog({ open, onOpenChange }: LeadExportDialogProps) 
   const trackings = useQueryTracking();
   const status = useStatus(trackingId);
   const mutation = useMutationExport();
+  const { checkPermission } = useCheckPermission();
+
+  const canExport = checkPermission("tracking", "canView");
+
+  if (!canExport && open) {
+    return null;
+  }
 
   const handleExport = async () => {
     if (!trackingId) {
@@ -96,6 +108,9 @@ export function LeadExportDialog({ open, onOpenChange }: LeadExportDialogProps) 
                 let value = lead[fieldKey];
                 if (fieldKey === "createdAt") {
                   value = new Date(value).toLocaleString("pt-BR");
+                }
+                if (fieldKey === "profile") {
+                  value = useConstructUrl(value);
                 }
                 row[field.label] = value ?? "";
               }
@@ -277,7 +292,9 @@ export function LeadExportDialog({ open, onOpenChange }: LeadExportDialogProps) 
             <Button
               className="w-full sm:w-auto gap-2"
               onClick={handleExport}
-              disabled={isExporting || !trackingId || selectedFields.length === 0}
+              disabled={
+                isExporting || !trackingId || selectedFields.length === 0
+              }
             >
               {isExporting ? (
                 <>
@@ -292,7 +309,10 @@ export function LeadExportDialog({ open, onOpenChange }: LeadExportDialogProps) 
               )}
             </Button>
           ) : (
-            <Button className="w-full sm:w-auto" onClick={() => handleClose(false)}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => handleClose(false)}
+            >
               Fechar
             </Button>
           )}

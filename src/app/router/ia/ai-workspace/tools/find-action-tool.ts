@@ -2,17 +2,11 @@ import prisma from "@/lib/prisma";
 import { tool } from "ai";
 import { z } from "zod";
 
-export const findActionTool = () =>
+export const findActionTool = (userId: string, workspaceId?: string) =>
   tool({
     description:
-      "Search for actions/tasks based on filters. Use this to find tasks by title, status, priority, dates, workspace, column, lead, project, etc. Returns a list of actions matching the provided filters.",
+      "Search for actions, tasks, or events based on filters. Use this to find tasks by title, status, priority, dates, workspace, etc. Returns a list of actions matching the provided filters.",
     inputSchema: z.object({
-      // Required identifiers
-      workspaceId: z
-        .string()
-        .describe("Workspace ID (required to scope the search)"),
-      userId: z.string().describe("ID of the user performing the search"),
-
       // Text filters
       title: z
         .string()
@@ -73,8 +67,6 @@ export const findActionTool = () =>
       offset: z.number().min(0).default(0).describe("Pagination offset"),
     }),
     execute: async ({
-      workspaceId,
-      userId,
       title,
       isDone,
       isArchived,
@@ -98,11 +90,7 @@ export const findActionTool = () =>
             workspaceId,
 
             // Only return actions where the user is the creator, a participant, or a responsible
-            OR: [
-              { createdBy: userId },
-              { participants: { some: { userId } } },
-              { responsibles: { some: { userId } } },
-            ],
+            OR: [{ createdBy: userId }, { participants: { some: { userId } } }],
 
             // Optional filters — only applied when provided
             ...(title && {
@@ -150,6 +138,20 @@ export const findActionTool = () =>
             isArchived: true,
             isFavorited: true,
             createdAt: true,
+            responsibles: {
+              select: {
+                user: {
+                  select: { id: true, name: true, image: true },
+                },
+              },
+            },
+            participants: {
+              select: {
+                user: {
+                  select: { id: true, name: true, image: true },
+                },
+              },
+            },
             column: {
               select: { id: true, name: true },
             },

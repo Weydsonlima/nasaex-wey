@@ -12,7 +12,7 @@ import { DataTable } from "./data-table";
 import { FiltersBar } from "./filters-bar";
 import { FiltersSheet } from "./filters-sheet";
 import { cn } from "@/lib/utils";
-import { CreateActionWithAi } from "./create-action-with-ai";
+import { CreateActionWithAi } from "./ai-button";
 
 interface Props {
   workspaceId: string;

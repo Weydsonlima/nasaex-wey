@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { tool } from "ai";
 import { z } from "zod";
 
-export const listWorkspaces = () =>
+export const listWorkspaces = (userId: string) =>
   tool({
     description: "List all the workspaces this user is in, if requested",
     inputSchema: z.object({

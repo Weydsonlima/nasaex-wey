@@ -2,9 +2,9 @@ import prisma from "@/lib/prisma";
 import { tool } from "ai";
 import { z } from "zod";
 
-export const listColumnsByWorkspace = () =>
+export const listColumnsByWorkspace = (userId: string) =>
   tool({
-    description: "List all the columns by workspace, if requested",
+    description: "List all the columns or status  by workspace",
     inputSchema: z.object({
       workspaceId: z.string(),
     }),

@@ -1,13 +1,24 @@
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+  type UIMessage,
+} from "ai";
 import { openai } from "@ai-sdk/openai";
 import { streamToEventIterator } from "@orpc/client";
 import { createActionTool } from "./tools/create-action";
 import { listWorkspaces } from "./tools/list-workspaces";
 import { listColumnsByWorkspace } from "./tools/list-status-by-workspace";
 import { findActionTool } from "./tools/find-action-tool";
+import { updateActionTool } from "./tools/update-action";
+import { getOverdueActionsTool } from "./tools/get-overdue-actions";
+import { moveActionToColumnTool } from "./tools/move-action-to-column";
+import { getWorkspaceSummaryTool } from "./tools/get-workspace-summary";
+import { closeActionTool } from "./tools/close-action";
+import { addResponsibleToActionTool } from "./tools/add-responsible-to-action";
 import z from "zod";
 
 export const createActionWithAi = base
@@ -38,16 +49,17 @@ export const createActionWithAi = base
         "",
         "REGRAS DE RESPOSTA E FLUXO:",
         `- PRIORIDADE DE DESTINO: Use Workspace (${initialWorkspaceId}) e Coluna (${initialColumnId}) por padrão.`,
-        "- **BUSCA DE TAREFAS**: Utilize a ferramenta `searchActions` sempre que o usuário se referir a uma tarefa existente ou quando você precisar de contexto de ações passadas para realizar novas operações.",
+        "- **BUSCA E GESTÃO**: Utilize `findAction` para localizar tarefas. Para edições, use `updateAction`, `moveActionToColumn` ou `closeAction` conforme necessário.",
+        "- **RESUMOS E ALERTAS**: Se o usuário pedir um status do projeto ou workspace, use `getWorkspaceSummary`. Para follow-ups de prazos, use `getOverdueActions`.",
+        "- **DELEGAÇÃO**: Utilize `addResponsibleToAction` para atribuir responsáveis às tarefas.",
         "- Retorne a resposta final consolidada apenas após concluir todas as ferramentas.",
         "- Utilize duas quebras de linha (\\n\\n) entre blocos de informação.",
         "Contexto Atual:",
         `- Organização ID: ${orgId}`,
         `- Usuário ID: ${userId}`,
-        "`",
       ];
       const result = streamText({
-        model: openai(""),
+        model: openai("gpt-4.1-nano"),
         messages: [
           {
             role: "system",
@@ -56,15 +68,25 @@ export const createActionWithAi = base
 
           ...(await convertToModelMessages(messages)),
         ],
+        stopWhen: stepCountIs(4),
+
         tools: {
-          createAction: createActionTool(),
-          listWorkspaces: listWorkspaces(),
-          listColumnsByWorkspace: listColumnsByWorkspace(),
-          findAction: findActionTool(),
+          createAction: createActionTool(userId),
+          listWorkspaces: listWorkspaces(userId),
+          listColumnsByWorkspace: listColumnsByWorkspace(userId),
+          findAction: findActionTool(userId, initialWorkspaceId),
+          updateAction: updateActionTool(userId),
+          getOverdueActions: getOverdueActionsTool(userId),
+          moveActionToColumn: moveActionToColumnTool(userId),
+          getWorkspaceSummary: getWorkspaceSummaryTool(userId),
+          closeAction: closeActionTool(userId),
+          addResponsibleToAction: addResponsibleToActionTool(userId),
         },
       });
 
-      return streamToEventIterator(result.toUIMessageStream());
+      console.log(result);
+
+      yield* streamToEventIterator(result.toUIMessageStream());
     } catch (error) {
       console.error(error);
     }

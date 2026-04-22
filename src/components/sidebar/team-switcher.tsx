@@ -27,7 +27,9 @@ import Image from "next/image";
 import { ActiveOrganization } from "@/lib/auth-types";
 import { toast } from "sonner";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { resolveOrgSwitchRedirect } from "./resolve-org-switch-redirect";
 
 // Update
 export function TeamSwitcher() {
@@ -36,6 +38,8 @@ export function TeamSwitcher() {
     React.useState<ActiveOrganization | null>();
   const { data: organizations } = authClient.useListOrganizations();
   const router = useRouter();
+  const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   const organizationsSorted = organizations?.sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -53,12 +57,21 @@ export function TeamSwitcher() {
 
     if (error) {
       toast.error("Erro ao tentar trocar de empresa!");
+      return;
     }
 
     setOrganizationActive(organization);
-    toast.success("Sucesso!");
 
-    router.refresh();
+    await queryClient.invalidateQueries();
+
+    const redirectTo = resolveOrgSwitchRedirect(pathname);
+    if (redirectTo) {
+      router.push(redirectTo);
+    } else {
+      router.refresh();
+    }
+
+    toast.success("Sucesso!");
   };
 
   React.useEffect(() => {

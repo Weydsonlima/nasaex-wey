@@ -117,7 +117,7 @@ export function FormCreateOrg() {
     }
 
     toast.success("Organização criada com sucesso!");
-    router.push("tracking");
+    router.push("/home");
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {

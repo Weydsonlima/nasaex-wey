@@ -11,8 +11,6 @@ import {
   Building2Icon,
   Trash2Icon,
   FolderKanbanIcon,
-  PlusIcon,
-  HistoryIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,7 +33,6 @@ import {
 import { useDeleteAction } from "../hooks/use-tasks";
 import { ShareActionDialog } from "./share-action-dialog";
 import { MoveActionWorkspaceDialog } from "./move-action-workspace";
-import { HistoricSheet } from "./view-modal/historic-sheet";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -62,8 +59,8 @@ export function CardActionsMenu({
 }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [moveWorkspaceOpen, setMoveWorkspaceOpen] = useState(false);
-  const [historicOpen, setHistoricOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [historicOpen, setHistoricOpen] = useState(false);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
   const copyAction = useCopyAction();
   const moveAction = useMoveAction();
   const updateFields = useUpdateActionFields();
@@ -113,6 +110,13 @@ export function CardActionsMenu({
     toast.success("Link copiado!");
   };
 
+  const handleCopyPublicLink = () => {
+    navigator.clipboard.writeText(
+      `${window.location.origin}/actions/${actionId}`,
+    );
+    toast.success("Link público copiado!");
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -121,7 +125,7 @@ export function CardActionsMenu({
             variant="ghost"
             size="icon"
             className={cn(
-              "size-7 text-muted-foreground hover:text-foreground",
+              "size-7 text-muted-foreground hover:text-foreground cursor-pointer",
               className,
             )}
             onClick={(e) => e.stopPropagation()}
@@ -138,7 +142,7 @@ export function CardActionsMenu({
           {/* Move to column */}
           {columns.length > 0 && (
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="gap-2">
+              <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
                 <MoveRightIcon className="size-3.5" />
                 Mover para
               </DropdownMenuSubTrigger>
@@ -147,7 +151,7 @@ export function CardActionsMenu({
                   <DropdownMenuItem
                     key={col.id}
                     onClick={() => handleMoveTo(col.id)}
-                    className="gap-2"
+                    className="gap-2 cursor-pointer"
                   >
                     <span
                       className="size-2 rounded-full shrink-0"
@@ -159,7 +163,7 @@ export function CardActionsMenu({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setMoveWorkspaceOpen(true)}
-                  className="gap-2"
+                  className="gap-2 cursor-pointer"
                 >
                   <FolderKanbanIcon className="size-3.5" />
                   Mover de workspace
@@ -172,16 +176,22 @@ export function CardActionsMenu({
           <DropdownMenuItem
             onClick={handleCopy}
             disabled={copyAction.isPending}
-            className="gap-2"
+            className="gap-2 cursor-pointer"
           >
             <CopyIcon className="size-3.5" />
-            Copiar ação
+            Duplicar ação
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
           {/* Share link */}
-          <DropdownMenuItem onClick={handleShareLink} className="gap-2">
+          {/* <DropdownMenuItem onClick={handleShareLink} className="gap-2">
+            <Share2Icon className="size-3.5" />
+            Copiar link
+          </DropdownMenuItem> */}
+
+          {/* Public SEO link */}
+          <DropdownMenuItem onClick={handleCopyPublicLink} className="gap-2 cursor-pointer">
             <Share2Icon className="size-3.5" />
             Copiar link
           </DropdownMenuItem>
@@ -189,7 +199,7 @@ export function CardActionsMenu({
           {/* Share with another company */}
           <DropdownMenuItem
             onClick={() => setShareOpen(true)}
-            className="gap-2 text-violet-600 focus:text-violet-700 focus:bg-violet-50 dark:focus:bg-violet-950/30"
+            className="gap-2 text-violet-600 focus:text-violet-700 focus:bg-violet-50 dark:focus:bg-violet-950/30 cursor-pointer"
           >
             <Building2Icon className="size-3.5" />
             Compartilhar com empresa
@@ -199,7 +209,7 @@ export function CardActionsMenu({
           <DropdownMenuItem
             onClick={handleToggleFavorite}
             disabled={updateFields.isPending}
-            className="gap-2"
+            className="gap-2 cursor-pointer"
           >
             <StarIcon
               className={cn(
@@ -226,7 +236,7 @@ export function CardActionsMenu({
             onClick={handleToggleArchive}
             disabled={updateFields.isPending}
             className={cn(
-              "gap-2",
+              "gap-2 cursor-pointer",
               !isArchived && "text-destructive focus:text-destructive",
             )}
           >
@@ -243,7 +253,7 @@ export function CardActionsMenu({
               <DropdownMenuItem
                 onClick={handleDelete}
                 disabled={deleteAction.isPending}
-                className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
               >
                 <Trash2Icon className="size-3.5 text-destructive" />
                 Excluir

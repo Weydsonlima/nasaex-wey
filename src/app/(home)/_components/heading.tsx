@@ -24,7 +24,7 @@ export function Heading() {
       )}
       {session?.user && !isPending && (
         <Button asChild>
-          <Link href="/tracking">
+          <Link href="/home">
             Entrar no Nasa
             <ArrowRight className="size-4 " />
           </Link>

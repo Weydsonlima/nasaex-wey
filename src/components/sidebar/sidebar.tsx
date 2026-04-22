@@ -34,6 +34,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
   const { startTour } = useTour();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (isMobile) {
@@ -41,7 +46,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [pathname]);
 
-  const currentOrganization = session?.session.activeOrganizationId;
+  const currentOrganization = mounted
+    ? session?.session.activeOrganizationId
+    : undefined;
 
   return (
     <Sidebar collapsible="icon" {...props}>

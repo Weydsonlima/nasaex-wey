@@ -66,6 +66,7 @@ export function ProductsTab() {
         <Button
           className="ml-auto bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1.5"
           onClick={handleAdd}
+          size="sm"
         >
           <Plus className="size-4" />
           Novo Produto

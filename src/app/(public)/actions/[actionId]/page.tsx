@@ -1,12 +1,13 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { CalendarIcon, UsersIcon, ExternalLinkIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   params: Promise<{ actionId: string }>;
@@ -88,7 +89,7 @@ export default async function PublicActionPage({ params }: Props) {
       workspace: {
         select: {
           name: true,
-          organization: { select: { name: true, logo: true } },
+          organization: { select: { id: true, slug: true, name: true, logo: true } },
         },
       },
       participants: {
@@ -105,6 +106,21 @@ export default async function PublicActionPage({ params }: Props) {
 
   const coverSrc = constructUrl(action.coverImage);
   const redirectUrl = `/workspaces/${action.workspaceId}?actionId=${action.id}`;
+  const organizationId = action.workspace.organization.id;
+  const organizationSlug = action.workspace.organization.slug;
+
+  async function openInNasa() {
+    "use server";
+    try {
+      await auth.api.setActiveOrganization({
+        body: { organizationId, organizationSlug },
+        headers: await headers(),
+      });
+    } catch {
+      // If the user is not logged in or not a member, proceed anyway
+    }
+    redirect(redirectUrl);
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -175,12 +191,12 @@ export default async function PublicActionPage({ params }: Props) {
             )}
 
             <div className="pt-4 border-t">
-              <Button asChild className="w-full sm:w-auto">
-                <Link href={redirectUrl}>
+              <form action={openInNasa}>
+                <Button type="submit" className="w-full sm:w-auto">
                   <ExternalLinkIcon className="size-4" />
                   Abrir no N.A.S.A
-                </Link>
-              </Button>
+                </Button>
+              </form>
             </div>
           </div>
         </div>

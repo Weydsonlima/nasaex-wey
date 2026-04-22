@@ -2,60 +2,78 @@ import prisma from "@/lib/prisma";
 import { tool } from "ai";
 import { z } from "zod";
 
-export const findActionTool = (userId: string, workspaceId?: string) =>
+const PRIVILEGED_ROLES = ["owner", "admin", "moderador"];
+
+export const findActionTool = (
+  userId: string,
+  workspaceId?: string,
+  orgId?: string,
+) =>
   tool({
-    description:
-      "Search for actions, tasks, or events based on filters. Use this to find tasks by title, status, priority, dates, workspace, etc. Returns a list of actions matching the provided filters.",
+    description: [
+      "Busca e lista ações/tarefas/eventos acessíveis ao usuário.",
+      "REGRA CRÍTICA: NÃO preencha nenhum campo opcional por dedução ou por padrão.",
+      "Cada campo só deve ser enviado se o usuário mencionar EXPLICITAMENTE aquele critério no prompt.",
+      "Exemplo: se o usuário disser 'liste todos os eventos', chame a tool com ZERO campos — nenhum filtro.",
+      "Exemplo: só passe isDone:true se o usuário disser 'concluídas' ou 'feitas'.",
+      "Semepre que falar em ação, evento, tarefa, em todas as linguagens, ele está se referino a Actions",
+    ].join(" "),
     inputSchema: z.object({
       // Text filters
       title: z
         .string()
         .optional()
-        .describe("Search by title (partial match, case-insensitive)"),
+        .describe(
+          "SOMENTE se o usuário mencionar um nome/título específico. NÃO preencha por padrão.",
+        ),
 
       // Status / type filters
+      type: z
+        .enum(["TASK", "ACTION", "MEETING", "NOTE"])
+        .optional()
+        .describe(
+          "SOMENTE se o usuário especificar o tipo: TASK=tarefa, ACTION=ação, MEETING=reunião, NOTE=nota. NÃO preencha por padrão.",
+        ),
       isDone: z
         .boolean()
         .optional()
-        .describe("Filter by completed (true) or pending (false) tasks"),
-      isArchived: z.boolean().optional().describe("Filter by archived tasks"),
-      isFavorited: z.boolean().optional().describe("Filter by favorited tasks"),
+        .describe(
+          "SOMENTE se o usuário pedir explicitamente 'concluídas' (true) ou 'pendentes' (false). NÃO preencha por padrão — omitir retorna ambas.",
+        ),
+      isArchived: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          "SOMENTE se o usuário pedir explicitamente arquivadas (true). Padrão false oculta arquivadas automaticamente.",
+        ),
+      isFavorited: z
+        .boolean()
+        .optional()
+        .describe(
+          "SOMENTE se o usuário pedir explicitamente 'favoritas'. NÃO preencha por padrão.",
+        ),
       priority: z
         .enum(["NONE", "LOW", "MEDIUM", "HIGH", "URGENT"])
         .optional()
-        .describe("Filter by task priority"),
+        .describe(
+          "SOMENTE se o usuário mencionar uma prioridade específica. NÃO preencha por padrão.",
+        ),
 
       // Relationship filters
-      columnId: z.string().optional().describe("Filter by column ID"),
-      leadId: z.string().optional().describe("Filter by related lead ID"),
-      orgProjectId: z
+      columnId: z
         .string()
         .optional()
-        .describe("Filter by organization project ID"),
+        .describe("SOMENTE se o usuário mencionar uma coluna específica."),
+      leadId: z
+        .string()
+        .optional()
+        .describe("SOMENTE se o usuário mencionar um lead específico."),
+
       organizationId: z
         .string()
         .optional()
-        .describe("Filter by organization ID"),
-
-      // Due date range
-      dueDateFrom: z
-        .string()
-        .optional()
-        .describe("Due date start range (ISO 8601, e.g. 2024-01-01)"),
-      dueDateTo: z
-        .string()
-        .optional()
-        .describe("Due date end range (ISO 8601, e.g. 2024-12-31)"),
-
-      // Start date range
-      startDateFrom: z
-        .string()
-        .optional()
-        .describe("Start date range from (ISO 8601)"),
-      startDateTo: z
-        .string()
-        .optional()
-        .describe("Start date range to (ISO 8601)"),
+        .describe("SOMENTE se o usuário mencionar uma organização específica."),
 
       // Pagination
       limit: z
@@ -63,23 +81,16 @@ export const findActionTool = (userId: string, workspaceId?: string) =>
         .min(1)
         .max(50)
         .default(10)
-        .describe("Maximum number of results to return (default: 10)"),
-      offset: z.number().min(0).default(0).describe("Pagination offset"),
+        .describe("Máximo de resultados. Padrão 10."),
+      offset: z.number().min(0).default(0).describe("Offset para paginação."),
     }),
     execute: async ({
       title,
       isDone,
       isArchived,
-      isFavorited,
       priority,
-      columnId,
-      leadId,
-      orgProjectId,
       organizationId,
-      dueDateFrom,
-      dueDateTo,
-      startDateFrom,
-      startDateTo,
+
       limit,
       offset,
     }) => {
@@ -87,39 +98,17 @@ export const findActionTool = (userId: string, workspaceId?: string) =>
       try {
         const actions = await prisma.action.findMany({
           where: {
-            workspaceId,
+            ...(workspaceId
+              ? { workspaceId }
+              : orgId
+                ? { organizationId: orgId }
+                : {}),
 
-            // Only return actions where the user is the creator, a participant, or a responsible
-            OR: [{ createdBy: userId }, { participants: { some: { userId } } }],
-
-            // Optional filters — only applied when provided
             ...(title && {
               title: { contains: title, mode: "insensitive" },
             }),
             ...(isDone !== undefined && { isDone }),
-            ...(isArchived !== undefined && { isArchived }),
-            ...(isFavorited !== undefined && { isFavorited }),
             ...(priority && { priority }),
-            ...(columnId && { columnId }),
-            ...(leadId && { leadId }),
-            ...(orgProjectId && { orgProjectId }),
-            ...(organizationId && { organizationId }),
-
-            // Due date range filter
-            ...((dueDateFrom || dueDateTo) && {
-              dueDate: {
-                ...(dueDateFrom && { gte: new Date(dueDateFrom) }),
-                ...(dueDateTo && { lte: new Date(dueDateTo) }),
-              },
-            }),
-
-            // Start date range filter
-            ...((startDateFrom || startDateTo) && {
-              startDate: {
-                ...(startDateFrom && { gte: new Date(startDateFrom) }),
-                ...(startDateTo && { lte: new Date(startDateTo) }),
-              },
-            }),
           },
           orderBy: [{ order: "asc" }, { createdAt: "desc" }],
           take: limit,
@@ -129,7 +118,7 @@ export const findActionTool = (userId: string, workspaceId?: string) =>
             title: true,
             description: true,
             isDone: true,
-            type: true,
+            type: true, // TASK | ACTION | MEETING | NOTE
             priority: true,
             dueDate: true,
             startDate: true,

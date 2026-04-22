@@ -39,6 +39,7 @@ import { SUGGESTED_PROMPTS } from "./constants";
 import { ChatAvatar } from "./chat-avatar";
 import { MessageTextPart } from "./message-text-part";
 import { ContextSelector } from "./context-selector";
+import { Spinner } from "@/components/ui/spinner";
 
 export function CreateActionWithAi({
   workspaceId: initialWorkspaceId,
@@ -71,10 +72,8 @@ export function CreateActionWithAi({
     }
   }, [columns, selectedColumnId]);
 
-  const { messages, isLoading, sendMessage, status } = useWorkspaceAi(
-    selectedWorkspaceId,
-    selectedColumnId,
-  );
+  const { messages, isLoading, sendMessage, status, error, clearError, stop } =
+    useWorkspaceAi(selectedWorkspaceId, selectedColumnId);
 
   useEffect(() => {
     const viewport = scrollRef.current?.querySelector(
@@ -244,6 +243,22 @@ export function CreateActionWithAi({
 
         {/* Input */}
         <div className="p-4 border-t border-zinc-900 bg-zinc-950/80 backdrop-blur-md">
+          {error && (
+            <div>
+              {" "}
+              <span className="text-sm text-muted-foreground">
+                Algo deu errado na sua solicitação. Por favor, relate ao suporte
+                ou tente novamente{" "}
+                <span
+                  className="underline text-blue-400"
+                  onClick={() => [clearError(), stop()]}
+                >
+                  Concluir
+                </span>
+              </span>{" "}
+              <Button variant={"ghost"}>Concluir</Button>
+            </div>
+          )}
           <InputGroup className="border-zinc-800 rounded-2xl flex-col h-auto">
             <InputGroupAddon align="block-start" className="border-zinc-800/50">
               <ContextSelector
@@ -272,18 +287,32 @@ export function CreateActionWithAi({
                 onChange={(e) => setPrompt(e.target.value)}
               />
               <InputGroupAddon align="inline-end" className="pb-2 pr-2">
-                <InputGroupButton
-                  disabled={!prompt.trim() || isLoading}
-                  size="icon-sm"
-                  className={cn(
-                    "rounded-xl transition-all shadow-lg shrink-0",
-                    "bg-purple-600 hover:bg-purple-500 text-white",
-                    "disabled:opacity-20 disabled:scale-95 disabled:bg-zinc-800",
-                  )}
-                  onClick={handleGenerate}
-                >
-                  <Send className="size-4" />
-                </InputGroupButton>
+                {status === "submitted" || status === "streaming" ? (
+                  <InputGroupButton
+                    size="icon-sm"
+                    className={cn(
+                      "rounded-xl transition-all shadow-lg shrink-0",
+                      "bg-purple-600 hover:bg-purple-500 text-white",
+                      "disabled:opacity-20 disabled:scale-95 disabled:bg-zinc-800",
+                    )}
+                    onClick={stop}
+                  >
+                    <Spinner className="size-4" />
+                  </InputGroupButton>
+                ) : (
+                  <InputGroupButton
+                    disabled={!prompt.trim()}
+                    size="icon-sm"
+                    className={cn(
+                      "rounded-xl transition-all shadow-lg shrink-0",
+                      "bg-purple-600 hover:bg-purple-500 text-white",
+                      "disabled:opacity-20 disabled:scale-95 disabled:bg-zinc-800",
+                    )}
+                    onClick={handleGenerate}
+                  >
+                    <Send className="size-4" />
+                  </InputGroupButton>
+                )}
               </InputGroupAddon>
             </div>
           </InputGroup>

@@ -2,12 +2,10 @@ import prisma from "@/lib/prisma";
 import { tool } from "ai";
 import { z } from "zod";
 
-export const listColumnsByWorkspace = (userId: string) =>
+export const listColumnsByWorkspace = (userId: string, workspaceId: string) =>
   tool({
     description: "List all the columns or status  by workspace",
-    inputSchema: z.object({
-      workspaceId: z.string(),
-    }),
+    inputSchema: z.object({}),
     execute: async ({ workspaceId }) => {
       try {
         const column = await prisma.workspaceColumn.findMany({

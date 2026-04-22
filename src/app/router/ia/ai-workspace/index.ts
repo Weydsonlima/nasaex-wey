@@ -20,6 +20,7 @@ import { getWorkspaceSummaryTool } from "./tools/get-workspace-summary";
 import { closeActionTool } from "./tools/close-action";
 import { addResponsibleToActionTool } from "./tools/add-responsible-to-action";
 import z from "zod";
+import prisma from "@/lib/prisma";
 
 export const createActionWithAi = base
   .use(requiredAuthMiddleware)
@@ -31,11 +32,20 @@ export const createActionWithAi = base
       initialColumnId: z.string().optional(),
     }),
   )
-  .handler(async function* ({ input, context }) {
+  .handler(async function* ({ input, context, errors }) {
     try {
       const { messages, initialWorkspaceId, initialColumnId } = input;
       const orgId = context.org.id;
       const userId = context.user.id;
+
+      const member = await prisma.member.findUnique({
+        where: { userId_organizationId: { userId, organizationId: orgId } },
+        select: { role: true },
+      });
+
+      if (!initialWorkspaceId) {
+        throw errors.NOT_FOUND;
+      }
 
       const systemPrompt = [
         '`Você é o "ASTRO", o assistente inteligente da NASA.ex.',
@@ -69,12 +79,16 @@ export const createActionWithAi = base
           ...(await convertToModelMessages(messages)),
         ],
         stopWhen: stepCountIs(4),
+        toolChoice: "auto",
 
         tools: {
           createAction: createActionTool(userId),
           listWorkspaces: listWorkspaces(userId),
-          listColumnsByWorkspace: listColumnsByWorkspace(userId),
-          findAction: findActionTool(userId, initialWorkspaceId),
+          listColumnsByWorkspace: listColumnsByWorkspace(
+            userId,
+            initialWorkspaceId,
+          ),
+          findAction: findActionTool(userId, initialWorkspaceId, orgId),
           updateAction: updateActionTool(userId),
           getOverdueActions: getOverdueActionsTool(userId),
           moveActionToColumn: moveActionToColumnTool(userId),
@@ -84,10 +98,9 @@ export const createActionWithAi = base
         },
       });
 
-      console.log(result);
-
       yield* streamToEventIterator(result.toUIMessageStream());
     } catch (error) {
       console.error(error);
+      throw errors.INTERNAL_SERVER_ERROR;
     }
   });

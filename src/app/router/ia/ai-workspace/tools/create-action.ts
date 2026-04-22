@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { tool } from "ai";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 export const createActionTool = (userId: string) =>
@@ -35,6 +36,9 @@ export const createActionTool = (userId: string) =>
             },
           },
         });
+
+        revalidatePath(`/workspaces/${workspaceId}?action-view=kanban`);
+        console.log(workspaceId);
 
         return {
           success: true,

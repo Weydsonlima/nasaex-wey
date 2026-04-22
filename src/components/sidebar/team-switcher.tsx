@@ -62,14 +62,14 @@ export function TeamSwitcher() {
 
     setOrganizationActive(organization);
 
-    await queryClient.invalidateQueries();
-
     const redirectTo = resolveOrgSwitchRedirect(pathname);
     if (redirectTo) {
       router.push(redirectTo);
     } else {
       router.refresh();
     }
+
+    queryClient.invalidateQueries();
 
     toast.success("Sucesso!");
   };

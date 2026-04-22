@@ -22,6 +22,12 @@ function getBaseUrl() {
   );
 }
 
+function constructUrl(key: string | null) {
+  if (!key) return FALLBACK_IMAGE;
+  if (key.startsWith("http") || key.startsWith("/")) return key;
+  return `https://${process.env.NEXT_PUBLIC_S3_BUCKET_CONSTRUCTOR_URL}/${key}`;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { actionId } = await params;
 
@@ -43,10 +49,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!action) return { title: "Ação não encontrada" };
 
   const baseUrl = getBaseUrl();
-  const rawImage = action.coverImage ?? FALLBACK_IMAGE;
-  const image = rawImage.startsWith("http")
-    ? rawImage
-    : `${baseUrl}${rawImage}`;
+  const image = action.coverImage 
+    ? constructUrl(action.coverImage)
+    : `${baseUrl}${FALLBACK_IMAGE}`;
 
   const title = `${action.title} — ${action.workspace.name}`;
   const description = action.dueDate
@@ -100,7 +105,7 @@ export default async function PublicActionPage({ params }: Props) {
 
   if (!action) notFound();
 
-  const coverSrc = action.coverImage ?? FALLBACK_IMAGE;
+  const coverSrc = constructUrl(action.coverImage);
   const redirectUrl = `/workspaces/${action.workspaceId}?actionId=${action.id}`;
 
   return (
@@ -155,7 +160,7 @@ export default async function PublicActionPage({ params }: Props) {
                       className="flex items-center gap-2 bg-muted/50 rounded-full pl-1 pr-3 py-1"
                     >
                       <Avatar className="size-7">
-                        <AvatarImage src={p.user.image ?? undefined} />
+                        <AvatarImage src={p.user.image ? constructUrl(p.user.image) : undefined} />
                         <AvatarFallback>
                           {p.user.name?.charAt(0).toUpperCase() ?? "?"}
                         </AvatarFallback>

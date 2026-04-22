@@ -8,15 +8,15 @@ export const createActionTool = (userId: string) =>
     description:
       "Create a event with title, workspace and status. Você pode usar outros campos como data de inicio e fim, descrição, etc, mas estes não são obrigatórios. ",
     inputSchema: z.object({
-      title: z.string().describe("The title of the note"),
-      content: z.string().describe("The content/body of the note"),
+      title: z.string().describe("The title of the action"),
+      content: z.string().describe("The content/body/description of the note"),
       workspaceId: z.string().describe("The ID of the workspace"),
       columnId: z.string().describe("The ID of the column"),
     }),
     execute: async ({ title, content, workspaceId, columnId }) => {
       console.log("CREATE CREATE ACTION TOOL CALL");
       try {
-        const note = await prisma.action.create({
+        const action = await prisma.action.create({
           data: {
             user: {
               connect: {
@@ -24,6 +24,7 @@ export const createActionTool = (userId: string) =>
               },
             },
             title: title,
+            description: content,
             workspace: {
               connect: {
                 id: workspaceId,
@@ -42,10 +43,10 @@ export const createActionTool = (userId: string) =>
 
         return {
           success: true,
-          message: `Note "${title}" created successfully with ID: ${note.id}`,
-          noteId: note.id,
-          title: note.title,
-          content: note.description,
+          message: `Action "${title}" created successfully with ID: ${action.id}`,
+          noteId: action.id,
+          title: action.title,
+          content: action.description,
         };
       } catch (error) {
         return {

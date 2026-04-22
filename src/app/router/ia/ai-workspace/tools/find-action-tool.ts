@@ -43,7 +43,6 @@ export const findActionTool = (
       isArchived: z
         .boolean()
         .optional()
-        .default(false)
         .describe(
           "SOMENTE se o usuário pedir explicitamente arquivadas (true). Padrão false oculta arquivadas automaticamente.",
         ),
@@ -108,7 +107,7 @@ export const findActionTool = (
               title: { contains: title, mode: "insensitive" },
             }),
             ...(isDone !== undefined && { isDone }),
-            ...(priority && { priority }),
+            ...(isArchived !== undefined && { isArchived }),
           },
           orderBy: [{ order: "asc" }, { createdAt: "desc" }],
           take: limit,

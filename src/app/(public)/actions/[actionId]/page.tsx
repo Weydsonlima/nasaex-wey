@@ -12,13 +12,11 @@ interface Props {
   params: Promise<{ actionId: string }>;
 }
 
-const FALLBACK_IMAGE = "/logo.png";
+const FALLBACK_IMAGE = "/background.png";
 
 function getBaseUrl() {
   return (
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    ""
+    process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? ""
   );
 }
 
@@ -49,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!action) return { title: "Ação não encontrada" };
 
   const baseUrl = getBaseUrl();
-  const image = action.coverImage 
+  const image = action.coverImage
     ? constructUrl(action.coverImage)
     : `${baseUrl}${FALLBACK_IMAGE}`;
 
@@ -149,9 +147,7 @@ export default async function PublicActionPage({ params }: Props) {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <UsersIcon className="size-4" />
-                  <span>
-                    Participantes ({action.participants.length})
-                  </span>
+                  <span>Participantes ({action.participants.length})</span>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {action.participants.map((p) => (
@@ -160,7 +156,13 @@ export default async function PublicActionPage({ params }: Props) {
                       className="flex items-center gap-2 bg-muted/50 rounded-full pl-1 pr-3 py-1"
                     >
                       <Avatar className="size-7">
-                        <AvatarImage src={p.user.image ? constructUrl(p.user.image) : undefined} />
+                        <AvatarImage
+                          src={
+                            p.user.image
+                              ? constructUrl(p.user.image)
+                              : undefined
+                          }
+                        />
                         <AvatarFallback>
                           {p.user.name?.charAt(0).toUpperCase() ?? "?"}
                         </AvatarFallback>

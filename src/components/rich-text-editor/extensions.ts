@@ -3,7 +3,7 @@ import FileHandler from "@tiptap/extension-file-handler";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import { Dropcursor } from "@tiptap/extensions";
-import { Placeholder } from "@tiptap/extensions";
+import { Placeholder, Gapcursor } from "@tiptap/extensions";
 
 export const baseExtensions = [
   StarterKit.configure({
@@ -29,6 +29,7 @@ export const editorExtensions = ({ placeholder }: { placeholder?: string }) => [
     },
   }),
   Dropcursor,
+  Gapcursor,
   FileHandler.configure({
     allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
     onDrop: (currentEditor, files, pos) => {

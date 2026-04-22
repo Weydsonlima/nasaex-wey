@@ -1,6 +1,7 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/inngest/client";
 import { executeWorkflow } from "@/inngest/functions";
+import { executeWorkspaceWorkflow } from "@/inngest/functions/workspace-workflow-executor";
 import { bookingNotification } from "@/inngest/functions/booking-notification";
 import { processUserAction } from "@/inngest/functions/process-user-action";
 import { detectAbsence } from "@/inngest/functions/crons/detect-absence";
@@ -15,6 +16,7 @@ export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
     executeWorkflow,
+    executeWorkspaceWorkflow,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,

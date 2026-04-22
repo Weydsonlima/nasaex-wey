@@ -5,6 +5,7 @@ import { tagsRouter } from "./tags";
 import { reasonsRouter } from "./reasons";
 import { orgRoutes } from "./org";
 import { workflowRoutes } from "./workflow";
+import { workspaceWorkflowRoutes } from "./workspace-workflow";
 import { messageRouter } from "./message";
 import { conversationRouter } from "./conversation";
 import { integrationsRouter } from "./integrations";
@@ -49,6 +50,7 @@ export const router = {
   reasons: reasonsRouter,
   orgs: orgRoutes,
   workflow: workflowRoutes,
+  workspaceWorkflow: workspaceWorkflowRoutes,
   message: messageRouter,
   conversation: conversationRouter,
   integrations: integrationsRouter,

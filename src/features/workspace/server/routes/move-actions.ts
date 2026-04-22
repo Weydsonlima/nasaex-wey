@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
 import { z } from "zod";
 
 export const moveActions = base
@@ -46,6 +47,21 @@ export const moveActions = base
         });
       }),
     );
+
+    for (const a of actions) {
+      try {
+        await sendWorkspaceWorkflowEvent({
+          trigger: "WS_ACTION_MOVED_COLUMN",
+          workspaceId: input.workspaceId,
+          actionId: a.id,
+        });
+      } catch (err) {
+        console.error(
+          "[workspace-workflow] failed to emit action.moved (bulk)",
+          err,
+        );
+      }
+    }
 
     return { success: true };
   });

@@ -56,3 +56,25 @@ export const sendWorkflowExecution = async (data: {
     data,
   });
 };
+
+export type WorkspaceWorkflowTrigger =
+  | "WS_MANUAL_TRIGGER"
+  | "WS_ACTION_CREATED"
+  | "WS_ACTION_MOVED_COLUMN"
+  | "WS_ACTION_TAGGED"
+  | "WS_ACTION_COMPLETED"
+  | "WS_ACTION_PARTICIPANT_ADDED";
+
+export const sendWorkspaceWorkflowEvent = async (data: {
+  trigger: WorkspaceWorkflowTrigger;
+  workspaceId: string;
+  actionId?: string;
+  workflowId?: string; // optional: force a specific workflow (manual trigger)
+  initialData?: Record<string, any>;
+  [key: string]: any;
+}) => {
+  return inngest.send({
+    name: "workspace-workflow/trigger",
+    data,
+  });
+};

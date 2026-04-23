@@ -72,7 +72,7 @@ export const getAction = base
             },
           },
           orderBy: {
-            createdAt: "desc",
+            finishDate: "asc",
           },
         },
         user: {

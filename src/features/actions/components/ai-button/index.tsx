@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles, Send, Lightbulb, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,7 @@ import { ChatAvatar } from "./chat-avatar";
 import { MessageTextPart } from "./message-text-part";
 import { ContextSelector } from "./context-selector";
 import { Spinner } from "@/components/ui/spinner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function CreateActionWithAi({
   workspaceId: initialWorkspaceId,
@@ -75,12 +76,21 @@ export function CreateActionWithAi({
   const { messages, isLoading, sendMessage, status, error, clearError, stop } =
     useWorkspaceAi(selectedWorkspaceId, selectedColumnId);
 
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      });
+    }
+  }, []);
+
+  // Auto-scroll when messages change or while streaming
   useEffect(() => {
-    const viewport = scrollRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]",
-    );
-    if (viewport) viewport.scrollTop = viewport.scrollHeight;
-  }, [messages]);
+    scrollToBottom();
+  }, [messages.length, status, scrollToBottom]);
 
   const selectedWorkspace = workspaces.find(
     (w) => w.id === selectedWorkspaceId,
@@ -135,10 +145,7 @@ export function CreateActionWithAi({
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea
-          ref={scrollRef}
-          className="flex-1 px-4 h-full overflow-y-auto"
-        >
+        <div ref={scrollRef} className="flex-1 px-4 h-full overflow-y-auto">
           <div className="flex flex-col gap-4 py-4">
             {/* Estado vazio: sugestões */}
             {messages.length === 0 && (
@@ -239,24 +246,23 @@ export function CreateActionWithAi({
               );
             })}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Input */}
         <div className="p-4 border-t border-zinc-900 bg-zinc-950/80 backdrop-blur-md">
           {error && (
-            <div>
+            <div className={"py-2"}>
               {" "}
               <span className="text-sm text-muted-foreground">
                 Algo deu errado na sua solicitação. Por favor, relate ao suporte
                 ou tente novamente{" "}
                 <span
-                  className="underline text-blue-400"
+                  className="underline text-blue-400 cursor-pointer"
                   onClick={() => [clearError(), stop()]}
                 >
                   Concluir
                 </span>
               </span>{" "}
-              <Button variant={"ghost"}>Concluir</Button>
             </div>
           )}
           <InputGroup className="border-zinc-800 rounded-2xl flex-col h-auto">

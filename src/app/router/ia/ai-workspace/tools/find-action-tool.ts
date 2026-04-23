@@ -2,8 +2,6 @@ import prisma from "@/lib/prisma";
 import { tool } from "ai";
 import { z } from "zod";
 
-const PRIVILEGED_ROLES = ["owner", "admin", "moderador"];
-
 export const findActionTool = (
   userId: string,
   workspaceId?: string,
@@ -18,81 +16,41 @@ export const findActionTool = (
       "Exemplo: só passe isDone:true se o usuário disser 'concluídas' ou 'feitas'.",
       "Semepre que falar em ação, evento, tarefa, em todas as linguagens, ele está se referino a Actions",
     ].join(" "),
-    inputSchema: z.object({
-      // Text filters
-      title: z
-        .string()
-        .optional()
-        .describe(
-          "SOMENTE se o usuário mencionar um nome/título específico. NÃO preencha por padrão.",
-        ),
+    inputSchema: z
+      .object({
+        // Text filters
+        title: z
+          .string()
+          .optional()
+          .describe(
+            "SOMENTE se o usuário mencionar um nome/título específico. NÃO preencha por padrão.",
+          ),
 
-      // Status / type filters
-      type: z
-        .enum(["TASK", "ACTION", "MEETING", "NOTE"])
-        .optional()
-        .describe(
-          "SOMENTE se o usuário especificar o tipo: TASK=tarefa, ACTION=ação, MEETING=reunião, NOTE=nota. NÃO preencha por padrão.",
-        ),
-      isDone: z
-        .boolean()
-        .optional()
-        .describe(
-          "SOMENTE se o usuário pedir explicitamente 'concluídas' (true) ou 'pendentes' (false). NÃO preencha por padrão — omitir retorna ambas.",
-        ),
-      isArchived: z
-        .boolean()
-        .optional()
-        .describe(
-          "SOMENTE se o usuário pedir explicitamente arquivadas (true). Padrão false oculta arquivadas automaticamente.",
-        ),
-      isFavorited: z
-        .boolean()
-        .optional()
-        .describe(
-          "SOMENTE se o usuário pedir explicitamente 'favoritas'. NÃO preencha por padrão.",
-        ),
-      priority: z
-        .enum(["NONE", "LOW", "MEDIUM", "HIGH", "URGENT"])
-        .optional()
-        .describe(
-          "SOMENTE se o usuário mencionar uma prioridade específica. NÃO preencha por padrão.",
-        ),
+        // Status / type filters
+        isDone: z
+          .boolean()
+          .optional()
+          .describe(
+            "SOMENTE se o usuário pedir explicitamente 'concluídas' (true) ou 'pendentes' (false). NÃO preencha por padrão — omitir retorna ambas.",
+          ),
+        isArchived: z
+          .boolean()
+          .optional()
+          .describe(
+            "SOMENTE se o usuário pedir explicitamente arquivadas (true). Padrão false oculta arquivadas automaticamente.",
+          ),
 
-      // Relationship filters
-      columnId: z
-        .string()
-        .optional()
-        .describe("SOMENTE se o usuário mencionar uma coluna específica."),
-      leadId: z
-        .string()
-        .optional()
-        .describe("SOMENTE se o usuário mencionar um lead específico."),
-
-      organizationId: z
-        .string()
-        .optional()
-        .describe("SOMENTE se o usuário mencionar uma organização específica."),
-
-      // Pagination
-      limit: z
-        .number()
-        .min(1)
-        .max(50)
-        .default(10)
-        .describe("Máximo de resultados. Padrão 10."),
-      offset: z.number().min(0).default(0).describe("Offset para paginação."),
-    }),
-    execute: async ({
-      title,
-      isDone,
-      isArchived,
-      priority,
-      organizationId,
-
-      limit,
-      offset,
-    }) => {
+        // Pagination
+        limit: z
+          .number()
+          .min(1)
+          .max(50)
+          .default(10)
+          .describe("Máximo de resultados. Padrão 10."),
+        offset: z.number().min(0).default(0).describe("Offset para paginação."),
+      })
+      .strip(),
+    execute: async ({ title, isDone, isArchived, limit, offset }) => {
       console.log("FIND ACTION TOOL CALL");
       try {
         const actions = await prisma.action.findMany({
@@ -149,22 +107,32 @@ export const findActionTool = (
         if (actions.length === 0) {
           return {
             success: true,
-            message: "No actions found matching the provided filters.",
+            message: "Nenhuma tarefa encontrada com os critérios informados.",
+            hint: "Sugira ao usuário refinar a busca ou criar uma nova ação.",
             actions: [],
             total: 0,
           };
         }
 
+        const serializedActions = actions.map((action) => ({
+          ...action,
+          dueDate: action.dueDate?.toISOString() ?? null,
+          startDate: action.startDate?.toISOString() ?? null,
+          endDate: action.endDate?.toISOString() ?? null,
+          createdAt: action.createdAt?.toISOString() ?? null,
+        }));
+
         return {
           success: true,
           message: `${actions.length} action(s) found.`,
-          actions,
-          total: actions.length,
+          actions: serializedActions,
+          total: serializedActions.length,
         };
       } catch (error) {
         return {
           success: false,
-          message: "Failed to fetch actions.",
+          message:
+            "Não foi possível buscar as tarefas agora. Tente novamente em instantes.",
           error: error instanceof Error ? error.message : "Unknown error",
         };
       }

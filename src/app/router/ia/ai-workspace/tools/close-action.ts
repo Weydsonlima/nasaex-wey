@@ -21,7 +21,7 @@ export const closeActionTool = (userId: string) =>
         return {
           success: true,
           message: `Action "${closedAction.title}" marked as completed.`,
-          action: closedAction,
+          columnId: closedAction.columnId,
         };
       } catch (error) {
         return {

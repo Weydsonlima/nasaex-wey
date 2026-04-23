@@ -23,6 +23,7 @@ export const createActionTool = (userId: string) =>
                 id: userId,
               },
             },
+
             title: title,
             description: content,
             workspace: {
@@ -33,6 +34,15 @@ export const createActionTool = (userId: string) =>
             column: {
               connect: {
                 id: columnId,
+              },
+            },
+            participants: {
+              create: {
+                user: {
+                  connect: {
+                    id: userId,
+                  },
+                },
               },
             },
           },
@@ -47,6 +57,7 @@ export const createActionTool = (userId: string) =>
           noteId: action.id,
           title: action.title,
           content: action.description,
+          columnId: action.columnId,
         };
       } catch (error) {
         return {

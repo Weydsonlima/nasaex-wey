@@ -27,7 +27,7 @@ export const updateActionTool = (userId: string) =>
         return {
           success: true,
           message: `Action "${updatedAction.title}" updated successfully.`,
-          action: updatedAction,
+          columnId: updatedAction.columnId,
         };
       } catch (error) {
         return {

@@ -26,7 +26,7 @@ export const moveActionToColumnTool = (userId: string) =>
         return {
           success: true,
           message: `Action "${updatedAction.title}" moved to column "${updatedAction.column?.name}".`,
-          action: updatedAction,
+          columnId: updatedAction.columnId,
         };
       } catch (error) {
         return {

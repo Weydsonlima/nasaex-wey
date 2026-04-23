@@ -26,6 +26,9 @@ export const addResponsibleToActionTool = (userId: string) =>
           include: {
             user: {
               select: { name: true }
+            },
+            action: {
+              select: { columnId: true }
             }
           }
         });
@@ -33,6 +36,7 @@ export const addResponsibleToActionTool = (userId: string) =>
         return {
           success: true,
           message: `User ${responsible.user.name} assigned as responsible for the action.`,
+          columnId: responsible.action.columnId,
         };
       } catch (error) {
         return {

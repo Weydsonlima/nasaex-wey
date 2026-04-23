@@ -91,9 +91,14 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
       return;
     }
     set((state) => ({
-      blockLayouts: state.blockLayouts.map((block) =>
-        block.id === id ? { ...block, ...updatedBlock } : block,
-      ),
+      blockLayouts: state.blockLayouts.map((block) => {
+        if (block.id !== id) return block;
+        return { ...block, ...updatedBlock };
+      }),
+      selectedBlockLayout:
+        state.selectedBlockLayout?.id === id
+          ? { ...state.selectedBlockLayout, ...updatedBlock }
+          : state.selectedBlockLayout,
     }));
   },
 
@@ -132,6 +137,7 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
   addBlockLayout: (blockLayout) => {
     set((state) => ({
       blockLayouts: [...state.blockLayouts, blockLayout],
+      selectedBlockLayout: blockLayout,
     }));
   },
 
@@ -210,17 +216,28 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
       const updatedBlocks = [...state.blockLayouts];
       updatedBlocks.splice(insertIndex, 0, newBlockLayout);
 
-      return { blockLayouts: updatedBlocks };
+      return {
+        blockLayouts: updatedBlocks,
+        selectedBlockLayout: newBlockLayout,
+      };
     });
   },
 
   // ─── Update block layout (children) ──────────────────────────────────────────
   updateBlockLayout: (id, childrenBlocks) => {
-    set((state) => ({
-      blockLayouts: state.blockLayouts.map((block) =>
+    set((state) => {
+      const updatedBlockLayouts = state.blockLayouts.map((block) =>
         block.id === id ? { ...block, childblocks: childrenBlocks } : block,
-      ),
-    }));
+      );
+
+      return {
+        blockLayouts: updatedBlockLayouts,
+        selectedBlockLayout:
+          state.selectedBlockLayout?.id === id
+            ? { ...state.selectedBlockLayout, childblocks: childrenBlocks }
+            : state.selectedBlockLayout,
+      };
+    });
   },
 
   // ─── Update child block ───────────────────────────────────────────────────────
@@ -237,6 +254,18 @@ export const useBuilderStore = create<BuilderStore>((set, get) => ({
 
         return { ...parentBlock, childblocks: updatedChildblocks };
       }),
+      selectedBlockLayout:
+        state.selectedBlockLayout?.id === parentId
+          ? {
+              ...state.selectedBlockLayout,
+              childblocks: state.selectedBlockLayout.childblocks?.map(
+                (childblock) =>
+                  childblock.id === childblockId
+                    ? { ...childblock, ...updatedBlock }
+                    : childblock,
+              ),
+            }
+          : state.selectedBlockLayout,
     }));
   },
 }));

@@ -136,5 +136,31 @@ export const getAction = base
 
     const hasAccess = isParticipant || isWorkspaceOwner || canSeeByOrg;
 
-    return { action, hasAccess };
+    if (!hasAccess) {
+      return { action, hasAccess };
+    }
+
+    const activityLogs = await prisma.orgActivityLog.findMany({
+      where: {
+        organizationId: context.org.id,
+        resource: "action",
+        resourceId: action.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        action: true,
+        userId: true,
+        userName: true,
+        userEmail: true,
+        resource: true,
+        resourceId: true,
+        metadata: true,
+        createdAt: true,
+      },
+    });
+
+    return { action: { ...action, activityLogs }, hasAccess };
   });

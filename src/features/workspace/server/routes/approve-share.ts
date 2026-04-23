@@ -2,32 +2,44 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 
 export const approveShare = base
   .use(requiredAuthMiddleware)
   .use(requireOrgMiddleware)
-  .input(z.object({
-    shareId: z.string(),
-    targetWorkspaceId: z.string(),
-    targetColumnId: z.string(),
-  }))
+  .input(
+    z.object({
+      shareId: z.string(),
+      targetWorkspaceId: z.string(),
+      targetColumnId: z.string(),
+    }),
+  )
   .handler(async ({ input, context }) => {
     // Verify share belongs to this org and is pending
     const share = await prisma.actionShare.findFirst({
-      where: { id: input.shareId, targetOrgId: context.org.id, status: "PENDING" },
+      where: {
+        id: input.shareId,
+        targetOrgId: context.org.id,
+        status: "PENDING",
+      },
       include: {
         sourceAction: true,
       },
     });
-    if (!share) throw new Error("Pedido de compartilhamento não encontrado ou já processado");
+    if (!share)
+      throw new Error(
+        "Pedido de compartilhamento não encontrado ou já processado",
+      );
 
     // Verify master role (owner)
     const member = await prisma.member.findFirst({
       where: { userId: context.user.id, organizationId: context.org.id },
     });
     if (!member || member.role !== "owner") {
-      throw new Error("Apenas o master da empresa pode aprovar compartilhamentos");
+      throw new Error(
+        "Apenas o master da empresa pode aprovar compartilhamentos",
+      );
     }
 
     const source = share.sourceAction;
@@ -48,13 +60,23 @@ export const approveShare = base
         links: source.links as any,
         coverImage: source.coverImage,
         youtubeUrl: source.youtubeUrl,
-        history: [{
-          type: "shared",
-          from: share.sourceOrgId,
-          shareId: share.id,
-          userId: context.user.id,
-          timestamp: new Date().toISOString(),
-        }],
+      },
+    });
+
+    await logOrgActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name ?? "Usuário",
+      userEmail: context.user.email ?? "",
+      action: "action.created",
+      resource: "action",
+      resourceId: copiedAction.id,
+      metadata: {
+        source: "share",
+        shareId: share.id,
+        fromOrgId: share.sourceOrgId,
+        workspaceId: copiedAction.workspaceId,
+        columnId: copiedAction.columnId,
       },
     });
 

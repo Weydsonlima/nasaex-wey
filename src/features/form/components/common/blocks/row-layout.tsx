@@ -122,6 +122,10 @@ function RowLayoutCanvasComponent({
 
         const updatedChildrenBlock = [...childBlocks, newBlock];
         updateBlockLayout(blockInstance.id, updatedChildrenBlock);
+        handleSelectedLayout({
+          ...blockInstance,
+          childblocks: updatedChildrenBlock,
+        });
       }
     },
   });

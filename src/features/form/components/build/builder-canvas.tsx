@@ -19,6 +19,7 @@ export function BuilderCanvas() {
     addBlockLayout,
     repositionBlockLayout,
     insertBlockLayoutAtIndex,
+    handleSelectedLayout,
   } = useBuilderStore();
 
   const [activeBlock, setActiveBlock] = useState<Active | null>(null);
@@ -35,7 +36,6 @@ export function BuilderCanvas() {
       setActiveBlock(event.active);
     },
     onDragEnd: (event: DragEndEvent) => {
-      console.log("DRAG END", event);
       const { active, over } = event;
       if (!over || !active) return;
       setActiveBlock(null);
@@ -82,7 +82,6 @@ export function BuilderCanvas() {
         if (isDroppingOverCanvasBlockLayoutAbove) {
           position = "above";
         }
-
         insertBlockLayoutAtIndex(overId, newBlockLayout, position);
         return;
       }

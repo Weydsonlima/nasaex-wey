@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
 import { z } from "zod";
 
@@ -18,34 +19,43 @@ export const moveActions = base
   .handler(async ({ input, context }) => {
     const actions = await prisma.action.findMany({
       where: { id: { in: input.actionIds } },
-      select: { id: true, history: true },
+      select: { id: true, columnId: true, workspaceId: true },
     });
-
-    const timestamp = new Date().toISOString();
 
     await prisma.$transaction(
       actions.map((action) => {
-        const history = (action.history as any[]) ?? [];
         return prisma.action.update({
           where: { id: action.id },
           data: {
             columnId: input.columnId,
             workspaceId: input.workspaceId,
-            history: [
-              ...history,
-              {
-                type: "move",
-                userId: context.user.id,
-                timestamp,
-                to: {
-                  columnId: input.columnId,
-                  workspaceId: input.workspaceId,
-                },
-              },
-            ],
           },
         });
       }),
+    );
+
+    await Promise.all(
+      actions.map((action) =>
+        logOrgActivity({
+          organizationId: context.org.id,
+          userId: context.user.id,
+          userName: context.user.name ?? "Usuário",
+          userEmail: context.user.email ?? "",
+          action: "action.moved",
+          resource: "action",
+          resourceId: action.id,
+          metadata: {
+            from: {
+              columnId: action.columnId,
+              workspaceId: action.workspaceId,
+            },
+            to: {
+              columnId: input.columnId,
+              workspaceId: input.workspaceId,
+            },
+          },
+        }),
+      ),
     );
 
     for (const a of actions) {

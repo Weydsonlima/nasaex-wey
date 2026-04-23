@@ -76,7 +76,7 @@ export function FormBlockBox() {
               <BlockBtnElement
                 key={block.blockType}
                 formBlock={block}
-                disabled={isPublished}
+                disabled={false}
               />
             ))}
           </div>

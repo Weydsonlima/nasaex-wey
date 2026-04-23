@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 
 export const archiveActions = base
@@ -11,25 +12,36 @@ export const archiveActions = base
   .handler(async ({ input, context }) => {
     const actions = await prisma.action.findMany({
       where: { id: { in: input.actionIds } },
-      select: { id: true, history: true },
+      select: { id: true, workspaceId: true, columnId: true },
     });
 
-    const timestamp = new Date().toISOString();
-
     await prisma.$transaction(
-      actions.map((action) => {
-        const history = (action.history as any[]) ?? [];
-        return prisma.action.update({
+      actions.map((action) =>
+        prisma.action.update({
           where: { id: action.id },
           data: {
             isArchived: true,
-            history: [
-              ...history,
-              { type: "archive", userId: context.user.id, timestamp },
-            ],
           },
-        });
-      }),
+        }),
+      ),
+    );
+
+    await Promise.all(
+      actions.map((action) =>
+        logOrgActivity({
+          organizationId: context.org.id,
+          userId: context.user.id,
+          userName: context.user.name ?? "Usuário",
+          userEmail: context.user.email ?? "",
+          action: "action.archived",
+          resource: "action",
+          resourceId: action.id,
+          metadata: {
+            workspaceId: action.workspaceId,
+            columnId: action.columnId,
+          },
+        }),
+      ),
     );
 
     return { success: true };

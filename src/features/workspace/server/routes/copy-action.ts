@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 
 export const copyAction = base
@@ -24,8 +25,24 @@ export const copyAction = base
         createdBy: context.user.id,
         attachments: source.attachments as any,
         links: source.links as any,
-        history: [{ type: "copy", from: source.id, userId: context.user.id, timestamp: new Date().toISOString() }],
       },
     });
+
+    await logOrgActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name ?? "Usuário",
+      userEmail: context.user.email ?? "",
+      action: "action.created",
+      resource: "action",
+      resourceId: copy.id,
+      metadata: {
+        source: "copy",
+        fromActionId: source.id,
+        workspaceId: copy.workspaceId,
+        columnId: copy.columnId,
+      },
+    });
+
     return { action: copy };
   });

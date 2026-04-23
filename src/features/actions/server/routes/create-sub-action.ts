@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 
 export const createSubAction = base
@@ -14,7 +15,7 @@ export const createSubAction = base
       finishDate: z.date().optional(),
     }),
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, context }) => {
     const subAction = await prisma.subActions.create({
       data: {
         title: input.title,
@@ -35,6 +36,20 @@ export const createSubAction = base
             workspaceId: true,
           },
         },
+      },
+    });
+
+    await logOrgActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name ?? "Usuário",
+      userEmail: context.user.email ?? "",
+      action: "action.checklist_added",
+      resource: "action",
+      resourceId: input.actionId,
+      metadata: {
+        subActionId: subAction.id,
+        title: subAction.title,
       },
     });
 

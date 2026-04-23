@@ -208,6 +208,17 @@ export async function POST(request: NextRequest) {
             },
           });
         }
+
+        if (!fromMe && lead.statusFlow === "FINISHED") {
+          lead = await prisma.lead.update({
+            where: { id: lead.id },
+            data: { statusFlow: "ACTIVE" },
+            include: {
+              conversation: true,
+              leadTags: { include: { tag: true } },
+            },
+          });
+        }
       }
 
       const senderId = fromMe ? json.owner : phone;

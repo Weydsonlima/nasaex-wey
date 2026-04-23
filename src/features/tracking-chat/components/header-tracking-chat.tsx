@@ -34,7 +34,7 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const profileUrl = useConstructUrl(profile || "");
-  const mutation = useMutationRodizio();
+  const mutation = useMutationRodizio(conversationId);
 
   const onCloseChat = () => {
     router.push(`/tracking-chat`);

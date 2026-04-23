@@ -3,7 +3,7 @@
 import { Spinner } from "@/components/ui/spinner";
 import { Body } from "@/features/tracking-chat/components/body";
 import { Footer } from "@/features/tracking-chat/components/footer";
-import { Header } from "@/features/tracking-chat/components/header";
+import { Header } from "@/features/tracking-chat/components/header-tracking-chat";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { redirect, useParams } from "next/navigation";
@@ -35,6 +35,7 @@ export default function Page() {
   if (!data) {
     redirect("/tracking-chat");
   }
+  console.log(data.conversation.lead.statusFlow);
 
   return (
     <div className=" h-full">

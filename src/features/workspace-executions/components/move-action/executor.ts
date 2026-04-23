@@ -1,6 +1,7 @@
 import { NodeExecutor } from "@/features/workspace-executions/types";
 import { NonRetriableError } from "inngest";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { wsMoveActionChannel } from "@/inngest/channels/workspace";
 import { ActionContext } from "../../schemas";
 import { loadActionContext } from "../../lib/load-action-context";
@@ -35,29 +36,40 @@ export const wsMoveActionExecutor: NodeExecutor<Data> = async ({
       }
 
       const workspaceId = cfg.workspaceId ?? action.workspaceId;
-
-      const existing = await prisma.action.findUnique({
+      const dbAction = await prisma.action.findUnique({
         where: { id: action.id },
-        select: { history: true },
+        select: {
+          id: true,
+          organizationId: true,
+          createdBy: true,
+          workspaceId: true,
+        },
       });
-      const history = (existing?.history as any[]) ?? [];
 
       await prisma.action.update({
         where: { id: action.id },
         data: {
           columnId: cfg.columnId,
           workspaceId,
-          history: [
-            ...history,
-            {
-              type: "move",
-              timestamp: new Date().toISOString(),
-              source: "workflow",
-              to: { columnId: cfg.columnId, workspaceId },
-            },
-          ],
         },
       });
+
+      if (dbAction?.organizationId) {
+        await logOrgActivity({
+          organizationId: dbAction.organizationId,
+          userId: dbAction.createdBy,
+          userName: "Workflow",
+          userEmail: "workflow@nasa.ex",
+          action: "action.moved",
+          resource: "action",
+          resourceId: dbAction.id,
+          metadata: {
+            source: "workflow",
+            from: { workspaceId: dbAction.workspaceId },
+            to: { columnId: cfg.columnId, workspaceId },
+          },
+        });
+      }
 
       const refreshed = await loadActionContext(action.id);
 

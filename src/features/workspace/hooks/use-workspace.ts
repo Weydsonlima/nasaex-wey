@@ -525,6 +525,40 @@ export const useMoveActions = () => {
   );
 };
 
+export const useDeleteActions = () => {
+  const queryClient = useQueryClient();
+  const { clearSelection } = useActionStore();
+
+  return useMutation(
+    orpc.workspace.deleteActions.mutationOptions({
+      onSuccess: () => {
+        toast.success("Ações deletadas!");
+        queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
+        queryClient.invalidateQueries(orpc.workspace.list.queryOptions());
+        clearSelection();
+      },
+      onError: () => toast.error("Erro ao deletar ações!"),
+    }),
+  );
+};
+
+export const useArchiveActions = () => {
+  const queryClient = useQueryClient();
+  const { clearSelection } = useActionStore();
+
+  return useMutation(
+    orpc.workspace.archiveActions.mutationOptions({
+      onSuccess: () => {
+        toast.success("Ações arquivadas!");
+        queryClient.invalidateQueries({ queryKey: ["action.listByColumn"] });
+        queryClient.invalidateQueries(orpc.workspace.list.queryOptions());
+        clearSelection();
+      },
+      onError: () => toast.error("Erro ao arquivar ações!"),
+    }),
+  );
+};
+
 // ─── Cross-Company Sharing ────────────────────────────────────────────────────
 
 export const useGetCompanyCode = () => {

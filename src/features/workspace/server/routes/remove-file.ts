@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 
 export const removeFileAction = base
@@ -18,7 +19,7 @@ export const removeFileAction = base
       const { actionId, attachmentId } = input;
       const existingAction = await prisma.action.findUnique({
         where: { id: actionId },
-        select: { history: true, attachments: true },
+        select: { attachments: true, workspaceId: true, columnId: true },
       });
 
       if (!existingAction) {
@@ -47,6 +48,23 @@ export const removeFileAction = base
         where: { id: actionId },
         data: { attachments: updatedAttachments },
       });
+
+      await logOrgActivity({
+        organizationId: context.org.id,
+        userId: context.user.id,
+        userName: context.user.name ?? "Usuário",
+        userEmail: context.user.email ?? "",
+        action: "action.updated",
+        resource: "action",
+        resourceId: actionId,
+        metadata: {
+          changes: ["attachments"],
+          removedAttachmentId: attachmentId,
+          workspaceId: existingAction.workspaceId,
+          columnId: existingAction.columnId,
+        },
+      });
+
       return { action };
     } catch (error) {
       console.log(error);

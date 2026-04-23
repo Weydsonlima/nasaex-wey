@@ -1,6 +1,13 @@
 "use client";
 
-import { CircleCheckIcon, CircleIcon, RedoDotIcon, X } from "lucide-react";
+import {
+  ArchiveIcon,
+  CircleCheckIcon,
+  CircleIcon,
+  RedoDotIcon,
+  Trash2Icon,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useActionStore } from "../context/use-action";
@@ -14,11 +21,15 @@ import {
 } from "@/components/ui/popover";
 import { useEffect, useState } from "react";
 import {
+  useArchiveActions,
   useColumnsByWorkspace,
+  useDeleteActions,
   useMoveActions,
   useSuspenseWokspaces,
 } from "@/features/workspace/hooks/use-workspace";
 import { cn } from "@/lib/utils";
+import { useActionFilters } from "../hooks/use-action-filters";
+import { DeleteActionsDialog } from "./delete-actions-dialog";
 
 export function NavWorkspace() {
   const params = useParams<{ workspaceId: string }>();
@@ -29,7 +40,9 @@ export function NavWorkspace() {
   const workspaces = workspacesData?.workspaces || [];
 
   const { selectedIds, clearSelection } = useActionStore();
+  const { filters } = useActionFilters();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(workspaceId);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Sync selectedWorkspaceId with current workspace when component mounts
   useEffect(() => {
@@ -41,6 +54,9 @@ export function NavWorkspace() {
   const { columns, isLoading: isLoadingColumns } =
     useColumnsByWorkspace(selectedWorkspaceId);
   const mutationMove = useMoveActions();
+  const mutationArchive = useArchiveActions();
+  const mutationDelete = useDeleteActions();
+  const canDelete = filters.showArchived;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,6 +97,30 @@ export function NavWorkspace() {
       </div>
 
       <div className="flex items-center gap-x-2">
+        {canDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="rounded-md gap-2"
+            disabled={mutationDelete.isPending}
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2Icon className="size-4" />
+            {mutationDelete.isPending ? "Deletando..." : "Deletar"}
+          </Button>
+        )}
+        {!canDelete && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-md gap-2"
+            disabled={mutationArchive.isPending}
+            onClick={() => mutationArchive.mutate({ actionIds: selectedIds })}
+          >
+            <ArchiveIcon className="size-4" />
+            {mutationArchive.isPending ? "Arquivando..." : "Arquivar"}
+          </Button>
+        )}
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -160,6 +200,20 @@ export function NavWorkspace() {
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Dialog de confirmação para deletar ações */}
+      <DeleteActionsDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() =>
+          mutationDelete.mutate(
+            { actionIds: selectedIds },
+            { onSuccess: () => setIsDeleteDialogOpen(false) },
+          )
+        }
+        count={selectedIds.length}
+        isLoading={mutationDelete.isPending}
+      />
     </nav>
   );
 }

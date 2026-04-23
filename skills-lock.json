@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "642a177bee320618caa49f5106cadb4e7594c606e867f61ba7b56d19cf745cd5"
     },
+    "vercel-ai-sdk": {
+      "source": "existential-birds/beagle",
+      "sourceType": "github",
+      "computedHash": "b00071436a76af470545edee9933df70c03b3c1039e11f7f69a781b3d7b1e84a"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

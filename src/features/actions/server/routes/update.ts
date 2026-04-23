@@ -2,6 +2,7 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 import { awardPoints } from "@/app/router/space-point/utils";
 import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
@@ -26,6 +27,9 @@ export const updateAction = base
   .handler(async ({ input, context }) => {
     const { actionId, ...data } = input;
     const { session } = context;
+    const changedFields = Object.keys(data).filter(
+      (key) => (data as Record<string, unknown>)[key] !== undefined,
+    );
 
     const previous = await prisma.action.findUnique({
       where: { id: actionId },
@@ -43,6 +47,31 @@ export const updateAction = base
               : undefined,
       },
     });
+
+    if (changedFields.length > 0) {
+      await logOrgActivity({
+        organizationId: context.org.id,
+        userId: context.user.id,
+        userName: context.user.name ?? "Usuário",
+        userEmail: context.user.email ?? "",
+        action: data.columnId !== undefined ? "action.moved" : "action.updated",
+        resource: "action",
+        resourceId: action.id,
+        metadata: {
+          changes: changedFields,
+          ...(previous &&
+            data.columnId !== undefined && {
+              from: { columnId: previous.columnId },
+              to: { columnId: data.columnId },
+            }),
+          ...(previous &&
+            data.isDone !== undefined && {
+              from: { isDone: previous.isDone },
+              to: { isDone: data.isDone },
+            }),
+        },
+      });
+    }
 
     // Somente pontua quando transiciona de não-feito para concluído
     if (previous && !previous.isDone && data.isDone === true) {

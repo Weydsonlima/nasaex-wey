@@ -29,7 +29,7 @@ export function ActionHeader({
         </span>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        {/* {historyTrigger} */}
+        {historyTrigger}
         {actionMenu}
         <DialogClose asChild>
           <Button variant="ghost" size="icon" className="size-8 rounded-full">

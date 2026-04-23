@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
 import { z } from "zod";
 
@@ -59,6 +60,21 @@ export const createAction = base
             userId: context.user.id,
           },
         },
+      },
+    });
+
+    await logOrgActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name ?? "Usuário",
+      userEmail: context.user.email ?? "",
+      action: "action.created",
+      resource: "action",
+      resourceId: action.id,
+      metadata: {
+        workspaceId: action.workspaceId,
+        columnId: action.columnId,
+        priority: action.priority,
       },
     });
 

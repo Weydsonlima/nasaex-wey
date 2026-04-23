@@ -2,22 +2,47 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
+import { logOrgActivity } from "@/lib/org-activity-log";
 import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
 import { z } from "zod";
 
 export const moveAction = base
   .use(requiredAuthMiddleware)
   .use(requireOrgMiddleware)
-  .input(z.object({ actionId: z.string(), columnId: z.string(), workspaceId: z.string() }))
+  .input(
+    z.object({
+      actionId: z.string(),
+      columnId: z.string(),
+      workspaceId: z.string(),
+    }),
+  )
   .handler(async ({ input, context }) => {
-    const existing = await prisma.action.findUnique({ where: { id: input.actionId }, select: { history: true } });
-    const history = (existing?.history as any[]) ?? [];
+    const existing = await prisma.action.findUnique({
+      where: { id: input.actionId },
+      select: { columnId: true, workspaceId: true },
+    });
+
     const action = await prisma.action.update({
       where: { id: input.actionId },
       data: {
         columnId: input.columnId,
         workspaceId: input.workspaceId,
-        history: [...history, { type: "move", userId: context.user.id, timestamp: new Date().toISOString(), to: { columnId: input.columnId, workspaceId: input.workspaceId } }],
+      },
+    });
+
+    await logOrgActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name ?? "Usuário",
+      userEmail: context.user.email ?? "",
+      action: "action.moved",
+      resource: "action",
+      resourceId: action.id,
+      metadata: {
+        from: existing
+          ? { columnId: existing.columnId, workspaceId: existing.workspaceId }
+          : undefined,
+        to: { columnId: input.columnId, workspaceId: input.workspaceId },
       },
     });
     try {
@@ -27,10 +52,7 @@ export const moveAction = base
         actionId: input.actionId,
       });
     } catch (err) {
-      console.error(
-        "[workspace-workflow] failed to emit action.moved",
-        err,
-      );
+      console.error("[workspace-workflow] failed to emit action.moved", err);
     }
 
     return { action };

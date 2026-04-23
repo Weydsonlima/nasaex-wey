@@ -1934,6 +1934,7 @@ model OrgActivityLog {
   createdAt      DateTime     @default(now()) @map("created_at")
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, resource, resourceId, createdAt])
   @@index([userId])
   @@map("org_activity_log")
 }

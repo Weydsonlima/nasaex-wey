@@ -69,11 +69,16 @@ export interface Action {
   coverImage: string | null;
   isArchived: boolean;
   isFavorited: boolean;
-  history: {
-    type: string;
+  activityLogs: {
+    id: string;
+    action: string;
     userId: string;
-    timestamp: string;
-    changes?: string[];
+    userName: string;
+    userEmail: string;
+    resource: string | null;
+    resourceId: string | null;
+    metadata?: Record<string, unknown> | null;
+    createdAt: Date;
   }[];
   tags: {
     tag: {
@@ -83,3 +88,13 @@ export interface Action {
     };
   }[];
 }
+
+export type ActionHistoryType =
+  | "action.created"
+  | "action.updated"
+  | "action.moved"
+  | "action.archived"
+  | "action.unarchived"
+  | "action.done_changed"
+  | "action.checklist_added"
+  | "action.checklist_updated";

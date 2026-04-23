@@ -1,3 +1,4 @@
+import { createActionWithAi } from "./ai-workspace";
 import { generateCompose } from "./generate-compose";
 import { generateConversationSummary } from "./generate-conversation-summary";
 import { getAiSettings } from "./get-ai-settings";
@@ -15,5 +16,8 @@ export const iaRouter = {
   settings: {
     get: getAiSettings,
     update: updateAiSettings,
+  },
+  workspace: {
+    chat: createActionWithAi,
   },
 };

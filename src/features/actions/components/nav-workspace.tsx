@@ -29,6 +29,7 @@ import {
 } from "@/features/workspace/hooks/use-workspace";
 import { cn } from "@/lib/utils";
 import { useActionFilters } from "../hooks/use-action-filters";
+import { DeleteActionsDialog } from "./delete-actions-dialog";
 
 export function NavWorkspace() {
   const params = useParams<{ workspaceId: string }>();
@@ -41,6 +42,7 @@ export function NavWorkspace() {
   const { selectedIds, clearSelection } = useActionStore();
   const { filters } = useActionFilters();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(workspaceId);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Sync selectedWorkspaceId with current workspace when component mounts
   useEffect(() => {
@@ -101,7 +103,7 @@ export function NavWorkspace() {
             size="sm"
             className="rounded-md gap-2"
             disabled={mutationDelete.isPending}
-            onClick={() => mutationDelete.mutate({ actionIds: selectedIds })}
+            onClick={() => setIsDeleteDialogOpen(true)}
           >
             <Trash2Icon className="size-4" />
             {mutationDelete.isPending ? "Deletando..." : "Deletar"}
@@ -198,6 +200,20 @@ export function NavWorkspace() {
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Dialog de confirmação para deletar ações */}
+      <DeleteActionsDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() =>
+          mutationDelete.mutate(
+            { actionIds: selectedIds },
+            { onSuccess: () => setIsDeleteDialogOpen(false) },
+          )
+        }
+        count={selectedIds.length}
+        isLoading={mutationDelete.isPending}
+      />
     </nav>
   );
 }

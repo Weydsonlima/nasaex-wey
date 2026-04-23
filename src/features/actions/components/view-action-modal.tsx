@@ -300,7 +300,8 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
                       <ActionSubActions
                         subActions={action?.subActions}
                         members={members}
-                        action={action}
+                        actionStartDate={action?.startDate ? new Date(action.startDate) : null}
+                        actionDueDate={action?.dueDate ? new Date(action.dueDate) : null}
                         onCreate={handleAddSubAction}
                         onToggle={handleToggleSubAction}
                         onDelete={handleDeleteSubAction}
@@ -314,6 +315,8 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
                       />
                     </>
                   )}
+
+                  <div className="pb-32" />
                 </div>
               </ScrollArea>
               <div className="sm:block hidden">

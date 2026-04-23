@@ -36,38 +36,86 @@ export const useCreateTag = () => {
   const queryClient = useQueryClient();
   return useMutation(
     orpc.tags.createTag.mutationOptions({
-      onMutate: async (data) => {
-        const previousData = queryClient.getQueryData([
-          "tags.list",
-          data.trackingId ?? undefined,
-        ]);
+      onMutate: async (newTag) => {
+        const specificKey = orpc.tags.listTags.queryKey({
+          input: { query: { trackingId: newTag.trackingId ?? undefined } },
+        });
+        const globalKey = orpc.tags.listTags.queryKey({
+          input: { query: { trackingId: undefined } },
+        });
 
-        queryClient.setQueryData(
-          ["tags.list", data.trackingId ?? undefined],
-          (old: any) => {
-            if (!old) return undefined;
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({ queryKey: specificKey });
+        await queryClient.cancelQueries({ queryKey: globalKey });
 
-            return [...old, data];
-          },
-        );
+        // Snapshot the previous value
+        const previousSpecific = queryClient.getQueryData(specificKey);
+        const previousGlobal = queryClient.getQueryData(globalKey);
 
-        return { previousData };
+        // Optimistically update to the specific tracking list
+        queryClient.setQueryData(specificKey, (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tags: [...(old.tags || []), { ...newTag, id: "temp-id" }],
+          };
+        });
+
+        // Optimistically update to the global list
+        queryClient.setQueryData(globalKey, (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tags: [...(old.tags || []), { ...newTag, id: "temp-id" }],
+          };
+        });
+
+        return { previousSpecific, previousGlobal };
       },
       onSuccess: (data) => {
-        console.log(data);
+        // Invalidate specific tracking tags
         queryClient.invalidateQueries({
           queryKey: orpc.tags.listTags.queryKey({
             input: {
               query: {
-                trackingId:
-                  data.trackingId === null ? undefined : data.trackingId,
+                trackingId: data.trackingId ?? undefined,
               },
             },
           }),
         });
+
+        // Invalidate global tags (trackingId: undefined)
+        queryClient.invalidateQueries({
+          queryKey: orpc.tags.listTags.queryKey({
+            input: {
+              query: {
+                trackingId: undefined,
+              },
+            },
+          }),
+        });
+
         toast.success("Tag criada com sucesso!");
       },
-      onError: (error) => {
+      onError: (error, _newTag, context) => {
+        // Rollback on error
+        if (context?.previousSpecific) {
+          queryClient.setQueryData(
+            orpc.tags.listTags.queryKey({
+              input: { query: { trackingId: _newTag.trackingId ?? undefined } },
+            }),
+            context.previousSpecific,
+          );
+        }
+        if (context?.previousGlobal) {
+          queryClient.setQueryData(
+            orpc.tags.listTags.queryKey({
+              input: { query: { trackingId: undefined } },
+            }),
+            context.previousGlobal,
+          );
+        }
+
         if (error.message === "Tag já existe") {
           toast.error("Tag já existe");
           return;

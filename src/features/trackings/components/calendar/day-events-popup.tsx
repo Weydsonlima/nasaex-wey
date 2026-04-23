@@ -65,7 +65,7 @@ export function DayEventsPopup({
           // Mantém o comportamento de não fechar se o clique for no calendário de fundo
           // (opcional, dependendo de como o RBC lida com isso)
         }}
-        onClick={(e) => e.stopPropagation()}
+        // onClick={(e) => e.stopPropagation()}
       >
         {/* Header — day */}
         <div className="flex items-start justify-between px-4 pt-4 pb-3 bg-muted/30 border-b border-border">
@@ -89,11 +89,14 @@ export function DayEventsPopup({
         </div>
 
         {/* Event list */}
-        <div className="overflow-y-auto max-h-72 py-2">
+        <div
+          className="overflow-y-auto scroll-cols-tracking max-h-72 py-2"
+          onWheel={(e) => e.stopPropagation()}
+        >
           {events.map((event) => (
             <button
               key={event.id}
-              onMouseDown={(e) => e.stopPropagation()}
+              // onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onSelectEvent(event.id);

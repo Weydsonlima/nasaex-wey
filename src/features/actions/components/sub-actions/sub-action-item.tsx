@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from "react";
+import { type KeyboardEvent, useRef, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,12 +26,13 @@ import {
   CheckIcon,
 } from "lucide-react";
 import { Action } from "../../types";
+import { DatePicker } from "../data-picker";
 
 interface SubActionItemProps {
   sub: NonNullable<Action["subActions"]>[number];
   members: any[];
-  minDate?: string;
-  maxDate?: string;
+  fromDate?: Date;
+  toDate?: Date;
   isExpanded: boolean;
   isEditingTitle: boolean;
   onToggleExpand: () => void;
@@ -57,8 +58,8 @@ interface SubActionItemProps {
 export function SubActionItem({
   sub,
   members,
-  minDate,
-  maxDate,
+  fromDate,
+  toDate,
   isExpanded,
   isEditingTitle,
   onToggleExpand,
@@ -73,12 +74,25 @@ export function SubActionItem({
   isUpdating,
   isDeleting,
 }: SubActionItemProps) {
-  const finishDateValue = sub.finishDate
-    ? new Date(sub.finishDate).toISOString().split("T")[0]
-    : "";
+  const finishDateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleFinishDateChange = useCallback(
+    (date: Date) => {
+      if (finishDateTimerRef.current) clearTimeout(finishDateTimerRef.current);
+      finishDateTimerRef.current = setTimeout(() => {
+        onUpdate(sub.id, { finishDate: date });
+      }, 700);
+    },
+    [onUpdate, sub.id],
+  );
 
   return (
-    <div className="rounded-md border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+    <div
+      className={cn(
+        "rounded-md border border-transparent hover:border-border hover:bg-muted/40 transition-colors",
+        isExpanded && "border-border bg-muted/60",
+      )}
+    >
       <div className="flex items-center gap-2 px-2 py-1.5 group">
         <Checkbox
           checked={sub.isDone}
@@ -234,16 +248,13 @@ export function SubActionItem({
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
               Prazo
             </p>
-            <Input
-              type="date"
-              className="h-7 text-xs"
-              defaultValue={finishDateValue}
-              min={minDate}
-              max={maxDate}
-              onChange={(e) => {
-                const val = e.target.value ? new Date(e.target.value) : null;
-                onUpdate(sub.id, { finishDate: val });
-              }}
+            <DatePicker
+              value={sub.finishDate ? new Date(sub.finishDate) : undefined}
+              onChange={handleFinishDateChange}
+              placeholder="Sem data"
+              className="h-8 text-xs bg-background"
+              fromDate={fromDate}
+              toDate={toDate}
             />
           </div>
 

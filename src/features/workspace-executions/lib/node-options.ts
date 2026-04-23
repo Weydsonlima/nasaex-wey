@@ -142,11 +142,11 @@ export const wsExecutionNodes: WsNodeTypeOption[] = [
     description: "Aguarda antes de continuar",
     icon: TimerIcon,
   },
-  {
-    type: WorkspaceNodeType.WS_FILTER,
-    category: "execution",
-    label: "Filtrar",
-    description: "Condição booleana sobre a ação",
-    icon: FunnelIcon,
-  },
+  // {
+  //   type: WorkspaceNodeType.WS_FILTER,
+  //   category: "execution",
+  //   label: "Filtrar",
+  //   description: "Condição booleana sobre a ação",
+  //   icon: FunnelIcon,
+  // },
 ];

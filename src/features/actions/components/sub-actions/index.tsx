@@ -15,7 +15,8 @@ import { SubActionItem } from "./sub-action-item";
 interface SubActionsProps {
   subActions?: Action["subActions"];
   members?: any[];
-  action?: Pick<Action, "startDate" | "dueDate">;
+  actionStartDate?: Date | null;
+  actionDueDate?: Date | null;
   onCreate: (title: string) => void;
   onToggle: (id: string, isDone: boolean) => void;
   onDelete: (id: string) => void;
@@ -38,7 +39,8 @@ interface SubActionsProps {
 export function ActionSubActions({
   subActions = [],
   members = [],
-  action,
+  actionStartDate,
+  actionDueDate,
   onCreate,
   onToggle,
   onDelete,
@@ -74,13 +76,6 @@ export function ActionSubActions({
       setNewSubActionTitle("");
     }
   };
-
-  const minDate = action?.startDate
-    ? new Date(action.startDate).toISOString().split("T")[0]
-    : undefined;
-  const maxDate = action?.dueDate
-    ? new Date(action.dueDate).toISOString().split("T")[0]
-    : undefined;
 
   return (
     <div className="space-y-2">
@@ -158,8 +153,8 @@ export function ActionSubActions({
               key={sub.id}
               sub={sub}
               members={members}
-              minDate={minDate}
-              maxDate={maxDate}
+              fromDate={actionStartDate ?? undefined}
+              toDate={actionDueDate ?? undefined}
               isExpanded={expandedId === sub.id}
               isEditingTitle={editingTitleId === sub.id}
               onToggleExpand={() =>

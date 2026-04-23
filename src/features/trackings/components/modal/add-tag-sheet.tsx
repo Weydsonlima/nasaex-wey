@@ -116,12 +116,22 @@ export function TagModal({ open, onOpenChange, trackingId }: Props) {
       toast("Selecione um tracking");
       return;
     }
-    createTag.mutate({
-      name: data.name,
-      trackingId: trackingSelected,
-      color: data.color,
-    });
-    form.reset();
+    createTag.mutate(
+      {
+        name: data.name,
+        trackingId: trackingSelected,
+        color: data.color,
+      },
+      {
+        onSuccess: () => {
+          form.reset({
+            name: "",
+            color: data.color,
+          });
+          inputRef.current?.focus();
+        },
+      },
+    );
   };
 
   return (
@@ -200,11 +210,13 @@ export function TagModal({ open, onOpenChange, trackingId }: Props) {
                 autoFocus
               />
               <InputGroupAddon align="inline-end">
-                {tagName.length > 0 && (
-                  <Button size="icon-xs" type="submit">
-                    <CheckIcon />
-                  </Button>
-                )}
+                <Button
+                  size="icon-xs"
+                  type="submit"
+                  disabled={!tagName || tagName.length === 0 || createTag.isPending}
+                >
+                  <CheckIcon />
+                </Button>
               </InputGroupAddon>
             </InputGroup>
           </form>
@@ -300,7 +312,10 @@ export function TagItem(tag: TagItemProps) {
         color: data.colorName,
       },
       {
-        onSuccess: () => setOpen(false),
+        onSuccess: () => {
+          setOpen(false);
+          form.reset(data);
+        },
       },
     );
   };
@@ -360,11 +375,13 @@ export function TagItem(tag: TagItemProps) {
               {...form.register("tagName")}
             />
             <InputGroupAddon align="inline-end">
-              {tagName.length > 0 && (
-                <Button size="icon-xs" type="submit">
-                  <CheckIcon />
-                </Button>
-              )}
+              <Button
+                size="icon-xs"
+                type="submit"
+                disabled={!tagName || tagName.length === 0 || updateTag.isPending}
+              >
+                <CheckIcon />
+              </Button>
             </InputGroupAddon>
           </InputGroup>
         </form>

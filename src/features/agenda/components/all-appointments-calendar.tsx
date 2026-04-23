@@ -129,9 +129,6 @@ export function AllAppointmentsCalendar({
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createInitialDate, setCreateInitialDate] = useState<Date>();
-  // viewId: qual agendamento está sendo visualizado
-  // viewOpen: controla a animação do Sheet de forma independente
-  // Separar os dois evita que o Radix desmonte abruptamente e deixe overlay bloqueando o calendário
   const [viewId, setViewId] = useState<string>("");
   const [viewOpen, setViewOpen] = useState(false);
   const [showMore, setShowMore] = useState<ShowMoreState | null>(null);

@@ -20,6 +20,8 @@ interface DatePickerProps {
   onChange: (date: Date) => void;
   className?: string;
   placeholder?: string;
+  fromDate?: Date;
+  toDate?: Date;
 }
 
 export function DatePicker({
@@ -27,8 +29,11 @@ export function DatePicker({
   onChange,
   className,
   placeholder = "Selecione uma data",
+  fromDate,
+  toDate,
 }: DatePickerProps) {
   const { locale } = useLocale();
+  const [open, setOpen] = useState(false);
 
   const [hour, setHour] = useState<string>(
     value ? String(dayjs(value).hour()).padStart(2, "0") : "00",
@@ -37,13 +42,13 @@ export function DatePicker({
     value ? String(dayjs(value).minute()).padStart(2, "0") : "00",
   );
 
-  // Sync time inputs when value changes externally
+  // Sync time inputs when value changes externally, but only while closed
   useEffect(() => {
-    if (value) {
+    if (value && !open) {
       setHour(String(dayjs(value).hour()).padStart(2, "0"));
       setMinute(String(dayjs(value).minute()).padStart(2, "0"));
     }
-  }, [value]);
+  }, [value, open]);
 
   const handleDaySelect = (date: Date | undefined) => {
     if (!date) return;
@@ -66,7 +71,7 @@ export function DatePicker({
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -90,6 +95,10 @@ export function DatePicker({
           mode="single"
           selected={value}
           onSelect={(date) => handleDaySelect(date as Date)}
+          disabled={[
+            ...(fromDate ? [{ before: fromDate }] : []),
+            ...(toDate ? [{ after: toDate }] : []),
+          ]}
           autoFocus
         />
 

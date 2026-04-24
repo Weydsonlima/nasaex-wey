@@ -11,6 +11,7 @@ import { SoundNotification } from "@/features/tracking-settings/components/sound
 import { TemplateSettings } from "@/features/tracking-settings/components/template-settings";
 import { ToastProvider } from "@/contexts/toast-context";
 import { TrackingDangerZone } from "@/features/tracking-settings/components/danger-zone";
+import { Personalization } from "@/features/tracking-settings/components/personalization";
 
 type SettingTrackingPage = {
   params: Promise<{ trackingId: string }>;
@@ -99,6 +100,11 @@ export default async function Page({
       name: "Zona de Perigo",
       value: "danger-zone",
       content: <TrackingDangerZone trackingId={trackingId} />,
+    },
+    {
+      name: "Personalização",
+      value: "personalization",
+      content: <Personalization />,
     },
   ];
 

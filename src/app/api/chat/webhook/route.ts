@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
             source: LeadSource.WHATSAPP,
             profile: key,
             order: firstLead ? Number(firstLead.order) - 1 : 0,
+            statusFlow: "WAITING",
             conversation: {
               create: {
                 remoteJid,

@@ -13,6 +13,10 @@ import {
   PlusIcon,
   RocketIcon,
   Tag,
+  Sparkles,
+  MessageCircle,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQueryTagByLead } from "@/features/tracking-chat/hooks/use-leads-conversation";
@@ -70,6 +74,13 @@ const TEMP_TEXT = {
   WARM: "Quente",
   HOT: "Muito quente",
   VERY_HOT: "Extremamente quente",
+} as const;
+
+const STATUS_FLOW_CONFIG = {
+  NEW: { label: "Novo lead", color: "#8b5cf6", Icon: Sparkles },
+  ACTIVE: { label: "Em atendimento", color: "#22c55e", Icon: MessageCircle },
+  WAITING: { label: "Aguardando atendimento", color: "#f59e0b", Icon: Clock },
+  FINISHED: { label: "Finalizado", color: "#6b7280", Icon: CheckCircle2 },
 } as const;
 
 export const LeadItem = memo(({ data }: { data: Lead }) => {
@@ -236,15 +247,29 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
             <TooltipTrigger asChild>
               <RocketIcon
                 className="size-3"
-                style={{
-                  color: TEMP_COLOR[data.temperature],
-                }}
+                style={{ color: TEMP_COLOR[data.temperature] }}
               />
             </TooltipTrigger>
             <TooltipContent>
               <p>{TEMP_TEXT[data.temperature]}</p>
             </TooltipContent>
           </Tooltip>
+          {data.statusFlow &&
+            STATUS_FLOW_CONFIG[data.statusFlow] &&
+            (() => {
+              const { label, color, Icon } =
+                STATUS_FLOW_CONFIG[data.statusFlow];
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Icon className="size-3" style={{ color }} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })()}
         </div>
         <Tooltip>
           <TooltipTrigger asChild>

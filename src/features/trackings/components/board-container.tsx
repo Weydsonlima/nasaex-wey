@@ -67,6 +67,7 @@ export function BoardContainer({ trackingId }: BoardContainerProps) {
   const [tagsFilter] = useQueryState("tags");
   const [temperatureFilter] = useQueryState("temperature");
   const [actionFilter] = useQueryState("filter");
+  const [statusFlowFilter] = useQueryState("status_flow");
 
   const queryInput = useMemo(
     () => ({
@@ -78,6 +79,7 @@ export function BoardContainer({ trackingId }: BoardContainerProps) {
         ? temperatureFilter.split(",")
         : undefined,
       actionFilter: actionFilter || "ACTIVE",
+      statusFlowFilter: statusFlowFilter ? statusFlowFilter.split(",") : undefined,
     }),
     [
       dateInit,
@@ -86,6 +88,7 @@ export function BoardContainer({ trackingId }: BoardContainerProps) {
       tagsFilter,
       temperatureFilter,
       actionFilter,
+      statusFlowFilter,
     ],
   );
 

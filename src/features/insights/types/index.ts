@@ -19,6 +19,8 @@ export interface DashboardSummary {
   totalMessages: number;
   sentMessages: number;
   receivedMessages: number;
+  leadsWaiting: number;
+  leadsActive: number;
   avgTimeToFirstResponse: number | null;
 }
 

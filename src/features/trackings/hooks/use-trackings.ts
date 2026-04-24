@@ -113,6 +113,7 @@ export const useInfiniteLeadsByStatus = ({
   tagsFilter,
   temperatureFilter,
   actionFilter,
+  statusFlowFilter,
 }: {
   statusId: string;
   trackingId: string;
@@ -123,6 +124,7 @@ export const useInfiniteLeadsByStatus = ({
   tagsFilter?: string[];
   temperatureFilter?: string[];
   actionFilter?: string;
+  statusFlowFilter?: string[];
 }) => {
   const sortBy = useKanbanStore((state) => state.sortBy);
 
@@ -142,6 +144,7 @@ export const useInfiniteLeadsByStatus = ({
       tagsFilter,
       temperatureFilter,
       actionFilter: actionFilter as any,
+      statusFlowFilter,
     }),
     queryKey: [
       "leads.listLeadsByStatus",
@@ -154,6 +157,7 @@ export const useInfiniteLeadsByStatus = ({
       tagsFilter,
       temperatureFilter,
       actionFilter,
+      statusFlowFilter,
     ],
     context: { cache: true },
     enabled,

@@ -14,6 +14,10 @@ import {
   GlobeIcon,
   RocketIcon,
   UserIcon,
+  Sparkles,
+  MessageCircle,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 
 import { ListTags } from "./list-tags";
@@ -26,6 +30,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { WhatsappIcon } from "@/components/whatsapp";
+import type { LucideIcon } from "lucide-react";
+
+const STATUS_FLOW_CONFIG: Record<string, { label: string; color: string; Icon: LucideIcon }> = {
+  NEW:      { label: "Novo lead",             color: "#8b5cf6", Icon: Sparkles      },
+  ACTIVE:   { label: "Em atendimento",         color: "#22c55e", Icon: MessageCircle },
+  WAITING:  { label: "Aguardando atendimento", color: "#f59e0b", Icon: Clock         },
+  FINISHED: { label: "Finalizado",             color: "#6b7280", Icon: CheckCircle2  },
+};
 import { Instance } from "../types";
 import { phoneMaskFull } from "@/utils/format-phone";
 
@@ -157,6 +169,19 @@ export function LeadBox({
             ) : null}
           </div>
           <div className="flex items-center gap-x-2">
+            {item.lead.statusFlow && STATUS_FLOW_CONFIG[item.lead.statusFlow] && (() => {
+              const { label, color, Icon } = STATUS_FLOW_CONFIG[item.lead.statusFlow];
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Icon className="size-3" style={{ color }} />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })()}
             <Tooltip>
               <TooltipTrigger asChild>
                 <RocketIcon

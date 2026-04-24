@@ -52,12 +52,11 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
               <FiltersBar workspaceId={workspaceId} />
               <FiltersSheet workspaceId={workspaceId} />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full lg:w-auto">
               <CreateActionWithAi workspaceId={workspaceId} />
-
               <Button
                 size="sm"
-                className="w-full lg:w-auto"
+                className="flex-1 lg:w-auto"
                 onClick={() => setOpen(true)}
               >
                 <PlusIcon className="size-4" />

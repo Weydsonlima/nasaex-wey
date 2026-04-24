@@ -1,4 +1,4 @@
-import { Temperature, LeadAction } from "@/generated/prisma/enums";
+import { Temperature, LeadAction, StatusFlow } from "@/generated/prisma/enums";
 
 export type Lead = {
   order: string;
@@ -26,5 +26,6 @@ export type Lead = {
     };
   }[];
   temperature: Temperature;
+  statusFlow: StatusFlow;
 };
 

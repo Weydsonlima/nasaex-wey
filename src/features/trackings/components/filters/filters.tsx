@@ -15,6 +15,7 @@ import { WinLossFilter } from "./win-loss-filter";
 import { CalendarFilter } from "./calendar-filter";
 import { SorterLead } from "./sort-leads";
 import { ProjectsFilter } from "./projects-filter";
+import { StatusFlowFilter } from "./status-flow-filter";
 
 export function Filters() {
   return (
@@ -37,6 +38,7 @@ export function Filters() {
           <ProjectsFilter />
           <TagsFilter />
           <TemperatureFilter />
+          <StatusFlowFilter />
           <WinLossFilter />
           <CalendarFilter />
           <SorterLead />

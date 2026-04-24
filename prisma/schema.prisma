@@ -421,6 +421,7 @@ enum Temperature {
 }
 
 enum StatusFlow {
+  NEW
   ACTIVE
   WAITING
   FINISHED

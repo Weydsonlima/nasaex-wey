@@ -8,6 +8,7 @@ import {
   Send,
   Download,
   Clock,
+  Activity,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardSummary } from "@/features/insights/types";
@@ -107,6 +108,18 @@ export function KPIAtendimentCards({ summary }: KPICardsProps) {
         title="Total de Mensagens"
         value={summary.totalMessages.toLocaleString("pt-BR")}
         icon={<MessageCircle className="size-4" />}
+      />
+      <KPICard
+        title="Aguardando atendimento"
+        value={summary.leadsWaiting.toLocaleString("pt-BR")}
+        icon={<Clock className="size-4" />}
+        variant="warning"
+      />
+      <KPICard
+        title="Em atendimento"
+        value={summary.leadsActive.toLocaleString("pt-BR")}
+        icon={<Activity className="size-4" />}
+        variant="success"
       />
       <KPICard
         title="Mensagens Enviadas"

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useMemo } from "react";
+import { Decimal } from "@prisma/client/runtime/client";
 
 export const useQueryTrackings = () => {
   const { data, isLoading } = useQuery(orpc.tracking.list.queryOptions());
@@ -185,10 +186,44 @@ export const useInfiniteLeadsByStatus = ({
 };
 
 export const useUpdateColumnOrder = () => {
+  const queryClient = useQueryClient();
+
   return useMutation(
     orpc.status.updateNewOrder.mutationOptions({
-      onError: () => {
+      onMutate: async ({ id, order }) => {
+        await queryClient.cancelQueries({
+          queryKey: orpc.status.getMany.key(),
+        });
+
+        const snapshots = queryClient.getQueriesData({
+          queryKey: orpc.status.getMany.key(),
+        });
+
+        queryClient.setQueriesData(
+          { queryKey: orpc.status.getMany.key() },
+          (old: any) => {
+            if (!Array.isArray(old)) return old;
+            const next = old.map((c: any) =>
+              c.id === id ? { ...c, order } : c,
+            );
+            return [...next].sort((a: any, b: any) =>
+              new Decimal(a.order).comparedTo(new Decimal(b.order)),
+            );
+          },
+        );
+
+        return { snapshots };
+      },
+      onError: (_err, _vars, ctx) => {
+        ctx?.snapshots.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
         toast.error("Erro ao atualizar status");
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({
+          queryKey: orpc.status.getMany.key(),
+        });
       },
     }),
   );

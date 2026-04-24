@@ -68,7 +68,25 @@ export const useKanbanStore = create<KanbanStore>()(
 
       setColumnList: (list) => {
         if (get().isDragging) return;
-        if (get().columnList === list) return;
+        const current = get().columnList;
+        if (current === list) return;
+
+        // Se o conjunto de IDs é o mesmo, preserva a ordem local (otimista)
+        // e apenas atualiza as propriedades de cada coluna. Evita que uma
+        // ordem antiga vinda do cache sobrescreva um reorder otimista
+        // enquanto a mutação ainda está em voo.
+        if (
+          current.length === list.length &&
+          current.length > 0 &&
+          current.every((c) => list.some((l) => l.id === c.id))
+        ) {
+          const byId = new Map(list.map((l) => [l.id, l]));
+          const merged = current.map((c) => byId.get(c.id) ?? c);
+          const changed = merged.some((m, i) => m !== current[i]);
+          if (changed) set({ columnList: merged });
+          return;
+        }
+
         set({ columnList: list });
       },
 

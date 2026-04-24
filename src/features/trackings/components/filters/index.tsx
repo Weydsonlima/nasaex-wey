@@ -9,6 +9,7 @@ import { TagsFilter } from "./tags-filter";
 import { CalendarFilter } from "./calendar-filter";
 import { useParams } from "next/navigation";
 import AddLeadSheet from "@/features/trackings/components/modal/add-lead-sheet";
+import { AiLeadButton } from "@/features/trackings/components/modal/ai-lead-button";
 import { useAddLead } from "@/hooks/modal/use-add-lead";
 import { SorterLead } from "./sort-leads";
 
@@ -30,6 +31,7 @@ export function FiltersTracking() {
           <Filters />
         </div>
         <div className="flex items-center gap-2">
+          <AiLeadButton trackingId={trackingId} />
           <Button size="sm" onClick={() => useLeadSheet.setIsOpen(true)}>
             <PlusIcon className="size-4" />
             Novo Lead

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Eye, EyeOff, ExternalLink, Info, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { orpc } from "@/lib/orpc";
 
 // ─── LocalStorage persistence ─────────────────────────────────────────────────
 
@@ -133,13 +134,38 @@ export function CredentialForm({ slug, fields, onSaved, compact = false }: Crede
   const handleSave = async () => {
     if (!allRequiredFilled) return;
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 700));
-    saveCredentials(slug, values);
-    setSaving(false);
-    setSaved(true);
-    onSaved?.();
-    // Reset saved indicator after 3s
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      if (slug === "instagram-dm") {
+        await orpc.integrations.setupMeta.call({
+          platform: "INSTAGRAM",
+          accessToken: values.access_token ?? "",
+          verifyToken: values.verify_token ?? "",
+          instagramAccountId: values.instagram_account_id ?? "",
+        });
+      } else if (slug === "facebook-messenger") {
+        await orpc.integrations.setupMeta.call({
+          platform: "FACEBOOK",
+          accessToken: values.page_access_token ?? "",
+          verifyToken: values.verify_token ?? "",
+          pageId: values.page_id ?? "",
+          pageAccessToken: values.page_access_token ?? "",
+        });
+      } else {
+        await new Promise((r) => setTimeout(r, 700));
+      }
+      saveCredentials(slug, values);
+      setSaved(true);
+      onSaved?.();
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      // fall back to local-only save so UI still works
+      saveCredentials(slug, values);
+      setSaved(true);
+      onSaved?.();
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

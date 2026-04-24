@@ -450,3 +450,49 @@ export interface ManagementLabelsResponse {
   response: string;
   editions: string[];
 }
+
+// ── Interactive / Buttons ─────────────────────────────────────────────────────
+
+export interface ButtonItem {
+  /** Texto exibido no botão (máx 20 chars) */
+  text: string;
+  /** ID retornado quando o lead clica (máx 256 chars) */
+  id: string;
+}
+
+export interface ListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface ListSection {
+  title?: string;
+  rows: ListRow[];
+}
+
+/** Payload para /send/menu com botões rápidos (máx 3 botões) */
+export interface SendButtonsPayload {
+  number: string;
+  text: string;
+  footer?: string;
+  buttons: ButtonItem[];
+  readchat?: boolean;
+  readmessages?: boolean;
+  delay?: number;
+}
+
+/** Payload para /send/menu com lista interativa */
+export interface SendListPayload {
+  number: string;
+  text: string;
+  footer?: string;
+  /** Texto do botão que abre a lista (máx 20 chars) */
+  button: string;
+  sections: ListSection[];
+  readchat?: boolean;
+  readmessages?: boolean;
+  delay?: number;
+}
+
+export type SendMenuResponse = SendTextResponse;

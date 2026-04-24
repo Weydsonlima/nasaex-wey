@@ -1,0 +1,91 @@
+import { requiredAuthMiddleware } from "@/app/middlewares/auth";
+import { base } from "@/app/middlewares/base";
+import prisma from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+import z from "zod";
+
+const avatarConfigSchema = z.object({
+  suitColor: z.string().optional(),
+  helmetColor: z.string().optional(),
+  accessory: z.enum(["none", "flag", "jetpack"]).optional(),
+  skinTone: z.string().optional(),
+  useProfilePhoto: z.boolean().optional(),
+  hairStyle: z.enum(["none", "short", "long", "curly", "afro", "ponytail"]).optional(),
+  hairColor: z.string().optional(),
+  beardStyle: z.enum(["none", "stubble", "short", "full"]).optional(),
+  faceAccessory: z.enum(["none", "glasses", "sunglasses"]).optional(),
+  lpcSpritesheetUrl: z.union([z.string().url(), z.literal("pixel_astronaut")]).optional().nullable(),
+  lpcCharacterName: z.string().max(60).optional().nullable(),
+});
+
+export const updateWorld = base
+  .use(requiredAuthMiddleware)
+  .route({
+    method: "PUT",
+    path: "/space-station/:stationId/world",
+    summary: "Create or update the Space Station world config",
+  })
+  .input(
+    z.object({
+      stationId: z.string(),
+      planetColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      ambientTheme: z.string().optional(),
+      avatarConfig: avatarConfigSchema.optional(),
+      meetingPoints: z.array(z.object({ x: z.number(), y: z.number(), label: z.string() })).optional(),
+      npcConfig: z.unknown().optional(),
+      mapData: z.unknown().optional(),
+    }),
+  )
+  .handler(async ({ input, context, errors }) => {
+    const { stationId, planetColor, ambientTheme, avatarConfig, meetingPoints, npcConfig, mapData } = input;
+    const orgId = context.session.activeOrganizationId;
+    const userId = context.user.id;
+
+    const station = await prisma.spaceStation.findUnique({ where: { id: stationId } });
+    if (!station) throw errors.NOT_FOUND({ message: "Space Station não encontrada" });
+
+    const isOwner =
+      (station.type === "USER" && station.userId === userId) ||
+      (station.type === "ORG" && (station.orgId === orgId || station.userId === userId));
+
+    if (!isOwner) throw errors.FORBIDDEN({ message: "Sem permissão para configurar esta station" });
+
+    const updateData: Prisma.SpaceStationWorldUpdateInput = {};
+    const createData: Prisma.SpaceStationWorldUncheckedCreateInput = { stationId };
+    if (planetColor !== undefined) {
+      updateData.planetColor = planetColor;
+      createData.planetColor = planetColor;
+    }
+    if (ambientTheme !== undefined) {
+      updateData.ambientTheme = ambientTheme;
+      createData.ambientTheme = ambientTheme;
+    }
+    if (avatarConfig !== undefined) {
+      updateData.avatarConfig = avatarConfig as Prisma.InputJsonValue;
+      createData.avatarConfig = avatarConfig as Prisma.InputJsonValue;
+    }
+    if (meetingPoints !== undefined) {
+      updateData.meetingPoints = meetingPoints as Prisma.InputJsonValue;
+      createData.meetingPoints = meetingPoints as Prisma.InputJsonValue;
+    }
+    if (npcConfig !== undefined) {
+      updateData.npcConfig = npcConfig as Prisma.InputJsonValue;
+      createData.npcConfig = npcConfig as Prisma.InputJsonValue;
+    }
+    if (mapData !== undefined) {
+      updateData.mapData = mapData as Prisma.InputJsonValue;
+      createData.mapData = mapData as Prisma.InputJsonValue;
+    }
+
+    try {
+      const world = await prisma.spaceStationWorld.upsert({
+        where: { stationId },
+        create: createData,
+        update: updateData,
+      });
+      return { world };
+    } catch (err) {
+      console.error("[updateWorld] Prisma error:", err);
+      throw err;
+    }
+  });

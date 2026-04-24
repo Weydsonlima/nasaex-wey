@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CircleQuestionMarkIcon, GripVertical, Map } from "lucide-react";
+import { CircleQuestionMarkIcon, GripVertical, Map, Rocket } from "lucide-react";
 
 import {
   Sidebar,
@@ -62,6 +62,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <NotificationBell />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Space Station" asChild>
+              <Link href="/space-station">
+                <Rocket className="size-4" />
+                <span>Space Station</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         {/* Tour Guiado trigger */}
         <SidebarMenu>
           <SidebarMenuItem>

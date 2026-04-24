@@ -34,10 +34,12 @@ export async function uazapiFetch<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
+    const msg =
       errorData.message ||
-        `UAZAPI error: ${response.status} ${response.statusText}.`,
-    );
+      errorData.error ||
+      (typeof errorData === "string" ? errorData : null) ||
+      `UAZAPI error: ${response.status} ${response.statusText}.`;
+    throw new Error(`${msg} (status ${response.status})`);
   }
 
   return response.json();

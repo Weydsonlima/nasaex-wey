@@ -9,8 +9,9 @@ import Link from "next/link";
 import { SummerizeConversation } from "./summerize-conversation";
 import { useRouter } from "next/navigation";
 import { CheckIaLead } from "./check-ia-lead";
-import { StatusFlow } from "@/generated/prisma/enums";
+import { MessageChannel, StatusFlow } from "@/generated/prisma/enums";
 import { useMutationRodizio } from "../hooks/use-rodizio";
+import type { SVGProps } from "react";
 
 interface HeaderProps {
   name: string;
@@ -21,6 +22,41 @@ interface HeaderProps {
   active: boolean;
   trackingId: string;
   statusFlow: StatusFlow;
+  channel?: MessageChannel;
+}
+
+function ChannelBadge({ channel }: { channel: MessageChannel }) {
+  if (channel === MessageChannel.INSTAGRAM) {
+    return (
+      <span title="Instagram DM" className="flex items-center justify-center size-6 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 text-white shrink-0">
+        <InstagramIcon className="size-3.5" />
+      </span>
+    )
+  }
+  if (channel === MessageChannel.FACEBOOK) {
+    return (
+      <span title="Facebook Messenger" className="flex items-center justify-center size-6 rounded-full bg-[#0082FB] text-white shrink-0">
+        <FacebookIcon className="size-3.5" />
+      </span>
+    )
+  }
+  return null
+}
+
+function InstagramIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2m0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95zm8.95 1.35a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2M12 6.85A5.15 5.15 0 1 1 6.85 12 5.16 5.16 0 0 1 12 6.85m0 1.8A3.35 3.35 0 1 0 15.35 12 3.35 3.35 0 0 0 12 8.65" />
+    </svg>
+  )
+}
+
+function FacebookIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M13.5 22v-8.2h2.77l.42-3.2H13.5V8.56c0-.93.26-1.56 1.6-1.56h1.7V4.13c-.3-.04-1.32-.13-2.51-.13-2.48 0-4.19 1.52-4.19 4.3v2.3H7.3v3.2h2.8V22z" />
+    </svg>
+  )
 }
 export function Header({
   name,
@@ -31,6 +67,7 @@ export function Header({
   active: initialActive,
   trackingId,
   statusFlow,
+  channel,
 }: HeaderProps) {
   const router = useRouter();
   const profileUrl = useConstructUrl(profile || "");
@@ -55,10 +92,17 @@ export function Header({
             <ArrowLeftIcon className="size-4" />
           </Link>
         </Button>
-        <Avatar>
-          <AvatarImage src={profileUrl} />
-          <AvatarFallback>{name.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar>
+            <AvatarImage src={profileUrl} />
+            <AvatarFallback>{name.slice(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          {channel && channel !== MessageChannel.WHATSAPP && (
+            <span className="absolute -bottom-1 -right-1">
+              <ChannelBadge channel={channel} />
+            </span>
+          )}
+        </div>
         <div className="flex flex-col">
           <Link
             href={`/contatos/${leadId}`}

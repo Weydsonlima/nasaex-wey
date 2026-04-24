@@ -13,6 +13,7 @@ type Values = {
   title: string;
   description?: string;
   priority: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  workspaceId?: string;
   columnId: string;
 };
 type Data = { action?: Values };
@@ -58,7 +59,8 @@ export const WsCreateActionNode = memo((props: NodeProps<Node<Data>>) => {
               { value: "URGENT", label: "Urgente" },
             ],
           },
-          { kind: "column", name: "columnId", label: "Coluna" },
+          { kind: "workspace", name: "workspaceId", label: "Workspace destino", optional: true },
+          { kind: "column", name: "columnId", label: "Coluna", workspaceIdFrom: "workspaceId" },
         ]}
         defaultValues={props.data?.action}
         onSubmit={handleSubmit}

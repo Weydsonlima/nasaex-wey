@@ -21,7 +21,17 @@ import {
 } from "@/components/ui/select";
 import { useParams } from "next/navigation";
 import { ReactNode } from "react";
-import { Controller, useForm, DefaultValues, FieldValues } from "react-hook-form";
+import {
+  Controller,
+  useForm,
+  DefaultValues,
+  FieldValues,
+  FormProvider,
+  useFormContext,
+  useWatch,
+} from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 import {
   useColumnsByWorkspace,
   useListTags,
@@ -59,6 +69,7 @@ type FieldDef<T> =
       name: keyof T & string;
       label: string;
       optional?: boolean;
+      workspaceIdFrom?: string;
     }
   | {
       kind: "tag";
@@ -68,6 +79,12 @@ type FieldDef<T> =
     }
   | {
       kind: "member";
+      name: keyof T & string;
+      label: string;
+      optional?: boolean;
+    }
+  | {
+      kind: "workspace";
       name: keyof T & string;
       label: string;
       optional?: boolean;
@@ -86,7 +103,7 @@ interface Props<T extends FieldValues> {
   footer?: ReactNode;
 }
 
-function ColumnSelect({
+function WorkspaceSelect({
   value,
   onChange,
   placeholder,
@@ -95,7 +112,37 @@ function ColumnSelect({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { data, isLoading } = useQuery(orpc.workspace.list.queryOptions());
+  const workspaces = data?.workspaces ?? [];
+  return (
+    <Select value={value ?? ""} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder={isLoading ? "Carregando..." : (placeholder ?? "Selecione o workspace")} />
+      </SelectTrigger>
+      <SelectContent>
+        {workspaces.map((w) => (
+          <SelectItem key={w.id} value={w.id}>
+            {w.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function ColumnSelect({
+  value,
+  onChange,
+  placeholder,
+  workspaceId: workspaceIdProp,
+}: {
+  value?: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  workspaceId?: string;
+}) {
+  const { workspaceId: paramsWorkspaceId } = useParams<{ workspaceId: string }>();
+  const workspaceId = workspaceIdProp || paramsWorkspaceId;
   const { columns, isLoading } = useColumnsByWorkspace(workspaceId);
   return (
     <Select value={value ?? ""} onValueChange={onChange}>
@@ -110,6 +157,29 @@ function ColumnSelect({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+function ColumnSelectField({
+  value,
+  onChange,
+  workspaceIdFrom,
+  optional,
+}: {
+  value?: string;
+  onChange: (v: string) => void;
+  workspaceIdFrom?: string;
+  optional?: boolean;
+}) {
+  const { control } = useFormContext();
+  const watched = useWatch({ control, name: workspaceIdFrom ?? "__none__" }) as string | undefined;
+  return (
+    <ColumnSelect
+      value={value}
+      onChange={onChange}
+      workspaceId={workspaceIdFrom ? watched : undefined}
+      placeholder={optional ? "Qualquer coluna" : "Selecione a coluna"}
+    />
   );
 }
 
@@ -196,88 +266,98 @@ export function SimpleDialog<T extends FieldValues>({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(handle)}>
-          <FieldGroup>
-            {fields.map((f) => (
-              <Controller
-                key={f.name}
-                control={form.control}
-                name={f.name as any}
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel>{f.label}</FieldLabel>
-                    {f.kind === "text" && (
-                      <Input
-                        {...field}
-                        value={(field.value as string) ?? ""}
-                        placeholder={f.placeholder}
-                      />
-                    )}
-                    {f.kind === "textarea" && (
-                      <Textarea
-                        {...field}
-                        value={(field.value as string) ?? ""}
-                        placeholder={f.placeholder}
-                      />
-                    )}
-                    {f.kind === "number" && (
-                      <Input
-                        type="number"
-                        value={(field.value as number) ?? ""}
-                        min={f.min}
-                        max={f.max}
-                        onChange={(e) =>
-                          field.onChange(Number(e.target.value))
-                        }
-                      />
-                    )}
-                    {f.kind === "select" && (
-                      <Select
-                        value={(field.value as string) ?? ""}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={f.label} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {f.options.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {f.kind === "column" && (
-                      <ColumnSelect
-                        value={field.value as string}
-                        onChange={field.onChange}
-                        placeholder={f.optional ? "Qualquer coluna" : "Selecione a coluna"}
-                      />
-                    )}
-                    {f.kind === "tag" && (
-                      <TagSelect
-                        value={field.value as string}
-                        onChange={field.onChange}
-                        placeholder={f.optional ? "Qualquer etiqueta" : "Selecione a etiqueta"}
-                      />
-                    )}
-                    {f.kind === "member" && (
-                      <MemberSelect
-                        value={field.value as string}
-                        onChange={field.onChange}
-                        placeholder={f.optional ? "Qualquer participante" : "Selecione o participante"}
-                      />
-                    )}
-                  </Field>
-                )}
-              />
-            ))}
-          </FieldGroup>
-          <DialogFooter className="mt-4">
-            <Button type="submit">Salvar</Button>
-          </DialogFooter>
-        </form>
+        <FormProvider {...form}>
+          <form onSubmit={form.handleSubmit(handle)}>
+            <FieldGroup>
+              {fields.map((f) => (
+                <Controller
+                  key={f.name}
+                  control={form.control}
+                  name={f.name as any}
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel>{f.label}</FieldLabel>
+                      {f.kind === "text" && (
+                        <Input
+                          {...field}
+                          value={(field.value as string) ?? ""}
+                          placeholder={f.placeholder}
+                        />
+                      )}
+                      {f.kind === "textarea" && (
+                        <Textarea
+                          {...field}
+                          value={(field.value as string) ?? ""}
+                          placeholder={f.placeholder}
+                        />
+                      )}
+                      {f.kind === "number" && (
+                        <Input
+                          type="number"
+                          value={(field.value as number) ?? ""}
+                          min={f.min}
+                          max={f.max}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      )}
+                      {f.kind === "select" && (
+                        <Select
+                          value={(field.value as string) ?? ""}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={f.label} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {f.options.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {f.kind === "column" && (
+                        <ColumnSelectField
+                          value={field.value as string}
+                          onChange={field.onChange}
+                          workspaceIdFrom={f.workspaceIdFrom}
+                          optional={f.optional}
+                        />
+                      )}
+                      {f.kind === "tag" && (
+                        <TagSelect
+                          value={field.value as string}
+                          onChange={field.onChange}
+                          placeholder={f.optional ? "Qualquer etiqueta" : "Selecione a etiqueta"}
+                        />
+                      )}
+                      {f.kind === "member" && (
+                        <MemberSelect
+                          value={field.value as string}
+                          onChange={field.onChange}
+                          placeholder={f.optional ? "Qualquer participante" : "Selecione o participante"}
+                        />
+                      )}
+                      {f.kind === "workspace" && (
+                        <WorkspaceSelect
+                          value={field.value as string}
+                          onChange={field.onChange}
+                          placeholder={f.optional ? "Workspace atual" : "Selecione o workspace"}
+                        />
+                      )}
+                    </Field>
+                  )}
+                />
+              ))}
+            </FieldGroup>
+            <DialogFooter className="mt-4">
+              <Button type="submit">Salvar</Button>
+            </DialogFooter>
+          </form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );

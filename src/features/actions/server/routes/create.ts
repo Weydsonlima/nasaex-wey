@@ -14,7 +14,7 @@ export const createAction = base
     z.object({
       title: z.string().min(1, "Título é obrigatório"),
       description: z.string().optional(),
-      priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+      priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH", "URGENT"]),
       dueDate: z.date().optional(),
       startDate: z.date().optional(),
       workspaceId: z.string().min(1, "Workspace é obrigatório"),
@@ -40,8 +40,6 @@ export const createAction = base
     } else {
       newOrder = new Prisma.Decimal(0);
     }
-
-    console.log("[CREATE TASK]", input);
 
     const action = await prisma.action.create({
       data: {

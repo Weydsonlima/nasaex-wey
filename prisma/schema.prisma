@@ -26,6 +26,7 @@ model User {
 
   members                 Member[]
   invitations             Invitation[]
+  inviteLinksCreated      OrganizationInviteLink[] @relation("InviteLinksCreated")
   trackings               TrackingParticipant[]
   leadHistories           LeadHistory[]
   participantOnActions    ActionsUserParticipant[]
@@ -142,6 +143,7 @@ model Organization {
 
   members     Member[]
   invitations Invitation[]
+  inviteLinks OrganizationInviteLink[]
   trackings   Tracking[]
   tags        Tag[]
   whatsappInstances    WhatsAppInstance[]
@@ -239,6 +241,26 @@ model Invitation {
   @@map("invitation")
   @@index([organizationId])
   @@index([email])
+}
+
+model OrganizationInviteLink {
+  id             String    @id @default(cuid())
+  organizationId String
+  token          String    @unique
+  role           String    @default("member")
+  expiresAt      DateTime
+  createdById    String
+  revokedAt      DateTime?
+  usesCount      Int       @default(0)
+  starsOnJoin    Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("InviteLinksCreated", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("organization_invite_link")
+  @@index([organizationId])
+  @@index([token])
 }
 
 // ─────────────────────────────────────────────

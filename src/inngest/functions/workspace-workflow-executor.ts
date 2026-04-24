@@ -83,44 +83,54 @@ export const executeWorkspaceWorkflow = inngest.createFunction(
 
     if (!workflows.length) return { ran: 0 };
 
-    const actionCtx = actionId ? await loadActionContext(actionId) : null;
-
-    let ran = 0;
-    for (const wf of workflows) {
-      const sortedNodes = topologicalSort(
-        wf.nodes as any,
-        wf.connections as any,
-      );
-      let context: Record<string, any> = {
-        ...(initialData ?? {}),
-        workspaceId: wf.workspaceId,
-        action: actionCtx ?? (initialData as any)?.action,
-        realTime: Boolean(workflowId), // manual execution → realtime UI
-      };
-
-      try {
-        for (const node of sortedNodes) {
-          const executor = getWorkspaceExecutor(
-            node.type as WorkspaceNodeType,
-          );
-          context = await executor({
-            data: node.data as Record<string, unknown>,
-            nodeId: node.id,
-            context,
-            step,
-            publish,
-          });
-        }
-        ran++;
-      } catch (err) {
-        if (err instanceof NonRetriableError) {
-          // workflow falhou uma condição (filter, trigger mismatch); segue para o próximo
-          continue;
-        }
-        throw err;
-      }
+    // Fan-out: quando múltiplos workflows batem no mesmo trigger sem um workflowId
+    // fixado, cada um precisa rodar em seu próprio invocation para evitar colisão
+    // de step IDs (Inngest memoiza por ID dentro do mesmo invocation).
+    if (!workflowId && workflows.length > 1) {
+      await step.run("fan-out-workflows", async () => {
+        await inngest.send(
+          workflows.map((wf) => ({
+            name: "workspace-workflow/trigger" as const,
+            data: { trigger, workspaceId, actionId, workflowId: wf.id, initialData },
+          })),
+        );
+      });
+      return { fanOut: true, total: workflows.length };
     }
 
-    return { ran, total: workflows.length };
+    // Carrega contexto da action dentro de um step para evitar re-execuções
+    // desnecessárias do banco a cada replay do Inngest.
+    const actionCtx = await step.run("load-action-context", async () => {
+      return actionId ? loadActionContext(actionId) : null;
+    });
+
+    const wf = workflows[0];
+    const sortedNodes = topologicalSort(wf.nodes as any, wf.connections as any);
+    let context: Record<string, any> = {
+      ...(initialData ?? {}),
+      workspaceId: wf.workspaceId,
+      action: actionCtx ?? (initialData as any)?.action,
+      realTime: Boolean(workflowId),
+    };
+
+    try {
+      for (const node of sortedNodes) {
+        const executor = getWorkspaceExecutor(node.type as WorkspaceNodeType);
+        context = await executor({
+          data: node.data as Record<string, unknown>,
+          nodeId: node.id,
+          context,
+          step,
+          publish,
+        });
+      }
+    } catch (err) {
+      if (err instanceof NonRetriableError) {
+        return { ran: 0, total: 1, skipped: err.message };
+      }
+      throw err;
+    }
+
+    return { ran: 1, total: 1 };
   },
 );

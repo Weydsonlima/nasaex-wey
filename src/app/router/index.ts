@@ -26,6 +26,7 @@ import { nboxRouter } from "./nbox";
 import { nasaPlannerRouter } from "./nasa-planner";
 import { nasaCommandRouter } from "./nasa-command";
 import { permissionsRouter } from "./permissions";
+import { inviteLinksRouter } from "./invite-links";
 import { activityRouter } from "./activity";
 import { formRouter } from "./form";
 import { adminRouter }              from "./admin";
@@ -69,6 +70,7 @@ export const router = {
   nasaPlanner: nasaPlannerRouter,
   nasaCommand: nasaCommandRouter,
   permissions: permissionsRouter,
+  inviteLinks: inviteLinksRouter,
   activity: activityRouter,
   form: formRouter,
   admin: adminRouter,

@@ -65,6 +65,15 @@ model User {
   supportTickets SupportTicket[]
   linnkerPages   LinnkerPage[]
   spaceStation   SpaceStation?
+  stationAccessRequests StationAccessRequest[]
+  worldTemplates  WorldTemplate[]
+  avatarTemplates AvatarTemplate[]
+  connectionsAsUser      UserConnection[] @relation("UserConnectionsAsUser")
+  connectionsAsConnected UserConnection[] @relation("UserConnectionsAsConnected")
+  nasaPages              NasaPage[]
+  actionLikes            ActionLike[]
+  publicActionShares     PublicActionShare[] @relation("PublicActionShareSharer")
+  actionReminders        ActionReminder[]    @relation("ActionReminderUser")
 
   @@unique([email])
   @@map("user")
@@ -195,6 +204,9 @@ model Organization {
   // Linnker
   linnkerPages LinnkerPage[]
 
+  // NASA Pages
+  nasaPages NasaPage[]
+
   // Space Station
   spaceStation SpaceStation?
 
@@ -207,6 +219,16 @@ model Organization {
   brandVisual         Json     @default("{}") @map("brand_visual")
   brandAiInstructions String?  @map("brand_ai_instructions")
   brandSwot           Json     @default("{}") @map("brand_swot")
+
+  // ── Localização (para diretório Empresas no mapa) ──
+  addressLine String?   @map("address_line")
+  city        String?
+  state       String?
+  postalCode  String?   @map("postal_code")
+  country     String?   @default("BR")
+  latitude    Float?
+  longitude   Float?
+  geocodedAt  DateTime? @map("geocoded_at")
 
   @@unique([slug])
   @@map("organization")
@@ -563,6 +585,24 @@ enum ActionPriority {
   URGENT
 }
 
+enum EventCategory {
+  WORKSHOP
+  PALESTRA
+  LANCAMENTO
+  WEBINAR
+  NETWORKING
+  CURSO
+  REUNIAO
+  HACKATHON
+  CONFERENCIA
+  OUTRO
+}
+
+enum ReminderChannel {
+  WHATSAPP
+  EMAIL
+}
+
 model Workspace {
   id        String  @id @default(cuid())
   name      String
@@ -718,6 +758,32 @@ model Action {
   mirrorOf         ActionMirror?  @relation("MirrorOf")
   sharedFrom       ActionShare[]  @relation("SharedAction")
 
+  // ─── Calendário Público ─────────────────────────────────────────────
+  isPublic         Boolean   @default(false) @map("is_public")
+  publicSlug       String?   @unique @map("public_slug")
+  publishedAt      DateTime? @map("published_at")
+
+  viewCount        Int       @default(0) @map("view_count")
+  likesCount       Int       @default(0) @map("likes_count")
+  shareCount       Int       @default(0) @map("share_count")
+
+  country          String?   @default("BR")
+  state            String?
+  city             String?
+  address          String?
+
+  eventCategory    EventCategory? @map("event_category")
+  registrationUrl  String?   @map("registration_url")
+  formId           String?   @map("form_id")
+
+  isGuestDraft     Boolean   @default(false) @map("is_guest_draft")
+  guestDraftToken  String?   @unique @map("guest_draft_token")
+
+  likes            ActionLike[]
+  views            ActionView[]
+  publicShares     PublicActionShare[]
+  reminders        ActionReminder[]
+
   @@index([workspaceId])
   @@index([columnId])
   @@index([leadId])
@@ -726,7 +792,83 @@ model Action {
   @@index([priority])
   @@index([dueDate])
   @@index([order])
+  @@index([isPublic, publishedAt])
+  @@index([country, state, city])
+  @@index([eventCategory])
   @@map("actions")
+}
+
+// ─── Calendário Público: Likes / Views / Shares / Reminders ─────────────────
+
+model ActionLike {
+  id          String   @id @default(cuid())
+  actionId    String   @map("action_id")
+  userId      String?  @map("user_id")
+  fingerprint String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([actionId, userId])
+  @@unique([actionId, fingerprint])
+  @@index([actionId])
+  @@index([userId])
+  @@map("action_likes")
+}
+
+model ActionView {
+  id          String   @id @default(cuid())
+  actionId    String   @map("action_id")
+  fingerprint String
+  userId      String?  @map("user_id")
+  referrer    String?
+  sharerToken String?  @map("sharer_token")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([actionId, fingerprint])
+  @@index([actionId, createdAt])
+  @@index([sharerToken])
+  @@map("action_views")
+}
+
+model PublicActionShare {
+  id           String   @id @default(cuid())
+  actionId     String   @map("action_id")
+  sharerUserId String?  @map("sharer_user_id")
+  sharerToken  String   @unique @map("sharer_token")
+  platform     String?
+  clicks       Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  action     Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  sharerUser User?  @relation("PublicActionShareSharer", fields: [sharerUserId], references: [id], onDelete: SetNull)
+
+  @@index([actionId])
+  @@index([sharerUserId])
+  @@map("public_action_shares")
+}
+
+model ActionReminder {
+  id          String   @id @default(cuid())
+  actionId    String   @map("action_id")
+  userId      String?  @map("user_id")
+  phoneNumber String   @map("phone_number")
+  channel     ReminderChannel @default(WHATSAPP)
+  remindAt    DateTime @map("remind_at")
+  sent        Boolean  @default(false)
+  sentAt      DateTime? @map("sent_at")
+  consentAt   DateTime @default(now()) @map("consent_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user   User?  @relation("ActionReminderUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([actionId, sent])
+  @@index([remindAt, sent])
+  @@map("action_reminders")
 }
 
 model SubActionUserResponsible {
@@ -3019,6 +3161,7 @@ model SpaceStation {
   rank        StationRank @default(CREW)
   starsReceived Int       @default(0) @map("stars_received")
   config      Json?
+  accessMode  StationAccessMode @default(OPEN) @map("access_mode")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
@@ -3028,8 +3171,38 @@ model SpaceStation {
   sentStars     SpaceStationStar[] @relation("SentStars")
   worldConfig   SpaceStationWorld?
   publicModules StationPublicModule[]
+  accessRequests StationAccessRequest[]
 
   @@map("space_stations")
+}
+
+enum StationAccessMode {
+  OPEN
+  MEMBERS_ONLY
+  REQUEST
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model StationAccessRequest {
+  id           String              @id @default(cuid())
+  stationId    String              @map("station_id")
+  station      SpaceStation        @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  userId       String              @map("user_id")
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message      String?
+  status       AccessRequestStatus @default(PENDING)
+  decidedById  String?             @map("decided_by_id")
+  decidedAt    DateTime?           @map("decided_at")
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  @@unique([stationId, userId])
+  @@index([stationId, status])
+  @@map("station_access_requests")
 }
 
 model SpaceStationWorld {
@@ -3095,4 +3268,214 @@ model WorldGameAsset {
 
   @@index([type])
   @@map("world_game_assets")
+}
+
+enum TemplateCategory {
+  OFFICE
+  SPACE
+  NATURE
+  FANTASY
+  TECH
+  OTHER
+}
+
+model WorldTemplate {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  authorId    String           @map("author_id")
+  stationId   String?          @map("station_id")
+  previewUrl  String?          @map("preview_url")
+  mapData     Json             @map("map_data")
+  category    TemplateCategory @default(OTHER)
+  isPublic    Boolean          @default(false) @map("is_public")
+  usedCount   Int              @default(0) @map("used_count")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([isPublic, category])
+  @@map("world_templates")
+}
+
+model AvatarTemplate {
+  id         String   @id @default(cuid())
+  name       String
+  authorId   String   @map("author_id")
+  previewUrl String?  @map("preview_url")
+  spriteUrl  String   @map("sprite_url")
+  overlays   Json?
+  isPublic   Boolean  @default(false) @map("is_public")
+  usedCount  Int      @default(0) @map("used_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([isPublic])
+  @@map("avatar_templates")
+}
+
+model UserConnection {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  connectedId String   @map("connected_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User @relation("UserConnectionsAsUser",      fields: [userId],      references: [id], onDelete: Cascade)
+  connected User @relation("UserConnectionsAsConnected", fields: [connectedId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, connectedId])
+  @@index([userId])
+  @@index([connectedId])
+  @@map("user_connections")
+}
+
+// ─── NASA PAGES ──────────────────────────────────────────────────────────────
+
+enum NasaPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NasaPageIntent {
+  INSTITUTIONAL
+  LANDING
+  BIO_LINK
+  EVENT
+  PRODUCT
+  PORTFOLIO
+  CUSTOM
+}
+
+enum NasaPageDomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum NasaPageDomainSource {
+  EXTERNAL
+  PURCHASED_VIA_NASA
+}
+
+enum NasaPageDomainPurchaseStatus {
+  NOT_STARTED
+  SEARCHING
+  AWAITING_PAYMENT
+  PAID
+  REGISTERING
+  ACTIVE
+  FAILED
+}
+
+model NasaPage {
+  id                         String          @id @default(cuid())
+  organizationId             String          @map("organization_id")
+  userId                     String          @map("user_id")
+  slug                       String          @unique
+  title                      String
+  description                String?
+  faviconUrl                 String?         @map("favicon_url")
+  ogImageUrl                 String?         @map("og_image_url")
+  intent                     NasaPageIntent  @default(CUSTOM)
+  status                     NasaPageStatus  @default(DRAFT)
+  layerCount                 Int             @default(1) @map("layer_count")
+  palette                    Json            @default("{}")
+  fontFamily                 String?         @map("font_family")
+  layout                     Json            @default("{}")
+  publishedLayout            Json?           @map("published_layout")
+  publishedAt                DateTime?       @map("published_at")
+  customDomain               String?         @unique @map("custom_domain")
+  domainStatus               NasaPageDomainStatus? @map("domain_status")
+  domainSource               NasaPageDomainSource? @map("domain_source")
+  domainVerifyToken          String?         @map("domain_verify_token")
+  isTemplate                 Boolean         @default(false) @map("is_template")
+  templateMarkedByModerator  Boolean         @default(false) @map("template_marked_by_moderator")
+  templateCategory           String?         @map("template_category")
+  starsSpent                 Int             @default(0) @map("stars_spent")
+  createdAt                  DateTime        @default(now()) @map("created_at")
+  updatedAt                  DateTime        @updatedAt      @map("updated_at")
+
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                     @relation(fields: [userId],         references: [id], onDelete: Cascade)
+  versions       NasaPageVersion[]
+  visits         NasaPageVisit[]
+  assets         NasaPageAsset[]
+  domainPurchase NasaPageDomainPurchase?
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([customDomain])
+  @@map("nasa_pages")
+}
+
+model NasaPageVersion {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  snapshot  Json
+  label     String?
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("nasa_page_versions")
+}
+
+model NasaPageAsset {
+  id             String   @id @default(cuid())
+  pageId         String   @map("page_id")
+  organizationId String   @map("organization_id")
+  url            String
+  kind           String
+  originalName   String?  @map("original_name")
+  sizeBytes      Int?     @map("size_bytes")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([organizationId])
+  @@map("nasa_page_assets")
+}
+
+model NasaPageVisit {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  path      String?
+  referrer  String?
+  userAgent String?  @map("user_agent")
+  country   String?
+  ipAddress String?  @map("ip_address")
+  device    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([createdAt])
+  @@map("nasa_page_visits")
+}
+
+model NasaPageDomainPurchase {
+  id              String   @id @default(cuid())
+  pageId          String   @unique @map("page_id")
+  provider        String
+  requestedDomain String   @map("requested_domain")
+  tldPriceCents   Int?     @map("tld_price_cents")
+  currency        String?
+  checkoutUrl     String?  @map("checkout_url")
+  externalOrderId String?  @map("external_order_id")
+  status          NasaPageDomainPurchaseStatus @default(NOT_STARTED)
+  lastError       String?  @map("last_error")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt       @map("updated_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("nasa_page_domain_purchases")
 }

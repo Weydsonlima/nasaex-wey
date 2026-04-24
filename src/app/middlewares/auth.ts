@@ -19,3 +19,22 @@ export const requiredAuthMiddleware = base.middleware(
     });
   }
 );
+
+/**
+ * Opcional: tenta carregar a sessão mas NÃO falha se não houver usuário.
+ * Útil para procedures públicas que querem personalizar o resultado
+ * quando o usuário está autenticado (ex: excluir templates próprios).
+ */
+export const optionalAuthMiddleware = base.middleware(
+  async ({ context, next }) => {
+    const sessionData = await auth.api.getSession({
+      headers: context.headers,
+    });
+    return next({
+      context: {
+        session: sessionData?.session ?? null,
+        user:    sessionData?.user ?? null,
+      },
+    });
+  }
+);

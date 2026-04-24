@@ -26,13 +26,10 @@ export const listConversation = base
       const conversations = await prisma.conversation.findMany({
         where: {
           trackingId: input.trackingId,
-          ...(input.statusId && {
-            lead: {
-              statusId: input.statusId,
-            },
-          }),
-          ...(input.search && {
-            lead: {
+          lead: {
+            statusFlow: { not: "FINISHED" },
+            ...(input.statusId && { statusId: input.statusId }),
+            ...(input.search && {
               OR: [
                 {
                   name: {
@@ -47,8 +44,8 @@ export const listConversation = base
                   },
                 },
               ],
-            },
-          }),
+            }),
+          },
         },
         include: {
           lastMessage: true,

@@ -11,8 +11,11 @@ export const updateLeadTool = (userId: string) =>
       leadId: z.string().describe("ID do lead a ser atualizado"),
       name: z.string().optional().describe("Novo nome"),
       email: z.string().optional().describe("Novo e-mail"),
-      phone: z.string().optional().describe("Novo telefone"),
-      description: z.string().optional().describe("Nova descrição"),
+      phone: z
+        .string()
+        .optional()
+        .describe("Não permita atualizar o telefone."),
+      description: z.string().optional().describe("Nova descrição do lead"),
       amount: z.number().optional().describe("Novo valor potencial do negócio"),
       temperature: z
         .enum(["COLD", "WARM", "HOT", "VERY_HOT"])
@@ -23,7 +26,6 @@ export const updateLeadTool = (userId: string) =>
       leadId,
       name,
       email,
-      phone,
       description,
       amount,
       temperature,
@@ -34,7 +36,6 @@ export const updateLeadTool = (userId: string) =>
           data: {
             ...(name !== undefined && { name }),
             ...(email !== undefined && { email }),
-            ...(phone !== undefined && { phone }),
             ...(description !== undefined && { description }),
             ...(amount !== undefined && { amount: new Decimal(amount) }),
             ...(temperature !== undefined && { temperature }),
@@ -44,8 +45,11 @@ export const updateLeadTool = (userId: string) =>
             name: true,
             statusId: true,
             updatedAt: true,
+            description: true,
           },
         });
+
+        console.log(lead);
 
         return {
           success: true,

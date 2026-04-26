@@ -1,4 +1,4 @@
-import { ActionPriority } from "@/generated/prisma/enums";
+import { ActionPriority, EventCategory } from "@/generated/prisma/enums";
 import { Decimal } from "@prisma/client/runtime/client";
 
 export interface Action {
@@ -82,4 +82,18 @@ export interface Action {
       color: string;
     };
   }[];
+
+  // ─── Calendário Público ─────────────────────────────────────────────
+  isPublic?: boolean;
+  publicSlug?: string | null;
+  publishedAt?: Date | string | null;
+  eventCategory?: EventCategory | null;
+  country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  address?: string | null;
+  registrationUrl?: string | null;
+  viewCount?: number;
+  likesCount?: number;
+  shareCount?: number;
 }

@@ -4,6 +4,20 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { generatePublicSlug } from "@/features/public-calendar/utils/slug";
+
+const EVENT_CATEGORY_VALUES = [
+  "WORKSHOP",
+  "PALESTRA",
+  "LANCAMENTO",
+  "WEBINAR",
+  "NETWORKING",
+  "CURSO",
+  "REUNIAO",
+  "HACKATHON",
+  "CONFERENCIA",
+  "OUTRO",
+] as const;
 
 export const createAction = base
   .use(requiredAuthMiddleware)
@@ -18,6 +32,13 @@ export const createAction = base
       workspaceId: z.string().min(1, "Workspace é obrigatório"),
       columnId: z.string().min(1, "Coluna é obrigatória"),
       orgProjectId: z.string().optional(),
+      // ─── Calendário Público ──────────────────────────────────────────
+      isPublic: z.boolean().optional(),
+      eventCategory: z.enum(EVENT_CATEGORY_VALUES).nullable().optional(),
+      state: z.string().nullable().optional(),
+      city: z.string().nullable().optional(),
+      address: z.string().nullable().optional(),
+      registrationUrl: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -39,6 +60,24 @@ export const createAction = base
       newOrder = new Prisma.Decimal(0);
     }
 
+    // Se for criado já público, geramos slug único
+    let publicSlug: string | undefined;
+    let publishedAt: Date | undefined;
+    if (input.isPublic) {
+      for (let i = 0; i < 3; i++) {
+        const candidate = generatePublicSlug(input.title);
+        const exists = await prisma.action.findUnique({
+          where: { publicSlug: candidate },
+          select: { id: true },
+        });
+        if (!exists) {
+          publicSlug = candidate;
+          break;
+        }
+      }
+      publishedAt = new Date();
+    }
+
     console.log("[CREATE TASK]", input);
 
     const action = await prisma.action.create({
@@ -53,6 +92,14 @@ export const createAction = base
         columnId: input.columnId,
         orgProjectId: input.orgProjectId,
         createdBy: context.user.id,
+        isPublic: input.isPublic ?? false,
+        publicSlug,
+        publishedAt,
+        eventCategory: input.eventCategory ?? undefined,
+        state: input.state ?? undefined,
+        city: input.city ?? undefined,
+        address: input.address ?? undefined,
+        registrationUrl: input.registrationUrl ?? undefined,
         participants: {
           create: {
             userId: context.user.id,

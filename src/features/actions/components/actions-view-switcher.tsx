@@ -18,10 +18,16 @@ interface Props {
 }
 
 export function ActionsViewSwitcher({ workspaceId }: Props) {
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
   const [view, setView] = useQueryState("action-view", {
     defaultValue: "list",
   });
+  const [createParam, setCreateParam] = useQueryState("create");
+  const presetPublic = createParam === "event-public";
+
+  // Modal abre se o usuário clicou no botão OU se chegou com ?create=event-public
+  const open = localOpen || presetPublic;
+  const setOpen = setLocalOpen;
 
   return (
     <>
@@ -80,8 +86,13 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
       </Tabs>
       <CreateActionModal
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          setLocalOpen(next);
+          // Limpa o query param ao fechar o modal
+          if (!next && presetPublic) setCreateParam(null);
+        }}
         workspaceId={workspaceId}
+        presetPublic={presetPublic}
       />
     </>
   );

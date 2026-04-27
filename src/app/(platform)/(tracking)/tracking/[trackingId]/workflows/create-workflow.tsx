@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useCreateWorkflow } from "@/features/workflows/hooks/use-workflows";
+import { PlusIcon } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
 export function CreateWorkflowButton() {
@@ -22,5 +23,10 @@ export function CreateWorkflowButton() {
       },
     );
 
-  return <Button onClick={onCreate}>Adicionar Automação</Button>;
+  return (
+    <Button onClick={onCreate} size="sm">
+      <PlusIcon className="size-4" />
+      <span className="hidden sm:inline">Adicionar Automação</span>
+    </Button>
+  );
 }

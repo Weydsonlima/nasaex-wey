@@ -138,8 +138,10 @@ model Organization {
   slug        String
   logo        String?
   createdAt   DateTime
-  metadata    String?
-  companyCode String?  @unique @map("company_code")
+  metadata     String?
+  companyCode  String?  @unique @map("company_code")
+  companyNiche String?  @map("company_niche")
+  companyCep   String?  @map("company_cep")
 
   // ── STARS ──────────────────────────────────
   planId               String?   @map("plan_id")

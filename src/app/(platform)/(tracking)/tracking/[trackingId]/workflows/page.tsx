@@ -3,6 +3,9 @@ import { CreateWorkflowButton } from "./create-workflow";
 import { WorkflowContainer } from "./workflow-container";
 import { Suspense } from "react";
 import { prefetchWorkflows } from "@/features/workflows/server/prefetch";
+import { AiLeadButton } from "@/features/trackings/components/modal/ai-lead-button";
+import { Button } from "@/components/ui/button";
+import { SparklesIcon } from "lucide-react";
 
 interface WorkflowPageProps {
   params: Promise<{
@@ -29,7 +32,17 @@ export default async function WorkflowsPage({ params }: WorkflowPageProps) {
           </p>
         </div>
 
-        <CreateWorkflowButton />
+        <div className="flex items-center gap-2 flex-shrink-0">
+            <AiLeadButton trackingId={trackingId}>
+              <Button variant="outline" size="sm">
+                <SparklesIcon className="size-4 text-purple-500" />
+                <span className="hidden sm:inline bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-semibold">
+                  IA de Automações
+                </span>
+              </Button>
+            </AiLeadButton>
+            <CreateWorkflowButton />
+          </div>
       </div>
 
       <HydrateClient client={queryClient}>

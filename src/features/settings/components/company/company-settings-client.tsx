@@ -1,20 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Building2Icon, TagIcon } from "lucide-react";
+import { Building2Icon, MapPinIcon, TagIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormCompany } from "../form-compnay";
 import { BrandTab } from "../brand/brand-tab";
+import { CompanyDetailsTab } from "./company-details-tab";
 
 interface Company {
   id: string;
   name: string;
   logo?: string;
+  companyNiche: string;
+  companyCep: string;
+  brandIcp: string;
+  brandSwot: Record<string, string>;
 }
 
 const TABS = [
-  { id: "geral", label: "Geral",  icon: Building2Icon },
-  { id: "marca", label: "Marca",  icon: TagIcon },
+  { id: "geral",   label: "Geral",   icon: Building2Icon },
+  { id: "empresa", label: "Empresa", icon: MapPinIcon },
+  { id: "marca",   label: "Marca",   icon: TagIcon },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -45,6 +51,15 @@ export function CompanySettingsClient({ company }: { company: Company }) {
       </div>
 
       {activeTab === "geral" && <FormCompany company={company} />}
+      {activeTab === "empresa" && (
+        <CompanyDetailsTab
+          orgId={company.id}
+          companyNiche={company.companyNiche}
+          companyCep={company.companyCep}
+          brandIcp={company.brandIcp}
+          brandSwot={company.brandSwot}
+        />
+      )}
       {activeTab === "marca" && <BrandTab entity="org" />}
     </div>
   );

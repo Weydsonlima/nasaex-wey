@@ -1,5 +1,9 @@
 import { GalleryVerticalEnd } from "lucide-react";
 import { FormCreateOrg } from "../_components/form-create-org";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export default async function OrganizationPage() {
   return (

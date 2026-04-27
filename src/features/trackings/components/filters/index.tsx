@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SparklesIcon } from "lucide-react";
 import { TrackingSwitcher } from "./tracking-switcher";
 import { ParticipantsSwitcher } from "./participant-switcher";
 import { Filters } from "./filters";
@@ -9,6 +9,7 @@ import { TagsFilter } from "./tags-filter";
 import { CalendarFilter } from "./calendar-filter";
 import { useParams } from "next/navigation";
 import AddLeadSheet from "@/features/trackings/components/modal/add-lead-sheet";
+import { AiLeadButton } from "@/features/trackings/components/modal/ai-lead-button";
 import { useAddLead } from "@/hooks/modal/use-add-lead";
 import { SorterLead } from "./sort-leads";
 import { StatusFlowFilter } from "./status-flow-filter";
@@ -32,6 +33,14 @@ export function FiltersTracking() {
           <Filters />
         </div>
         <div className="flex items-center gap-2">
+          <AiLeadButton trackingId={trackingId}>
+            <Button variant="outline" size="sm">
+              <SparklesIcon className="size-4 mr-2 text-purple-500" />
+              <span className="bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-semibold">
+                IA de Leads
+              </span>
+            </Button>
+          </AiLeadButton>
           <Button size="sm" onClick={() => useLeadSheet.setIsOpen(true)}>
             <PlusIcon className="size-4" />
             Novo Lead

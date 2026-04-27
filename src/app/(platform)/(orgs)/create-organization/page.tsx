@@ -1,7 +1,23 @@
 import { GalleryVerticalEnd } from "lucide-react";
 import { FormCreateOrg } from "../_components/form-create-org";
+import { auth } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export default async function OrganizationPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (session?.user?.id) {
+    const memberCount = await prisma.member.count({
+      where: { userId: session.user.id },
+    });
+
+    if (memberCount > 0) {
+      redirect("/home");
+    }
+  }
+
   return (
     <div className="h-full flex flex-col items-center justify-center px-4">
       <div className="fixed top-0 left-0 flex flex-col gap-4 p-6 md:p-10">

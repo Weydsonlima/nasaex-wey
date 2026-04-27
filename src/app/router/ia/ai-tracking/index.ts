@@ -21,6 +21,7 @@ import { addNodeTool } from "./tools/add-node";
 import { connectNodesTool } from "./tools/connect-nodes";
 import { executeWorkflowTool } from "./tools/execute-workflow";
 import { getWorkflowTool } from "./tools/get-workflow";
+import { updateWorkflowTool } from "./tools/update-workflow";
 
 export const createLeadWithAi = base
   .use(requiredAuthMiddleware)
@@ -53,6 +54,8 @@ export const createLeadWithAi = base
         "- **ATUALIZAÇÃO**: Utilize `updateLead` para editar campos do lead (nome, email, telefone, descrição, valor, temperatura).",
         "- **MOVIMENTAÇÃO**: Utilize `moveLeadToStatus` para mover um lead entre colunas. Use `listStatuses` para conhecer as colunas disponíveis antes de mover.",
         "- **COLUNAS**: Antes de mover ou criar um lead (quando não souber o statusId), use `listStatuses` para descobrir os IDs e nomes das colunas.",
+        "- **LEAD NÃO ENCONTRADO**: Se `findLeads` não retornar resultado, peça EXCLUSIVAMENTE os dados de identificação do lead: nome completo, telefone ou e-mail. NÃO peça informações de automações nesse contexto.",
+        "- **DADOS INSUFICIENTES PARA LEAD**: Se o usuário quiser criar ou atualizar um lead mas faltar nome ou telefone, pergunte SOMENTE por nome e telefone. Não misture com perguntas sobre automações.",
 
         "REGRAS DE RESPOSTA E FLUXO — AUTOMAÇÕES:",
         "- **LISTAR**: Use `listWorkflows` para ver automações existentes.",
@@ -62,27 +65,31 @@ export const createLeadWithAi = base
         "  3. `addNode` → adicione cada nó de EXECUÇÃO na ordem desejada",
         "  4. `connectNodes` → conecte trigger→primeira ação, depois cada ação→próxima",
         "  5. `getWorkflow` → confirme o que foi criado",
+        "- **EDITAR AUTOMAÇÃO**: Use `updateWorkflow` para alterar nome e/ou descrição de uma automação existente. Antes de editar, use `listWorkflows` para confirmar o workflowId correto se o usuário referenciar a automação pelo nome.",
         "- **EXECUTAR**: Use `executeWorkflow` apenas para workflows com gatilho MANUAL_TRIGGER.",
         "- **VERIFICAR**: Use `getWorkflow` para inspecionar nós e conexões de um workflow.",
         "- Ao criar automação, NUNCA pule a etapa de conectar os nós.",
         "- Conclua toda a sequência antes de responder ao usuário.",
+        "- **AUTOMAÇÃO NÃO ENCONTRADA**: Se o usuário quiser modificar/visualizar uma automação e não especificou qual, ou `getWorkflow` retornar não encontrado: chame `listWorkflows` imediatamente, exiba a lista e pergunte SOMENTE qual automação deseja. NÃO peça nome, telefone ou email nesse contexto.",
+        "- **DADOS INSUFICIENTES PARA AUTOMAÇÃO**: Se faltar o nome ou objetivo da automação para criá-la, pergunte SOMENTE o nome e o objetivo. Não misture com perguntas sobre leads.",
+        `- **LINK DE VISUALIZAÇÃO**: Após qualquer criação ou modificação bem-sucedida de workflow, SEMPRE inclua no final da resposta um link Markdown: [Ver automação →](/tracking/${trackingId}/workflows/WORKFLOW_ID) — substitua WORKFLOW_ID pelo ID retornado pela tool.`,
 
-        "SCHEMA DE DATA POR TIPO DE NÓ (use como referência ao chamar addNode):",
+        "PARÂMETROS POR TIPO DE NÓ (use como referência ao chamar addNode):",
         "TRIGGERS:",
-        "  - MANUAL_TRIGGER → data: {}",
-        "  - NEW_LEAD → data: {}",
-        "  - AI_FINISHED → data: {}",
-        "  - MOVE_LEAD_STATUS → data: { statusId: 'id_do_status' }",
-        "  - LEAD_TAGGED → data: { tagId: 'id_da_tag' }",
+        "  - MANUAL_TRIGGER   → sem parâmetros extras",
+        "  - NEW_LEAD         → sem parâmetros extras",
+        "  - AI_FINISHED      → conditions: [] (opcional)",
+        "  - MOVE_LEAD_STATUS → statusId: 'id', conditions: [] (opcional)",
+        "  - LEAD_TAGGED      → tagIds: ['id'], conditions: [] (opcional)",
         "EXECUÇÕES:",
-        "  - MOVE_LEAD → data: { trackingId: 'id', statusId: 'id_do_status_destino' }",
-        "  - SEND_MESSAGE → data: { type: 'TEXT', message: 'texto' } — variáveis: {{name}}, {{email}}, {{phone}}, {{status}}",
-        "  - WAIT → data: { type: 'MINUTES'|'HOURS'|'DAYS'|'WEEKS', value: number }",
-        "  - WIN_LOSS → data: { type: 'WIN'|'LOSS', reasonId: 'id_opcional' }",
-        "  - TAG → data: { operation: 'ADD'|'REMOVE', tagIds: ['id1'] }",
-        "  - TEMPERATURE → data: { temperature: 'COLD'|'WARM'|'HOT'|'VERY_HOT' }",
-        "  - RESPONSIBLE → data: { operation: 'ADD'|'REMOVE', userId: 'id_do_usuario' }",
-        "  - FILTER_LEAD → data: { conditions: [{ field: 'status'|'name'|'email', operator: 'is'|'contains', value: '...' }] }",
+        "  - MOVE_LEAD    → statusId: 'id_destino', trackingId: 'id_tracking'",
+        "  - SEND_MESSAGE → message: 'texto' (variáveis: {{name}}, {{email}}, {{phone}}, {{status}}); countryCode: 'BR' (padrão)",
+        "  - WAIT         → unit: 'MINUTES'|'HOURS'|'DAYS'|'WEEKS', value: número",
+        "  - WIN_LOSS     → winLossType: 'WIN'|'LOSS'; reason: 'id' (opcional); observation: 'texto' (opcional)",
+        "  - TAG          → operation: 'ADD'|'REMOVE', tagIds: ['id1']",
+        "  - TEMPERATURE  → temperature: 'COLD'|'WARM'|'HOT'|'VERY_HOT'",
+        "  - RESPONSIBLE  → operation: 'ADD'|'REMOVE', userId: 'id', userName: 'nome'",
+        "  - FILTER_LEAD  → logic: 'and'|'or', conditions: [{ field: 'status'|'name'|'email', value: ['...'], operator: 'is'|'contains' }]",
 
         "TRATAMENTO DE ERROS E ESCOPO:",
         "- **NUNCA** exiba erros técnicos, IDs internos, stack traces ou mensagens de sistema.",
@@ -118,6 +125,7 @@ export const createLeadWithAi = base
           connectNodes: connectNodesTool(),
           executeWorkflow: executeWorkflowTool(trackingId),
           getWorkflow: getWorkflowTool(),
+          updateWorkflow: updateWorkflowTool(),
         },
       });
 

@@ -30,8 +30,8 @@ export const connectNodesTool = () =>
             workflowId,
             fromNodeId,
             toNodeId,
-            fromOutput: "main",
-            toInput: "main",
+            fromOutput: "source-1",
+            toInput: "target-1",
           },
           select: { id: true },
         });

@@ -5,7 +5,7 @@ import { z } from "zod";
 export const getWorkflowTool = () =>
   tool({
     description:
-      "Retorna os detalhes completos de um workflow, incluindo seus nós e conexões. Use para verificar o que foi criado antes de executar.",
+      "Retorna os detalhes completos de um workflow, incluindo seus nós e conexões. Use para verificar o que foi criado antes de executar. Se o workflow não for encontrado, chame listWorkflows para listar as automações disponíveis e peça ao usuário que especifique qual deseja visualizar ou modificar.",
     inputSchema: z.object({
       workflowId: z.string().describe("ID do workflow"),
     }),

@@ -1,11 +1,15 @@
 "use client";
 
-import { client } from "@/lib/orpc";
+import { client, orpc } from "@/lib/orpc";
 import { eventIteratorToStream } from "@orpc/client";
 import { useChat, type UIMessage } from "@ai-sdk/react";
 import { v4 as uuidv4 } from "uuid";
 import { useKanbanStore } from "../lib/kanban-store";
 import type { Lead } from "../types";
+import { useAtomValue } from "jotai";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import type { ReactFlowInstance } from "@xyflow/react";
+import { editorAtom } from "@/features/editor/store/atoms";
 
 // Type helpers
 
@@ -38,6 +42,25 @@ type MoveLeadOutput = {
   success: boolean;
   leadId?: string;
   newStatusId?: string;
+};
+
+type CreateWorkflowOutput = {
+  success: boolean;
+  workflowId?: string;
+  name?: string;
+  createdAt?: string;
+};
+
+type AddNodeOutput = {
+  success: boolean;
+  nodeId?: string;
+  type?: string;
+  name?: string;
+};
+
+type ConnectNodesOutput = {
+  success: boolean;
+  connectionId?: string;
 };
 
 // Optimistic Kanban update helpers
@@ -109,6 +132,63 @@ function applyMoveLead(out: MoveLeadOutput) {
   store.moveLeadToColumn(out.leadId, sourceColId, out.newStatusId);
 }
 
+// Optimistic Automation update helpers
+
+function applyCreateWorkflow(trackingId: string, queryClient: QueryClient) {
+  queryClient.invalidateQueries({
+    queryKey: orpc.workflow.list.queryKey({ input: { trackingId } }),
+  });
+}
+
+function applyAddNode(
+  out: AddNodeOutput,
+  input: Record<string, unknown>,
+  editor: ReactFlowInstance | null,
+  queryClient: QueryClient,
+) {
+  if (!out.nodeId || !out.type) return;
+
+  const newNode = {
+    id: out.nodeId,
+    type: out.type,
+    position: (input.position as { x: number; y: number }) ?? { x: 0, y: 0 },
+    data: (input.data as Record<string, unknown>) ?? {},
+  };
+
+  editor?.setNodes((nodes) => {
+    if (nodes.some((n) => n.id === out.nodeId)) return nodes;
+    return [...nodes, newNode];
+  });
+
+  const workflowId = input.workflowId as string | undefined;
+  if (workflowId) {
+    queryClient.invalidateQueries({
+      queryKey: orpc.workflow.getOne.queryKey({ input: { workflowId } }),
+    });
+  }
+}
+
+function applyConnectNodes(
+  out: ConnectNodesOutput,
+  input: Record<string, unknown>,
+  editor: ReactFlowInstance | null,
+) {
+  if (!out.connectionId) return;
+
+  const newEdge = {
+    id: out.connectionId,
+    source: input.fromNodeId as string,
+    target: input.toNodeId as string,
+    sourceHandle: "source-1",
+    targetHandle: "target-1",
+  };
+
+  editor?.setEdges((edges) => {
+    if (edges.some((e) => e.id === out.connectionId)) return edges;
+    return [...edges, newEdge];
+  });
+}
+
 /**
  * Picks only the Lead fields that are safe to patch directly from the AI
  * tool's input (the input echoes the fields that were updated).
@@ -130,6 +210,9 @@ function sanitizeLeadPatch(input: Record<string, unknown>): Partial<Lead> {
 // ---------------------------------------------------------------------------
 
 export function useTrackingAi(trackingId: string) {
+  const queryClient = useQueryClient();
+  const editor = useAtomValue(editorAtom);
+
   const {
     messages,
     status,
@@ -174,6 +257,15 @@ export function useTrackingAi(trackingId: string) {
             break;
           case "moveLeadToStatus":
             applyMoveLead(output as MoveLeadOutput);
+            break;
+          case "createWorkflow":
+            applyCreateWorkflow(trackingId, queryClient);
+            break;
+          case "addNode":
+            applyAddNode(output as AddNodeOutput, input, editor, queryClient);
+            break;
+          case "connectNodes":
+            applyConnectNodes(output as ConnectNodesOutput, input, editor);
             break;
         }
       }

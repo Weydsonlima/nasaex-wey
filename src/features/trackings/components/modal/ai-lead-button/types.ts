@@ -1,5 +1,6 @@
 export interface AiLeadButtonProps {
   trackingId: string;
+  children: React.ReactNode;
 }
 
 export interface ViewLeadButtonProps {

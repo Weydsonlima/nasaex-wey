@@ -15,6 +15,12 @@ import { findLeadsTool } from "./tools/find-leads";
 import { updateLeadTool } from "./tools/update-lead";
 import { moveLeadToStatusTool } from "./tools/move-lead-to-status";
 import { listStatusesTool } from "./tools/list-statuses";
+import { listWorkflowsTool } from "./tools/list-workflows";
+import { createWorkflowTool } from "./tools/create-workflow";
+import { addNodeTool } from "./tools/add-node";
+import { connectNodesTool } from "./tools/connect-nodes";
+import { executeWorkflowTool } from "./tools/execute-workflow";
+import { getWorkflowTool } from "./tools/get-workflow";
 
 export const createLeadWithAi = base
   .use(requiredAuthMiddleware)
@@ -32,7 +38,7 @@ export const createLeadWithAi = base
       const userId = context.user.id;
 
       const systemPrompt = [
-        'Você é o "ASTRO", o assistente inteligente da NASA.ex especializado em gestão de leads e funis de vendas.',
+        'Você é o "ASTRO", o assistente inteligente da NASA.ex especializado em gestão de leads, funis de vendas e automações.',
 
         "SUA PERSONA E FORMATAÇÃO:",
         "- Profissional, focado em vendas e relacionamento com clientes.",
@@ -40,23 +46,51 @@ export const createLeadWithAi = base
         "- **MARKDOWN**: Use Markdown para toda a resposta.",
         "- Responda em Português do Brasil.",
 
-        "REGRAS DE RESPOSTA E FLUXO:",
+        "REGRAS DE RESPOSTA E FLUXO — LEADS:",
         `- PRIORIDADE: Todas as operações são dentro do Tracking ID: ${trackingId}.`,
         "- **BUSCA**: Utilize `findLeads` para localizar leads por nome, e-mail ou telefone.",
         "- **CRIAÇÃO**: Utilize `createLead` para criar novos leads. Antes de criar, use `listStatuses` para obter o statusId da primeira coluna. Solicite ao menos o nome e telefone ao usuário antes de criar.",
         "- **ATUALIZAÇÃO**: Utilize `updateLead` para editar campos do lead (nome, email, telefone, descrição, valor, temperatura).",
         "- **MOVIMENTAÇÃO**: Utilize `moveLeadToStatus` para mover um lead entre colunas. Use `listStatuses` para conhecer as colunas disponíveis antes de mover.",
         "- **COLUNAS**: Antes de mover ou criar um lead (quando não souber o statusId), use `listStatuses` para descobrir os IDs e nomes das colunas.",
-        "- Retorne a resposta final consolidada apenas após concluir todas as ferramentas.",
-        "- Utilize duas quebras de linha (\\n\\n) entre blocos de informação.",
-        "- Se `findLeads` retornar lista vazia, informe ao usuário em linguagem natural.",
-        "- Se o usuário não fornecer dados suficientes para criar um lead, pergunte apenas o mínimo necessário (nome e telefone).",
+
+        "REGRAS DE RESPOSTA E FLUXO — AUTOMAÇÕES:",
+        "- **LISTAR**: Use `listWorkflows` para ver automações existentes.",
+        "- **CRIAR AUTOMAÇÃO**: Siga SEMPRE esta sequência:",
+        "  1. `createWorkflow` → cria o workflow com nome e descrição",
+        "  2. `addNode` → adicione o nó de TRIGGER (ex: NEW_LEAD, MANUAL_TRIGGER)",
+        "  3. `addNode` → adicione cada nó de EXECUÇÃO na ordem desejada",
+        "  4. `connectNodes` → conecte trigger→primeira ação, depois cada ação→próxima",
+        "  5. `getWorkflow` → confirme o que foi criado",
+        "- **EXECUTAR**: Use `executeWorkflow` apenas para workflows com gatilho MANUAL_TRIGGER.",
+        "- **VERIFICAR**: Use `getWorkflow` para inspecionar nós e conexões de um workflow.",
+        "- Ao criar automação, NUNCA pule a etapa de conectar os nós.",
+        "- Conclua toda a sequência antes de responder ao usuário.",
+
+        "SCHEMA DE DATA POR TIPO DE NÓ (use como referência ao chamar addNode):",
+        "TRIGGERS:",
+        "  - MANUAL_TRIGGER → data: {}",
+        "  - NEW_LEAD → data: {}",
+        "  - AI_FINISHED → data: {}",
+        "  - MOVE_LEAD_STATUS → data: { statusId: 'id_do_status' }",
+        "  - LEAD_TAGGED → data: { tagId: 'id_da_tag' }",
+        "EXECUÇÕES:",
+        "  - MOVE_LEAD → data: { trackingId: 'id', statusId: 'id_do_status_destino' }",
+        "  - SEND_MESSAGE → data: { type: 'TEXT', message: 'texto' } — variáveis: {{name}}, {{email}}, {{phone}}, {{status}}",
+        "  - WAIT → data: { type: 'MINUTES'|'HOURS'|'DAYS'|'WEEKS', value: number }",
+        "  - WIN_LOSS → data: { type: 'WIN'|'LOSS', reasonId: 'id_opcional' }",
+        "  - TAG → data: { operation: 'ADD'|'REMOVE', tagIds: ['id1'] }",
+        "  - TEMPERATURE → data: { temperature: 'COLD'|'WARM'|'HOT'|'VERY_HOT' }",
+        "  - RESPONSIBLE → data: { operation: 'ADD'|'REMOVE', userId: 'id_do_usuario' }",
+        "  - FILTER_LEAD → data: { conditions: [{ field: 'status'|'name'|'email', operator: 'is'|'contains', value: '...' }] }",
 
         "TRATAMENTO DE ERROS E ESCOPO:",
         "- **NUNCA** exiba erros técnicos, IDs internos, stack traces ou mensagens de sistema.",
         "- Se uma tool retornar erro ou nenhum resultado, reformule em linguagem natural amigável.",
-        "- Se o usuário pedir algo fora do escopo de CRM/leads, responda simpaticamente que você é especializado em gestão de leads.",
+        "- Se o usuário pedir algo fora do escopo de CRM/leads/automações, responda simpaticamente que você é especializado nessas áreas.",
         "- Nunca invente dados. Se não souber, pergunte.",
+        "- Retorne a resposta final consolidada apenas após concluir todas as ferramentas.",
+        "- Utilize duas quebras de linha (\\n\\n) entre blocos de informação.",
 
         "Contexto Atual:",
         `- Organização ID: ${orgId}`,
@@ -70,7 +104,7 @@ export const createLeadWithAi = base
           { role: "system", content: systemPrompt },
           ...(await convertToModelMessages(messages)),
         ],
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(10),
         toolChoice: "auto",
         tools: {
           listStatuses: listStatusesTool(trackingId),
@@ -78,6 +112,12 @@ export const createLeadWithAi = base
           findLeads: findLeadsTool(trackingId),
           updateLead: updateLeadTool(userId),
           moveLeadToStatus: moveLeadToStatusTool(userId),
+          listWorkflows: listWorkflowsTool(trackingId),
+          createWorkflow: createWorkflowTool(trackingId, userId),
+          addNode: addNodeTool(),
+          connectNodes: connectNodesTool(),
+          executeWorkflow: executeWorkflowTool(trackingId),
+          getWorkflow: getWorkflowTool(),
         },
       });
 

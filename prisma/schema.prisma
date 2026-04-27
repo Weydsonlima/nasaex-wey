@@ -1,4 +1,3 @@
-
 generator client {
   provider      = "prisma-client"
   output        = "../src/generated/prisma"
@@ -10,63 +9,74 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String
-  emailVerified   Boolean   @default(false)
-  nickname        String?
-  image           String?
-  isSystemAdmin   Boolean   @default(false) @map("is_system_admin")
-  isActive              Boolean    @default(true)   @map("is_active")
-  onboardingCompletedAt DateTime?                   @map("onboarding_completed_at")
+  id                    String    @id @default(cuid())
+  name                  String
+  email                 String
+  emailVerified         Boolean   @default(false)
+  nickname              String?
+  image                 String?
+  isSystemAdmin         Boolean   @default(false) @map("is_system_admin")
+  isActive              Boolean   @default(true) @map("is_active")
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  sessions              Session[]
+  accounts              Account[]
 
-  members                 Member[]
-  invitations             Invitation[]
-  inviteLinksCreated      OrganizationInviteLink[] @relation("InviteLinksCreated")
-  trackings               TrackingParticipant[]
-  leadHistories           LeadHistory[]
-  participantOnActions    ActionsUserParticipant[]
-  responsibleOnActions    ActionsUserResponsible[]
-  actions                 Action[]
-  responsibleOnSubActions SubActionUserResponsible[]
-  responsibleOnLeads      Lead[]  @relation("LeadResponsible")
-  worflows Workflow[]
-  workspaceWorkflows WorkspaceWorkflow[]
-  forms    Form[]
-  leadFiles LeadFile[]
-  insightShares InsightShares[]
-  agendaResponsibles AgendaResponsible[]
-  appointments Appointment[]
-  trackingConsultants TrackingConsultant[]
-  forgeProductsCreated  ForgeProduct[]          @relation("ForgeProductCreatedBy")
-  forgeProposalsResp    ForgeProposal[]         @relation("ForgeProposalResponsible")
-  forgeProposalsCreated ForgeProposal[]         @relation("ForgeProposalCreatedBy")
-  forgeContractsCreated ForgeContract[]         @relation("ForgeContractCreatedBy")
-  forgeTemplatesCreated ForgeContractTemplate[] @relation("ForgeTemplateCreatedBy")
-  nboxFoldersCreated NBoxFolder[] @relation("NBoxFolderCreatedBy")
-  nboxItemsCreated   NBoxItem[]   @relation("NBoxItemCreatedBy")
-  nasaPlannerPostsCreated NasaPlannerPost[] @relation("NasaPlannerPostCreatedBy")
-  actionSharesRequested   ActionShare[]     @relation("ShareRequester")
-  workspacesCreated     Workspace[]
-  workspacesMembers     WorkspaceMember[]
-  userNotifications     UserNotification[]
-  notificationPrefs     UserNotificationPreference[]
-  sidebarPrefs          UserSidebarPreference[]
-  spacePoints           UserSpacePoint[]
-  memberStarBudgets     MemberStarBudget[]
-  paymentEntriesCreated PaymentEntry[] @relation("PaymentEntryCreatedBy")
-  paymentAccess         PaymentAccess[] @relation("PaymentAccessUser")
-  paymentAccessGranted  PaymentAccess[] @relation("PaymentAccessAuthorizer")
-  nasaCampaignPlannersCreated NasaCampaignPlanner[] @relation("NasaCampaignPlannerCreatedBy")
-  nasaCampaignOnboardingsResponsible NasaCampaignOnboarding[] @relation("NasaCampaignOnboardingResponsible")
-  nasaCampaignTasksAssigned NasaCampaignTask[] @relation("NasaCampaignTaskAssignee")
-  supportTickets SupportTicket[]
-  stripeCustomerId String? @map("stripe_customer_id")
+  members                            Member[]
+  invitations                        Invitation[]
+  inviteLinksCreated                 OrganizationInviteLink[]     @relation("InviteLinksCreated")
+  trackings                          TrackingParticipant[]
+  leadHistories                      LeadHistory[]
+  participantOnActions               ActionsUserParticipant[]
+  responsibleOnActions               ActionsUserResponsible[]
+  actions                            Action[]
+  responsibleOnSubActions            SubActionUserResponsible[]
+  responsibleOnLeads                 Lead[]                       @relation("LeadResponsible")
+  worflows                           Workflow[]
+  workspaceWorkflows                 WorkspaceWorkflow[]
+  forms                              Form[]
+  leadFiles                          LeadFile[]
+  insightShares                      InsightShares[]
+  agendaResponsibles                 AgendaResponsible[]
+  appointments                       Appointment[]
+  trackingConsultants                TrackingConsultant[]
+  forgeProductsCreated               ForgeProduct[]               @relation("ForgeProductCreatedBy")
+  forgeProposalsResp                 ForgeProposal[]              @relation("ForgeProposalResponsible")
+  forgeProposalsCreated              ForgeProposal[]              @relation("ForgeProposalCreatedBy")
+  forgeContractsCreated              ForgeContract[]              @relation("ForgeContractCreatedBy")
+  forgeTemplatesCreated              ForgeContractTemplate[]      @relation("ForgeTemplateCreatedBy")
+  nboxFoldersCreated                 NBoxFolder[]                 @relation("NBoxFolderCreatedBy")
+  nboxItemsCreated                   NBoxItem[]                   @relation("NBoxItemCreatedBy")
+  nasaPlannerPostsCreated            NasaPlannerPost[]            @relation("NasaPlannerPostCreatedBy")
+  actionSharesRequested              ActionShare[]                @relation("ShareRequester")
+  workspacesCreated                  Workspace[]
+  workspacesMembers                  WorkspaceMember[]
+  userNotifications                  UserNotification[]
+  notificationPrefs                  UserNotificationPreference[]
+  sidebarPrefs                       UserSidebarPreference[]
+  spacePoints                        UserSpacePoint[]
+  memberStarBudgets                  MemberStarBudget[]
+  paymentEntriesCreated              PaymentEntry[]               @relation("PaymentEntryCreatedBy")
+  paymentAccess                      PaymentAccess[]              @relation("PaymentAccessUser")
+  paymentAccessGranted               PaymentAccess[]              @relation("PaymentAccessAuthorizer")
+  nasaCampaignPlannersCreated        NasaCampaignPlanner[]        @relation("NasaCampaignPlannerCreatedBy")
+  nasaCampaignOnboardingsResponsible NasaCampaignOnboarding[]     @relation("NasaCampaignOnboardingResponsible")
+  nasaCampaignTasksAssigned          NasaCampaignTask[]           @relation("NasaCampaignTaskAssignee")
+  supportTickets                     SupportTicket[]
+  stripeCustomerId                   String?                      @map("stripe_customer_id")
 
+  linnkerPages           LinnkerPage[]
+  spaceStation           SpaceStation?
+  stationAccessRequests  StationAccessRequest[]
+  worldTemplates         WorldTemplate[]
+  avatarTemplates        AvatarTemplate[]
+  connectionsAsUser      UserConnection[]       @relation("UserConnectionsAsUser")
+  connectionsAsConnected UserConnection[]       @relation("UserConnectionsAsConnected")
+  nasaPages              NasaPage[]
+  actionLikes            ActionLike[]
+  publicActionShares     PublicActionShare[]    @relation("PublicActionShareSharer")
+  actionReminders        ActionReminder[]       @relation("ActionReminderUser")
 
   @@unique([email])
   @@map("user")
@@ -86,8 +96,8 @@ model Session {
   activeOrganizationId String?
 
   @@unique([token])
-  @@map("session")
   @@index([userId])
+  @@map("session")
 }
 
 model Account {
@@ -106,8 +116,8 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  @@map("account")
   @@index([userId])
+  @@map("account")
 }
 
 model Verification {
@@ -118,12 +128,12 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
-  @@map("verification")
   @@index([identifier])
+  @@map("verification")
 }
 
 model Organization {
-  id          String       @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   slug        String
   logo        String?
@@ -134,51 +144,51 @@ model Organization {
   companyCep   String?  @map("company_cep")
 
   // ── STARS ──────────────────────────────────
-  planId                String?   @map("plan_id")
-  starsBalance          Int       @default(0)   @map("stars_balance")
-  starsCycleStart       DateTime? @map("stars_cycle_start")
-  starsAlertConfig      Json      @default("{}") @map("stars_alert_config")
-  starDistributionMode  String    @default("org") @map("star_distribution_mode")
+  planId               String?   @map("plan_id")
+  starsBalance         Int       @default(0) @map("stars_balance")
+  starsCycleStart      DateTime? @map("stars_cycle_start")
+  starsAlertConfig     Json      @default("{}") @map("stars_alert_config")
+  starDistributionMode String    @default("org") @map("star_distribution_mode")
   // "org"    = pool compartilhado (padrão)
   // "equal"  = dividido igualmente entre usuários ativos
   // "custom" = orçamento personalizado por usuário
 
-  members     Member[]
-  invitations Invitation[]
-  inviteLinks OrganizationInviteLink[]
-  trackings   Tracking[]
-  tags        Tag[]
-  whatsappInstances    WhatsAppInstance[]
-  actions              Action[]
-  insightShares        InsightShares[]
-  agendas              Agenda[]
-  widgets              Widget[]
-  platformIntegrations PlatformIntegration[]
-  forgeProducts        ForgeProduct[]
-  forgeProposals       ForgeProposal[]
-  forgeContracts       ForgeContract[]
-  forgeTemplates       ForgeContractTemplate[]
-  forgeSettings        ForgeSettings?
-  plan                 Plan?                  @relation(fields: [planId], references: [id], onDelete: SetNull)
-  starTransactions     StarTransaction[]
-  workspaceIntegrations WorkspaceIntegration[]
-  memberStarBudgets    MemberStarBudget[]
-  nboxFolders      NBoxFolder[]
-  nboxItems        NBoxItem[]
-  nasaPlanners        NasaPlanner[]
-  orgPermissions   OrgPermission[]
-  activityLogs     OrgActivityLog[]
-  systemActivityLogs SystemActivityLog[]
-  userPresences      UserPresence[]
-  workspaces  Workspace[]
-  form        Form[]
-  workspaceFolders WorkspaceFolder[]
-  sentShares       ActionShare[]     @relation("SentShares")
-  receivedShares   ActionShare[]     @relation("ReceivedShares")
-  starRules        StarRule[]
-  spacePoints      UserSpacePoint[]
+  members                Member[]
+  invitations            Invitation[]
+  inviteLinks            OrganizationInviteLink[]
+  trackings              Tracking[]
+  tags                   Tag[]
+  whatsappInstances      WhatsAppInstance[]
+  actions                Action[]
+  insightShares          InsightShares[]
+  agendas                Agenda[]
+  widgets                Widget[]
+  platformIntegrations   PlatformIntegration[]
+  forgeProducts          ForgeProduct[]
+  forgeProposals         ForgeProposal[]
+  forgeContracts         ForgeContract[]
+  forgeTemplates         ForgeContractTemplate[]
+  forgeSettings          ForgeSettings?
+  plan                   Plan?                    @relation(fields: [planId], references: [id], onDelete: SetNull)
+  starTransactions       StarTransaction[]
+  workspaceIntegrations  WorkspaceIntegration[]
+  memberStarBudgets      MemberStarBudget[]
+  nboxFolders            NBoxFolder[]
+  nboxItems              NBoxItem[]
+  nasaPlanners           NasaPlanner[]
+  orgPermissions         OrgPermission[]
+  activityLogs           OrgActivityLog[]
+  systemActivityLogs     SystemActivityLog[]
+  userPresences          UserPresence[]
+  workspaces             Workspace[]
+  form                   Form[]
+  workspaceFolders       WorkspaceFolder[]
+  sentShares             ActionShare[]            @relation("SentShares")
+  receivedShares         ActionShare[]            @relation("ReceivedShares")
+  starRules              StarRule[]
+  spacePoints            UserSpacePoint[]
   spacePointTransactions SpacePointTransaction[]
-  spacePointPrizes SpacePointRankingPrize[]
+  spacePointPrizes       SpacePointRankingPrize[]
 
   // NASA Payment
   paymentBankAccounts PaymentBankAccount[]
@@ -197,15 +207,34 @@ model Organization {
   // Client Onboarding
   clientOnboardingProcesses ClientOnboardingProcess[]
 
+  // Linnker
+  linnkerPages LinnkerPage[]
+
+  // NASA Pages
+  nasaPages NasaPage[]
+
+  // Space Station
+  spaceStation SpaceStation?
+
   // Marca / Brand
-  brandSlogan         String?  @map("brand_slogan")
-  brandWebsite        String?  @map("brand_website")
-  brandIcp            String?  @map("brand_icp")
-  brandPositioning    String?  @map("brand_positioning")
-  brandVoiceTone      String?  @map("brand_voice_tone")
-  brandVisual         Json     @default("{}") @map("brand_visual")
-  brandAiInstructions String?  @map("brand_ai_instructions")
-  brandSwot           Json     @default("{}") @map("brand_swot")
+  brandSlogan         String? @map("brand_slogan")
+  brandWebsite        String? @map("brand_website")
+  brandIcp            String? @map("brand_icp")
+  brandPositioning    String? @map("brand_positioning")
+  brandVoiceTone      String? @map("brand_voice_tone")
+  brandVisual         Json    @default("{}") @map("brand_visual")
+  brandAiInstructions String? @map("brand_ai_instructions")
+  brandSwot           Json    @default("{}") @map("brand_swot")
+
+  // ── Localização (para diretório Empresas no mapa) ──
+  addressLine String?   @map("address_line")
+  city        String?
+  state       String?
+  postalCode  String?   @map("postal_code")
+  country     String?   @default("BR")
+  latitude    Float?
+  longitude   Float?
+  geocodedAt  DateTime? @map("geocoded_at")
 
   @@unique([slug])
   @@map("organization")
@@ -218,7 +247,7 @@ model Member {
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   role           String
-  cargo          String?  @map("cargo")
+  cargo          String?      @map("cargo")
   createdAt      DateTime
 
   @@unique([userId, organizationId])
@@ -240,9 +269,9 @@ model Invitation {
 
   createdAt DateTime @default(now())
 
-  @@map("invitation")
   @@index([organizationId])
   @@index([email])
+  @@map("invitation")
 }
 
 model OrganizationInviteLink {
@@ -260,9 +289,9 @@ model OrganizationInviteLink {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User         @relation("InviteLinksCreated", fields: [createdById], references: [id], onDelete: Cascade)
 
-  @@map("organization_invite_link")
   @@index([organizationId])
   @@index([token])
+  @@map("organization_invite_link")
 }
 
 // ─────────────────────────────────────────────
@@ -270,51 +299,51 @@ model OrganizationInviteLink {
 // ─────────────────────────────────────────────
 
 model Tracking {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  organizationId String   @map("organization_id")
-  orgProjectId   String?  @map("org_project_id")
-  isArchived     Boolean  @default(false) @map("is_archived")
-  archivedAt     DateTime? @map("archived_at")
-  globalAiActive Boolean  @default(false) @map("global_ai_active")
-  isTemplate     Boolean  @default(false) @map("is_template")
-  templateMarkedByModerator Boolean @default(false) @map("template_marked_by_moderator")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                        String    @id @default(cuid())
+  name                      String
+  description               String?
+  organizationId            String    @map("organization_id")
+  orgProjectId              String?   @map("org_project_id")
+  isArchived                Boolean   @default(false) @map("is_archived")
+  archivedAt                DateTime? @map("archived_at")
+  globalAiActive            Boolean   @default(false) @map("global_ai_active")
+  isTemplate                Boolean   @default(false) @map("is_template")
+  templateMarkedByModerator Boolean   @default(false) @map("template_marked_by_moderator")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
 
   // Relacionamentos
-  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  orgProject     OrgProject?           @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
-  participants   TrackingParticipant[]
-  status         Status[]
-  leads          Lead[]
-  tags           Tag[]
-  winLossReasons WinLossReason[]
-  actions        Action[]
-  workflows      Workflow[]
-  forms          FormSettings[]
-  whatsappInstance WhatsAppInstance?
-  conversations  Conversation[]
-  agendas        Agenda[]
-  appointments   Appointment[]
-  aiSettings     AiSettings?
+  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orgProject          OrgProject?           @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  participants        TrackingParticipant[]
+  status              Status[]
+  leads               Lead[]
+  tags                Tag[]
+  winLossReasons      WinLossReason[]
+  actions             Action[]
+  workflows           Workflow[]
+  forms               FormSettings[]
+  whatsappInstance    WhatsAppInstance?
+  conversations       Conversation[]
+  agendas             Agenda[]
+  appointments        Appointment[]
+  aiSettings          AiSettings?
   trackingConsultants TrackingConsultant[]
-  workspaces     Workspace[]
-  scripts        Script[]
+  workspaces          Workspace[]
+  scripts             Script[]
 
   @@map("tracking")
 }
 
 model AiSettings {
-  id String @id @default(cuid())
-  prompt String
-  assistantName String? @map("assistant_name")
+  id             String  @id @default(cuid())
+  prompt         String
+  assistantName  String? @map("assistant_name")
   finishSentence String? @map("finish_sentence")
   isAudioEnabled Boolean @default(false) @map("is_audio_enabled")
 
-  trackingId String @unique
-  tracking Tracking @relation(fields: [trackingId], references: [id])
+  trackingId String   @unique
+  tracking   Tracking @relation(fields: [trackingId], references: [id])
 
   @@map("ai_setting")
 }
@@ -346,14 +375,14 @@ model WinLossReason {
 }
 
 model TrackingConsultant {
-  id         String   @id @default(cuid())
-  trackingId String   @map("tracking_id")
-  userId     String   @map("user_id")
-  maxFlow    Int      @default(0)   @map("max_flow")
-  isActive   Boolean  @default(true)
+  id         String  @id @default(cuid())
+  trackingId String  @map("tracking_id")
+  userId     String  @map("user_id")
+  maxFlow    Int     @default(0) @map("max_flow")
+  isActive   Boolean @default(true)
 
-  tracking Tracking @relation( fields: [trackingId], references: [id], onDelete: Cascade)  
-  user     User     @relation( fields: [userId], references: [id], onDelete: Cascade)
+  tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, trackingId])
   @@map("tracking_consultant")
@@ -367,7 +396,7 @@ model TrackingParticipant {
   createdAt  DateTime        @default(now()) @map("created_at")
   tracking   Tracking        @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, trackingId])
   @@map("tracking_participant")
 }
@@ -383,14 +412,14 @@ model Status {
   id         String   @id @default(cuid())
   name       String
   color      String?  @default("#1447e6")
-  order      Decimal  @db.Decimal(20, 10) @default(0)
+  order      Decimal  @default(0) @db.Decimal(20, 10)
   trackingId String   @map("tracking_id")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
-  leads    Lead[]
+  tracking     Tracking       @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+  leads        Lead[]
   FormSettings FormSettings[]
 
   @@index([trackingId, order])
@@ -445,28 +474,29 @@ enum Temperature {
 }
 
 enum StatusFlow {
+  NEW
   ACTIVE
   WAITING
   FINISHED
-} 
+}
 
 model Lead {
-  id          String  @id @default(cuid())
-  name        String
-  email       String?
-  phone       String?
-  document    String?
-  profile     String?
-  description String?
-  statusId    String  @map("status_id")
-  trackingId  String  @map("tracking_id")
-  responsibleId String? @map("responsible_id")
-  orgProjectId  String? @map("org_project_id")
-  order      Decimal @db.Decimal(20, 10) @default(0)
-  source      LeadSource @default(DEFAULT)
-  temperature Temperature @default(COLD)
-  amount Decimal @db.Decimal(15, 2) @default(0)
-  statusFlow StatusFlow @default(ACTIVE) @map("status_flow")
+  id            String      @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  document      String?
+  profile       String?
+  description   String?
+  statusId      String      @map("status_id")
+  trackingId    String      @map("tracking_id")
+  responsibleId String?     @map("responsible_id")
+  orgProjectId  String?     @map("org_project_id")
+  order         Decimal     @default(0) @db.Decimal(20, 10)
+  source        LeadSource  @default(DEFAULT)
+  temperature   Temperature @default(COLD)
+  amount        Decimal     @default(0) @db.Decimal(15, 2)
+  statusFlow    StatusFlow  @default(ACTIVE) @map("status_flow")
 
   currentAction LeadAction @default(ACTIVE) @map("current_action")
   isActive      Boolean    @default(true) @map("is_active")
@@ -476,22 +506,24 @@ model Lead {
   closedAt  DateTime? @map("closed_at")
 
   // Relacionamentos
-  status   Status   @relation(fields: [statusId], references: [id], onDelete: Cascade)
-  tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
-  responsible User? @relation("LeadResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
-  orgProject OrgProject? @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  status      Status      @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  tracking    Tracking    @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+  responsible User?       @relation("LeadResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
+  orgProject  OrgProject? @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
 
-  conversation Conversation? 
+  conversation Conversation?
 
-  leadTags LeadTag[]
-  history  LeadHistory[]
-  files    LeadFile[]
-  actions  Action[]
-  appointments Appointment[]
-  forgeProposals ForgeProposal[]
-  formResponses FormResponses[]
+  leadTags                  LeadTag[]
+  history                   LeadHistory[]
+  files                     LeadFile[]
+  actions                   Action[]
+  appointments              Appointment[]
+  forgeProposals            ForgeProposal[]
+  formResponses             FormResponses[]
   clientOnboardingProcesses ClientOnboardingProcess[]
+  linnkerScans              LinnkerScan[]
 
+  @@unique([phone, trackingId])
   @@index([trackingId])
   @@index([statusId, order])
   @@index([email])
@@ -500,7 +532,6 @@ model Lead {
   @@index([currentAction])
   @@index([isActive])
   @@index([responsibleId])
-  @@unique([phone, trackingId])
   @@map("leads")
 }
 
@@ -513,7 +544,7 @@ model Tag {
   icon           String?
   type           TagType  @default(CUSTOM)
   organizationId String   @map("organization_id")
-  trackingId     String?  @map("tracking_id") 
+  trackingId     String?  @map("tracking_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -552,11 +583,11 @@ model LeadFile {
   fileUrl   String   @map("file_url")
   mimeType  String   @map("mime_type")
   createdAt DateTime @default(now()) @map("created_at")
-  name String
+  name      String
 
   createdBy String? @map("created_by")
-  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  creator   User?   @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  lead      Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([createdBy])
@@ -581,43 +612,61 @@ enum ActionPriority {
   URGENT
 }
 
+enum EventCategory {
+  WORKSHOP
+  PALESTRA
+  LANCAMENTO
+  WEBINAR
+  NETWORKING
+  CURSO
+  REUNIAO
+  HACKATHON
+  CONFERENCIA
+  OUTRO
+}
+
+enum ReminderChannel {
+  WHATSAPP
+  EMAIL
+}
+
 model Workspace {
-  id        String  @id @default(cuid())
-  name      String
-  description String?
-  color          String?  @default("#1447e6")
-  icon           String?
-  coverImage     String?
-  isArchived     Boolean @default(false)  @map("is_archived")
-  order          Int      @default(0)
-  isTemplate     Boolean  @default(false) @map("is_template")
+  id                        String  @id @default(cuid())
+  name                      String
+  description               String?
+  color                     String? @default("#1447e6")
+  icon                      String?
+  coverImage                String?
+  isArchived                Boolean @default(false) @map("is_archived")
+  order                     Int     @default(0)
+  isTemplate                Boolean @default(false) @map("is_template")
   templateMarkedByModerator Boolean @default(false) @map("template_marked_by_moderator")
 
-  organizationId String   @map("organization_id")
-  trackingId     String?  @map("tracking_id")   // opcional
-  orgProjectId   String?  @map("org_project_id")
-  createdBy      String   @map("created_by")
+  organizationId String  @map("organization_id")
+  trackingId     String? @map("tracking_id") // opcional
+  orgProjectId   String? @map("org_project_id")
+  createdBy      String  @map("created_by")
 
-  createdAt      DateTime @default(now())        @map("created_at")
-  updatedAt      DateTime @updatedAt             @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  tracking       Tracking?     @relation(fields: [trackingId],     references: [id], onDelete: SetNull)
-  orgProject     OrgProject?   @relation(fields: [orgProjectId],   references: [id], onDelete: SetNull)
-  creator        User          @relation(fields: [createdBy],      references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tracking     Tracking?    @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+  orgProject   OrgProject?  @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  creator      User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  columns        WorkspaceColumn[]
-  members        WorkspaceMember[]
-  actions        Action[]
+  columns WorkspaceColumn[]
+  members WorkspaceMember[]
+  actions Action[]
 
-  backgroundImage    String?  @map("background_image")
-  backgroundColor    String?  @map("background_color")
-  visibility         String   @default("PRIVATE") @map("visibility")
-  archivedAt         DateTime? @map("archived_at")
-  tags               WorkspaceTag[]
-  automations        WorkspaceAutomation[]
-  workflows          WorkspaceWorkflow[]
-  folderItems        WorkspaceFolderItem[]
+  backgroundImage String?               @map("background_image")
+  backgroundColor String?               @map("background_color")
+  visibility      String                @default("PRIVATE") @map("visibility")
+  archivedAt      DateTime?             @map("archived_at")
+  tags            WorkspaceTag[]
+  automations     WorkspaceAutomation[]
+  workflows       WorkspaceWorkflow[]
+  folderItems     WorkspaceFolderItem[]
 
   @@index([organizationId])
   @@index([trackingId])
@@ -627,13 +676,13 @@ model Workspace {
 }
 
 model WorkspaceColumn {
-  id        String  @id @default(cuid())
-  name      String
-  color     String? @default("#1447e6")
-  order     Decimal @db.Decimal(20, 10) @default(0)
+  id          String  @id @default(cuid())
+  name        String
+  color       String? @default("#1447e6")
+  order       Decimal @default(0) @db.Decimal(20, 10)
   workspaceId String  @map("workspace_id")
 
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   actions   Action[]
 
   @@index([workspaceId, order])
@@ -641,14 +690,14 @@ model WorkspaceColumn {
 }
 
 model WorkspaceMember {
-  id        String            @id @default(cuid())
-  workspaceId String            @map("workspace_id")
-  userId    String            @map("user_id")
-  role      WorkspaceMemberRole @default(MEMBER)
-  createdAt DateTime          @default(now()) @map("created_at")
+  id          String              @id @default(cuid())
+  workspaceId String              @map("workspace_id")
+  userId      String              @map("user_id")
+  role        WorkspaceMemberRole @default(MEMBER)
+  createdAt   DateTime            @default(now()) @map("created_at")
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User    @relation(fields: [userId],    references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([workspaceId])
@@ -689,53 +738,79 @@ enum TypeAction {
 }
 
 model Action {
-  id             String     @id @default(cuid())
-  title          String
-  description    String?
-  score          Int        @default(0)
-  isDone         Boolean    @default(false) @map("is_done")
-  type           TypeAction @default(TASK)
-  priority       ActionPriority  @default(NONE)
-  order          Decimal @db.Decimal(20, 10) @default(0)
-  dueDate        DateTime?  @map("due_date")
-  startDate      DateTime?  @map("start_date")
-  endDate        DateTime?  @map("end_date")
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  score       Int            @default(0)
+  isDone      Boolean        @default(false) @map("is_done")
+  type        TypeAction     @default(TASK)
+  priority    ActionPriority @default(NONE)
+  order       Decimal        @default(0) @db.Decimal(20, 10)
+  dueDate     DateTime?      @map("due_date")
+  startDate   DateTime?      @map("start_date")
+  endDate     DateTime?      @map("end_date")
 
-  workspaceId    String     @map("workspace_id")
-  columnId       String?    @map("column_id")
+  workspaceId String  @map("workspace_id")
+  columnId    String? @map("column_id")
 
-  trackingId     String?    @map("tracking_id")
-  organizationId String?    @map("organization_id")
-  createdBy      String     @map("created_by")
-  leadId         String?    @map("lead_id")
-  orgProjectId   String?    @map("org_project_id")
+  trackingId     String? @map("tracking_id")
+  organizationId String? @map("organization_id")
+  createdBy      String  @map("created_by")
+  leadId         String? @map("lead_id")
+  orgProjectId   String? @map("org_project_id")
 
-  closedAt       DateTime?  @map("closed_at")
-  createdAt      DateTime   @default(now()) @map("created_at")
+  closedAt  DateTime? @map("closed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
-  user         User          @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  tracking     Tracking?     @relation(fields: [trackingId], references: [id], onDelete: SetNull)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  orgProject   OrgProject?   @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  lead         Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  tracking     Tracking?        @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+  organization Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  orgProject   OrgProject?      @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   column       WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
 
   participants ActionsUserParticipant[]
   responsibles ActionsUserResponsible[]
   subActions   SubActions[]
 
-  attachments      Json      @default("[]") @map("attachments")
-  links            Json      @default("[]") @map("links")
-  youtubeUrl       String?   @map("youtube_url")
-  coverImage       String?   @map("cover_image")
-  isArchived       Boolean   @default(false) @map("is_archived")
-  isFavorited      Boolean   @default(false) @map("is_favorited")
-  history          Json      @default("[]") @map("history")
-  tags             ActionTag[]
-  mirrorsAsSource  ActionMirror[] @relation("SourceMirror")
-  mirrorOf         ActionMirror?  @relation("MirrorOf")
-  sharedFrom       ActionShare[]  @relation("SharedAction")
+  attachments     Json           @default("[]") @map("attachments")
+  links           Json           @default("[]") @map("links")
+  youtubeUrl      String?        @map("youtube_url")
+  coverImage      String?        @map("cover_image")
+  isArchived      Boolean        @default(false) @map("is_archived")
+  isFavorited     Boolean        @default(false) @map("is_favorited")
+  history         Json           @default("[]") @map("history")
+  tags            ActionTag[]
+  mirrorsAsSource ActionMirror[] @relation("SourceMirror")
+  mirrorOf        ActionMirror?  @relation("MirrorOf")
+  sharedFrom      ActionShare[]  @relation("SharedAction")
+
+  // ─── Calendário Público ─────────────────────────────────────────────
+  isPublic    Boolean   @default(false) @map("is_public")
+  publicSlug  String?   @unique @map("public_slug")
+  publishedAt DateTime? @map("published_at")
+
+  viewCount  Int @default(0) @map("view_count")
+  likesCount Int @default(0) @map("likes_count")
+  shareCount Int @default(0) @map("share_count")
+
+  country String? @default("BR")
+  state   String?
+  city    String?
+  address String?
+
+  eventCategory   EventCategory? @map("event_category")
+  registrationUrl String?        @map("registration_url")
+  formId          String?        @map("form_id")
+
+  isGuestDraft    Boolean @default(false) @map("is_guest_draft")
+  guestDraftToken String? @unique @map("guest_draft_token")
+
+  likes        ActionLike[]
+  views        ActionView[]
+  publicShares PublicActionShare[]
+  reminders    ActionReminder[]
 
   @@index([workspaceId])
   @@index([columnId])
@@ -745,7 +820,83 @@ model Action {
   @@index([priority])
   @@index([dueDate])
   @@index([order])
+  @@index([isPublic, publishedAt])
+  @@index([country, state, city])
+  @@index([eventCategory])
   @@map("actions")
+}
+
+// ─── Calendário Público: Likes / Views / Shares / Reminders ─────────────────
+
+model ActionLike {
+  id          String   @id @default(cuid())
+  actionId    String   @map("action_id")
+  userId      String?  @map("user_id")
+  fingerprint String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([actionId, userId])
+  @@unique([actionId, fingerprint])
+  @@index([actionId])
+  @@index([userId])
+  @@map("action_likes")
+}
+
+model ActionView {
+  id          String   @id @default(cuid())
+  actionId    String   @map("action_id")
+  fingerprint String
+  userId      String?  @map("user_id")
+  referrer    String?
+  sharerToken String?  @map("sharer_token")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([actionId, fingerprint])
+  @@index([actionId, createdAt])
+  @@index([sharerToken])
+  @@map("action_views")
+}
+
+model PublicActionShare {
+  id           String   @id @default(cuid())
+  actionId     String   @map("action_id")
+  sharerUserId String?  @map("sharer_user_id")
+  sharerToken  String   @unique @map("sharer_token")
+  platform     String?
+  clicks       Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  action     Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  sharerUser User?  @relation("PublicActionShareSharer", fields: [sharerUserId], references: [id], onDelete: SetNull)
+
+  @@index([actionId])
+  @@index([sharerUserId])
+  @@map("public_action_shares")
+}
+
+model ActionReminder {
+  id          String          @id @default(cuid())
+  actionId    String          @map("action_id")
+  userId      String?         @map("user_id")
+  phoneNumber String          @map("phone_number")
+  channel     ReminderChannel @default(WHATSAPP)
+  remindAt    DateTime        @map("remind_at")
+  sent        Boolean         @default(false)
+  sentAt      DateTime?       @map("sent_at")
+  consentAt   DateTime        @default(now()) @map("consent_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user   User?  @relation("ActionReminderUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([actionId, sent])
+  @@index([remindAt, sent])
+  @@map("action_reminders")
 }
 
 model SubActionUserResponsible {
@@ -782,18 +933,18 @@ model SubActions {
 // ─────────────────────────────────────────────
 
 model Workflow {
-  id         String   @id @default(cuid())
-  name       String
+  id          String   @id @default(cuid())
+  name        String
   description String?
-  userId     String?  @map("user_id")
-  trackingId String   @map("tracking_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt  @map("updated_at")
+  userId      String?  @map("user_id")
+  trackingId  String   @map("tracking_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
 
-  nodes Node[]
+  nodes       Node[]
   connections Connection[]
 
   @@map("workflows")
@@ -824,37 +975,37 @@ enum NodeType {
 }
 
 model Node {
-  id String @id @default(cuid())
-  workflowId String @map("workflow_id")
-  name String
-  type NodeType
-  position Json
-  data Json @default("{}")
+  id         String   @id @default(cuid())
+  workflowId String   @map("workflow_id")
+  name       String
+  type       NodeType
+  position   Json
+  data       Json     @default("{}")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt  @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   outputConnections Connection[] @relation("FromNode")
-  inputConnections Connection[] @relation("ToNode")
+  inputConnections  Connection[] @relation("ToNode")
 
   @@map("nodes")
 }
 
 model Connection {
-  id String @id @default(cuid())
-  workflowId String @map("workflow_id")
-  fromNodeId String @map("from_node_id")
-  toNodeId String @map("to_node_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt  @map("updated_at")
-  fromOutput String @default("main")
-  toInput String @default("main")
+  id         String   @id @default(cuid())
+  workflowId String   @map("workflow_id")
+  fromNodeId String   @map("from_node_id")
+  toNodeId   String   @map("to_node_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  fromOutput String   @default("main")
+  toInput    String   @default("main")
 
   workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  fromNode Node @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
-  toNode Node @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+  fromNode Node     @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode   Node     @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
 
   @@unique([fromNodeId, toNodeId, fromOutput, toInput])
   @@map("connections")
@@ -865,30 +1016,30 @@ model Connection {
 // ─────────────────────────────────────────────
 
 model Form {
-  id String @id @default(cuid())
-  userId String @map("user_id")
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
   organizationId String
-  name String
-  description String?
-  jsonBlock String @default("[]")
-  published Boolean @default(false)
-  content String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt  @map("updated_at")
-  settingsId String? @unique
+  name           String
+  description    String?
+  jsonBlock      String   @default("[]")
+  published      Boolean  @default(false)
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  settingsId     String?  @unique
 
-  views Int @default(0)
+  views     Int @default(0)
   responses Int @default(0)
 
-  isTemplate Boolean @default(false) @map("is_template")
+  isTemplate                Boolean @default(false) @map("is_template")
   templateMarkedByModerator Boolean @default(false) @map("template_marked_by_moderator")
 
-  createdBy     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   formSubmissions FormResponses[]
-  shareUrl String @unique @map("share_url")
+  shareUrl        String          @unique @map("share_url")
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  settings FormSettings?
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  settings     FormSettings?
 
   onboardingBrandForms      ClientOnboardingProcess[] @relation("OnboardingBrandForm")
   onboardingOnboardingForms ClientOnboardingProcess[] @relation("OnboardingOnboardingForm")
@@ -897,40 +1048,39 @@ model Form {
 }
 
 model FormSettings {
-  id String @id @default(cuid())
-  primaryColor String
+  id              String   @id @default(cuid())
+  primaryColor    String
   backgroundColor String
-  backgroundImage String? @map("background_image")
-  createdAt DateTime @default(now())
-  updateAt DateTime @default(now()) @updatedAt
-  trackingId String? @map("tracking_id")
-  statusId String? @map("status_id")
-  formId String @unique
-  redirectUrl String? @map("redirect_url")
-  idPixel String? @map("id_pixel")
-  idTagManager String? @map("id_tag_manager")
-  needLogin Boolean @default(true) @map("need_login")
-  showName Boolean @default(true) @map("show_name")
-  showEmail Boolean @default(true) @map("show_email")
-  showPhone Boolean @default(true) @map("show_phone")
-  finishMessage String @default("Obrigado por seu cadastro!") @map("finish_message")
+  backgroundImage String?  @map("background_image")
+  createdAt       DateTime @default(now())
+  updateAt        DateTime @default(now()) @updatedAt
+  trackingId      String?  @map("tracking_id")
+  statusId        String?  @map("status_id")
+  formId          String   @unique
+  redirectUrl     String?  @map("redirect_url")
+  idPixel         String?  @map("id_pixel")
+  idTagManager    String?  @map("id_tag_manager")
+  needLogin       Boolean  @default(true) @map("need_login")
+  showName        Boolean  @default(true) @map("show_name")
+  showEmail       Boolean  @default(true) @map("show_email")
+  showPhone       Boolean  @default(true) @map("show_phone")
+  finishMessage   String   @default("Obrigado por seu cadastro!") @map("finish_message")
 
   tracking Tracking? @relation(fields: [trackingId], references: [id], onDelete: SetNull)
-  status Status? @relation(fields: [statusId], references: [id], onDelete: SetNull)
-  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  status   Status?   @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  form     Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
 
   @@map("form_settings")
 }
 
 model FormResponses {
-  id String @id @default(cuid())
-  formId String @map("form_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  jsonResponse Json @default("[]")
-  leadId String? @map("lead_id")
-  lead Lead? @relation(fields: [leadId], references: [id])
+  id           String   @id @default(cuid())
+  formId       String   @map("form_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  jsonResponse Json     @default("[]")
+  leadId       String?  @map("lead_id")
+  lead         Lead?    @relation(fields: [leadId], references: [id])
 
-  
   form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
 
   @@map("form_responses")
@@ -940,30 +1090,36 @@ model FormResponses {
 // CHAT
 // ─────────────────────────────────────────────
 
+enum MessageChannel {
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+}
+
 model Conversation {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now()) @map("created_at")
   lastMessageAt DateTime @updatedAt @map("last_message_at")
   name          String?
   isGroup       Boolean  @default(false)
-  
-  remoteJid     String   @map("remote_jid")
-  profilePicUrl String?  @map("profile_pic_url")
-  isActive      Boolean  @default(true) @map("is_active")
-  
-  lead   Lead   @relation(fields: [leadId], references: [id] , onDelete: Cascade)
-  leadId String @unique @map("lead_id")
-  trackingId    String   @map("tracking_id")
-  tracking      Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
 
-  lastMessageId String? @unique @map("last_message_id")
-  lastMessage Message? @relation(fields: [lastMessageId], references: [id])
+  remoteJid     String         @map("remote_jid")
+  profilePicUrl String?        @map("profile_pic_url")
+  isActive      Boolean        @default(true) @map("is_active")
+  channel       MessageChannel @default(WHATSAPP) @map("channel")
 
-  messages      Message[]        @relation("Messages")
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId     String   @unique @map("lead_id")
+  trackingId String   @map("tracking_id")
+  tracking   Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  lastMessageId String?  @unique @map("last_message_id")
+  lastMessage   Message? @relation(fields: [lastMessageId], references: [id])
+
+  messages Message[] @relation("Messages")
 
   @@unique([leadId, trackingId])
   @@unique([remoteJid, trackingId])
-  
   @@index([isActive])
   @@index([lastMessageAt])
   @@index([trackingId])
@@ -977,31 +1133,31 @@ enum MessageStatus {
 }
 
 model Message {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   body      String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  
-  messageId        String   @unique @map("message_id")
-  fromMe           Boolean  @default(false) @map("from_me")
-  status           MessageStatus   @default(SENT)
-  seen             Boolean  @default(false)
-  
-  mediaUrl         String?  @map("media_url")
-  mediaType        String?  @map("media_type")
-  mediaCaption     String?  @map("media_caption")
-  mimetype         String?
-  fileName         String?  @map("file_name")
-  
-  quotedMessageId  String?  @map("quoted_message_id")
-  quotedMessage    Message? @relation("QuotedMessages", fields: [quotedMessageId], references: [id], onDelete: SetNull)
-  quotes           Message[] @relation("QuotedMessages")
-  conversationId String 
-  senderId       String?
-  senderName     String?
+  createdAt DateTime @default(now()) @map("created_at")
 
-  conversation   Conversation @relation("Messages", fields: [conversationId], references: [id], onDelete: Cascade)
-  LastMessage Conversation?
-  
+  messageId String        @unique @map("message_id")
+  fromMe    Boolean       @default(false) @map("from_me")
+  status    MessageStatus @default(SENT)
+  seen      Boolean       @default(false)
+
+  mediaUrl     String? @map("media_url")
+  mediaType    String? @map("media_type")
+  mediaCaption String? @map("media_caption")
+  mimetype     String?
+  fileName     String? @map("file_name")
+
+  quotedMessageId String?   @map("quoted_message_id")
+  quotedMessage   Message?  @relation("QuotedMessages", fields: [quotedMessageId], references: [id], onDelete: SetNull)
+  quotes          Message[] @relation("QuotedMessages")
+  conversationId  String
+  senderId        String?
+  senderName      String?
+
+  conversation Conversation  @relation("Messages", fields: [conversationId], references: [id], onDelete: Cascade)
+  LastMessage  Conversation?
+
   @@index([conversationId, createdAt])
   @@index([status])
   @@index([fromMe])
@@ -1014,44 +1170,44 @@ enum WhatsAppInstanceStatus {
 }
 
 model WhatsAppInstance {
-  id              String   @id @default(cuid())
-  instanceName    String   @map("instance_name")
-  instanceId      String   @unique @map("instance_id")
-  apiKey          String @unique  @map("api_key") // Token
-  baseUrl         String   @map("base_url") // URL
-  status          WhatsAppInstanceStatus @default(DISCONNECTED)
-  qrCode          String?  @map("qr_code") // Base64 do QR Code
-  phoneNumber     String?  @map("phone_number") // Número conectado
-  profileName     String?  @map("profile_name")
-  profilePicUrl   String?  @map("profile_pic_url")
-  organizationId  String   @map("organization_id")
-  trackingId      String @unique   @map("tracking_id")
-  webhookUrl      String?  @map("webhook_url")
-  isActive        Boolean  @default(true) @map("is_active")
-  lastSyncAt      DateTime? @map("last_sync_at")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  isBusiness      Boolean  @default(false) @map("is_business")
-  
+  id             String                 @id @default(cuid())
+  instanceName   String                 @map("instance_name")
+  instanceId     String                 @unique @map("instance_id")
+  apiKey         String                 @unique @map("api_key") // Token
+  baseUrl        String                 @map("base_url") // URL
+  status         WhatsAppInstanceStatus @default(DISCONNECTED)
+  qrCode         String?                @map("qr_code") // Base64 do QR Code
+  phoneNumber    String?                @map("phone_number") // Número conectado
+  profileName    String?                @map("profile_name")
+  profilePicUrl  String?                @map("profile_pic_url")
+  organizationId String                 @map("organization_id")
+  trackingId     String                 @unique @map("tracking_id")
+  webhookUrl     String?                @map("webhook_url")
+  isActive       Boolean                @default(true) @map("is_active")
+  lastSyncAt     DateTime?              @map("last_sync_at")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+  isBusiness     Boolean                @default(false) @map("is_business")
+
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   tracking     Tracking     @relation(fields: [trackingId], references: [id])
-  
+
   @@index([organizationId])
   @@index([status])
   @@map("whatsapp_instances")
 }
 
-model InsightShares{
-  id String @id @default(cuid())
-  name String
-  token String @unique @default(cuid()) 
-  organizationId String @map("organization_id")
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  filters Json @default("{}") 
-  settings Json @default("{}") 
-  userId String @map("user_id")
-  createdBy User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
+model InsightShares {
+  id             String       @id @default(cuid())
+  name           String
+  token          String       @unique @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  filters        Json         @default("{}")
+  settings       Json         @default("{}")
+  userId         String       @map("user_id")
+  createdBy      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
 
   @@map("insight_shares")
 }
@@ -1074,23 +1230,23 @@ model Agenda {
   id             String   @id @default(cuid())
   name           String
   description    String?
-  slug           String  
-  isActive       Boolean  @default(true)  @map("is_active")
-  slotDuration   Int      @default(30)    @map("slot_duration")
+  slug           String
+  isActive       Boolean  @default(true) @map("is_active")
+  slotDuration   Int      @default(30) @map("slot_duration")
   trackingId     String   @map("tracking_id")
   organizationId String   @map("organization_id")
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   tracking     Tracking     @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  responsibles         AgendaResponsible[]
-  availabilities       AgendaAvailability[]
-  appointments         Appointment[]
-  publicChatSessions   PublicChatSession[]
-  dateOverrides        AgendaDateOverride[]
-  dateAvailabilities   AgendaDateAvailability[]
+  responsibles       AgendaResponsible[]
+  availabilities     AgendaAvailability[]
+  appointments       Appointment[]
+  publicChatSessions PublicChatSession[]
+  dateOverrides      AgendaDateOverride[]
+  dateAvailabilities AgendaDateAvailability[]
 
   @@unique([slug, organizationId])
   @@index([trackingId])
@@ -1122,7 +1278,7 @@ model AgendaAvailability {
   dayOfWeek DayOfWeek @map("day_of_week")
   isActive  Boolean   @default(true) @map("is_active")
 
-  agenda    Agenda          @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  agenda    Agenda                 @relation(fields: [agendaId], references: [id], onDelete: Cascade)
   timeSlots AvailabilityTimeSlot[]
 
   @@unique([agendaId, dayOfWeek])
@@ -1132,11 +1288,11 @@ model AgendaAvailability {
 
 // Intervalos de horário dentro de um dia (ex: 8h–12h, 14h–18h)
 model AvailabilityTimeSlot {
-  id             String   @id @default(cuid())
-  availabilityId String   @map("availability_id")
-  startTime      String   @map("start_time") // "08:00"
-  endTime        String   @map("end_time")   // "12:00"
-  order          Int      @default(0)
+  id             String @id @default(cuid())
+  availabilityId String @map("availability_id")
+  startTime      String @map("start_time") // "08:00"
+  endTime        String @map("end_time") // "12:00"
+  order          Int    @default(0)
 
   availability AgendaAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
 
@@ -1166,14 +1322,14 @@ model Appointment {
   userId      String?           @map("user_id")
   trackingId  String?           @map("tracking_id")
   createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt      @map("updated_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
 
-  orgProjectId String?           @map("org_project_id")
+  orgProjectId String? @map("org_project_id")
 
-  agenda     Agenda     @relation(fields: [agendaId],     references: [id], onDelete: Cascade)
-  lead       Lead?      @relation(fields: [leadId],       references: [id], onDelete: SetNull)
-  user       User?      @relation(fields: [userId],       references: [id], onDelete: SetNull)
-  tracking   Tracking?  @relation(fields: [trackingId],   references: [id], onDelete: SetNull)
+  agenda     Agenda      @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  lead       Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tracking   Tracking?   @relation(fields: [trackingId], references: [id], onDelete: SetNull)
   orgProject OrgProject? @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
 
   @@index([agendaId])
@@ -1192,10 +1348,10 @@ model Appointment {
 model AgendaDateAvailability {
   id        String   @id @default(cuid())
   agendaId  String   @map("agenda_id")
-  date      String   // YYYY-MM-DD
+  date      String // YYYY-MM-DD
   createdAt DateTime @default(now()) @map("created_at")
 
-  agenda    Agenda                      @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  agenda    Agenda                       @relation(fields: [agendaId], references: [id], onDelete: Cascade)
   timeSlots AgendaDateAvailabilitySlot[]
 
   @@unique([agendaId, date])
@@ -1205,11 +1361,11 @@ model AgendaDateAvailability {
 
 // Intervalos de horário dentro de uma disponibilidade por data específica
 model AgendaDateAvailabilitySlot {
-  id                 String   @id @default(cuid())
-  dateAvailabilityId String   @map("date_availability_id")
-  startTime          String   @map("start_time") // "08:00"
-  endTime            String   @map("end_time")   // "12:00"
-  order              Int      @default(0)
+  id                 String @id @default(cuid())
+  dateAvailabilityId String @map("date_availability_id")
+  startTime          String @map("start_time") // "08:00"
+  endTime            String @map("end_time") // "12:00"
+  order              Int    @default(0)
 
   dateAvailability AgendaDateAvailability @relation(fields: [dateAvailabilityId], references: [id], onDelete: Cascade)
 
@@ -1233,8 +1389,8 @@ model PublicChatSession {
   expiresAt     DateTime @map("expires_at")
 
   // Auditoria de segurança
-  ipAddress     String?  @map("ip_address")
-  userAgent     String?  @map("user_agent")
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
 
   agenda Agenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
 
@@ -1251,7 +1407,7 @@ model PublicChatSession {
 model AgendaDateOverride {
   id        String   @id @default(cuid())
   agendaId  String   @map("agenda_id")
-  date      String   // YYYY-MM-DD
+  date      String // YYYY-MM-DD
   isBlocked Boolean  @default(true) @map("is_blocked")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1294,7 +1450,7 @@ model PlatformIntegration {
   isActive       Boolean             @default(false) @map("is_active")
   config         Json                @default("{}") // tokens, IDs, secrets
   createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt      @map("updated_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1379,10 +1535,10 @@ model ForgeProduct {
   value          Decimal  @db.Decimal(15, 2)
   createdById    String   @map("created_by")
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy    User                  @relation("ForgeProductCreatedBy", fields: [createdById], references: [id])
+  organization     Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy        User                   @relation("ForgeProductCreatedBy", fields: [createdById], references: [id])
   proposalProducts ForgeProposalProduct[]
 
   @@unique([organizationId, sku])
@@ -1391,38 +1547,38 @@ model ForgeProduct {
 }
 
 model ForgeProposal {
-  id              String               @id @default(cuid())
-  organizationId  String               @map("organization_id")
-  title           String
-  number          Int
-  status          ForgeProposalStatus  @default(RASCUNHO)
-  clientId        String?              @map("client_id")
-  responsibleId   String               @map("responsible_id")
-  participants    String[]
-  validUntil      DateTime?            @map("valid_until")
-  description     String?
-  discount        Decimal?             @db.Decimal(15, 2)
-  discountType    ForgeDiscountType?   @map("discount_type")
-  paymentLink     String?              @map("payment_link")
-  paymentGateway  ForgePaymentGateway? @map("payment_gateway")
-  publicToken     String               @unique @default(cuid()) @map("public_token")
-  headerConfig    Json                 @default("{}") @map("header_config")
-  isTemplate      Boolean              @default(false) @map("is_template")
-  templateMarkedByModerator Boolean    @default(false) @map("template_marked_by_moderator")
-  createdById     String               @map("created_by")
-  createdAt       DateTime             @default(now()) @map("created_at")
-  updatedAt       DateTime             @updatedAt      @map("updated_at")
+  id                        String               @id @default(cuid())
+  organizationId            String               @map("organization_id")
+  title                     String
+  number                    Int
+  status                    ForgeProposalStatus  @default(RASCUNHO)
+  clientId                  String?              @map("client_id")
+  responsibleId             String               @map("responsible_id")
+  participants              String[]
+  validUntil                DateTime?            @map("valid_until")
+  description               String?
+  discount                  Decimal?             @db.Decimal(15, 2)
+  discountType              ForgeDiscountType?   @map("discount_type")
+  paymentLink               String?              @map("payment_link")
+  paymentGateway            ForgePaymentGateway? @map("payment_gateway")
+  publicToken               String               @unique @default(cuid()) @map("public_token")
+  headerConfig              Json                 @default("{}") @map("header_config")
+  isTemplate                Boolean              @default(false) @map("is_template")
+  templateMarkedByModerator Boolean              @default(false) @map("template_marked_by_moderator")
+  createdById               String               @map("created_by")
+  createdAt                 DateTime             @default(now()) @map("created_at")
+  updatedAt                 DateTime             @updatedAt @map("updated_at")
 
-  orgProjectId String?              @map("org_project_id")
+  orgProjectId String? @map("org_project_id")
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  client       Lead?                 @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  responsible  User                  @relation("ForgeProposalResponsible", fields: [responsibleId], references: [id])
-  createdBy    User                  @relation("ForgeProposalCreatedBy", fields: [createdById], references: [id])
-  products     ForgeProposalProduct[]
-  contracts    ForgeContract[]
-  campaignPlanners NasaCampaignPlanner[]
-  orgProject   OrgProject?           @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client                  Lead?                    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  responsible             User                     @relation("ForgeProposalResponsible", fields: [responsibleId], references: [id])
+  createdBy               User                     @relation("ForgeProposalCreatedBy", fields: [createdById], references: [id])
+  products                ForgeProposalProduct[]
+  contracts               ForgeContract[]
+  campaignPlanners        NasaCampaignPlanner[]
+  orgProject              OrgProject?              @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
   clientOnboardingProcess ClientOnboardingProcess?
 
   @@unique([organizationId, number])
@@ -1436,8 +1592,8 @@ model ForgeProposalProduct {
   id          String   @id @default(cuid())
   proposalId  String   @map("proposal_id")
   productId   String   @map("product_id")
-  quantity    Decimal  @db.Decimal(15, 4) @default(1)
-  unitValue   Decimal  @db.Decimal(15, 2) @map("unit_value")
+  quantity    Decimal  @default(1) @db.Decimal(15, 4)
+  unitValue   Decimal  @map("unit_value") @db.Decimal(15, 2)
   discount    Decimal? @db.Decimal(15, 2)
   description String?
   order       Int      @default(0)
@@ -1450,27 +1606,27 @@ model ForgeProposalProduct {
 }
 
 model ForgeContract {
-  id           String              @id @default(cuid())
-  proposalId   String?             @map("proposal_id")
-  organizationId String            @map("organization_id")
-  number       Int
-  startDate    DateTime            @map("start_date")
-  endDate      DateTime            @map("end_date")
-  value        Decimal             @db.Decimal(15, 2)
-  status       ForgeContractStatus @default(PENDENTE_ASSINATURA)
-  templateId   String?             @map("template_id")
-  content      String?
-  signers      Json                @default("[]")
-  isTemplate   Boolean             @default(false) @map("is_template")
-  templateMarkedByModerator Boolean @default(false) @map("template_marked_by_moderator")
-  createdById  String              @map("created_by")
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt      @map("updated_at")
+  id                        String              @id @default(cuid())
+  proposalId                String?             @map("proposal_id")
+  organizationId            String              @map("organization_id")
+  number                    Int
+  startDate                 DateTime            @map("start_date")
+  endDate                   DateTime            @map("end_date")
+  value                     Decimal             @db.Decimal(15, 2)
+  status                    ForgeContractStatus @default(PENDENTE_ASSINATURA)
+  templateId                String?             @map("template_id")
+  content                   String?
+  signers                   Json                @default("[]")
+  isTemplate                Boolean             @default(false) @map("is_template")
+  templateMarkedByModerator Boolean             @default(false) @map("template_marked_by_moderator")
+  createdById               String              @map("created_by")
+  createdAt                 DateTime            @default(now()) @map("created_at")
+  updatedAt                 DateTime            @updatedAt @map("updated_at")
 
-  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  proposal     ForgeProposal?          @relation(fields: [proposalId], references: [id], onDelete: SetNull)
-  template     ForgeContractTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  createdBy    User                    @relation("ForgeContractCreatedBy", fields: [createdById], references: [id])
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  proposal     ForgeProposal?         @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  template     ForgeContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdBy    User                   @relation("ForgeContractCreatedBy", fields: [createdById], references: [id])
 
   @@index([organizationId])
   @@index([proposalId])
@@ -1487,10 +1643,10 @@ model ForgeContractTemplate {
   defaultEndDate   DateTime? @map("default_end_date")
   createdById      String    @map("created_by")
   createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt      @map("updated_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy    User             @relation("ForgeTemplateCreatedBy", fields: [createdById], references: [id])
+  createdBy    User            @relation("ForgeTemplateCreatedBy", fields: [createdById], references: [id])
   contracts    ForgeContract[]
 
   @@index([organizationId])
@@ -1500,7 +1656,7 @@ model ForgeContractTemplate {
 model ForgeSettings {
   id                    String             @id @default(cuid())
   organizationId        String             @unique @map("organization_id")
-  commissionPercentage  Decimal            @db.Decimal(5, 2) @default(0) @map("commission_percentage")
+  commissionPercentage  Decimal            @default(0) @map("commission_percentage") @db.Decimal(5, 2)
   letterheadHeader      String?            @map("letterhead_header")
   letterheadFooter      String?            @map("letterhead_footer")
   letterheadHeaderImage String?            @map("letterhead_header_image")
@@ -1513,7 +1669,7 @@ model ForgeSettings {
   reminderDaysBefore    Int                @default(3) @map("reminder_days_before")
   paymentGatewayConfigs Json               @default("{}") @map("payment_gateway_configs")
   createdAt             DateTime           @default(now()) @map("created_at")
-  updatedAt             DateTime           @updatedAt      @map("updated_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1525,26 +1681,26 @@ model ForgeSettings {
 // ─────────────────────────────────────────────
 
 model Plan {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  name          String
-  slogan        String?
-  sortOrder     Int      @default(0)        @map("sort_order")
-  monthlyStars  Int      @map("monthly_stars")
-  priceMonthly  Decimal  @db.Decimal(10, 2) @map("price_monthly")
-  billingType   String   @default("monthly") @map("billing_type") // monthly | annual | weekly
-  maxUsers      Int      @default(3)        @map("max_users")
-  rolloverPct   Int      @default(30)       @map("rollover_pct")
-  benefits      Json     @default("[]")     // string[]
-  ctaLabel      String   @default("Assinar agora") @map("cta_label")
-  ctaLink       String?  @map("cta_link")   // external URL (optional, overrides gateway)
-  ctaGatewayId  String?  @map("cta_gateway_id") // PaymentGatewayConfig.id
-  highlighted   Boolean  @default(false)    // destaque "Mais popular"
-  isActive      Boolean  @default(true)     @map("is_active")
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  slogan          String?
+  sortOrder       Int      @default(0) @map("sort_order")
+  monthlyStars    Int      @map("monthly_stars")
+  priceMonthly    Decimal  @map("price_monthly") @db.Decimal(10, 2)
+  billingType     String   @default("monthly") @map("billing_type") // monthly | annual | weekly
+  maxUsers        Int      @default(3) @map("max_users")
+  rolloverPct     Int      @default(30) @map("rollover_pct")
+  benefits        Json     @default("[]") // string[]
+  ctaLabel        String   @default("Assinar agora") @map("cta_label")
+  ctaLink         String?  @map("cta_link") // external URL (optional, overrides gateway)
+  ctaGatewayId    String?  @map("cta_gateway_id") // PaymentGatewayConfig.id
+  highlighted     Boolean  @default(false) // destaque "Mais popular"
+  isActive        Boolean  @default(true) @map("is_active")
   stripeProductId String?  @map("stripe_product_id")
   stripePriceId   String?  @map("stripe_price_id")
-  createdAt     DateTime @default(now())    @map("created_at")
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   organizations Organization[]
 
@@ -1578,46 +1734,46 @@ model Subscription {
 model StarPackage {
   id        String   @id @default(cuid())
   stars     Int
-  priceBrl  Decimal  @db.Decimal(10, 2) @map("price_brl")
+  priceBrl  Decimal  @map("price_brl") @db.Decimal(10, 2)
   label     String
-  isActive  Boolean  @default(true)    @map("is_active")
-  createdAt DateTime @default(now())   @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("star_packages")
 }
 
 model AppStarCost {
-  id           String   @id @default(cuid())
-  appSlug      String   @unique @map("app_slug")
-  monthlyCost  Int      @default(0) @map("monthly_cost") // stars/mês
-  setupCost    Int      @default(0) @map("setup_cost")   // stars na ativação
-  priceBrl     Decimal? @db.Decimal(10, 2) @map("price_brl") // exibição R$
-  displayName  String?  @map("display_name")
-  description  String?
-  category     String?
-  iconEmoji    String?  @map("icon_emoji")
-  isPublic     Boolean  @default(true) @map("is_public")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt       @map("updated_at")
+  id          String   @id @default(cuid())
+  appSlug     String   @unique @map("app_slug")
+  monthlyCost Int      @default(0) @map("monthly_cost") // stars/mês
+  setupCost   Int      @default(0) @map("setup_cost") // stars na ativação
+  priceBrl    Decimal? @map("price_brl") @db.Decimal(10, 2) // exibição R$
+  displayName String?  @map("display_name")
+  description String?
+  category    String?
+  iconEmoji   String?  @map("icon_emoji")
+  isPublic    Boolean  @default(true) @map("is_public")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("app_star_costs")
 }
 
 enum StarTransactionType {
-  PLAN_CREDIT       // crédito mensal do plano
-  TOPUP_PURCHASE    // compra de top-up
-  APP_CHARGE        // débito mensal de integração
-  APP_SETUP         // débito de ativação de integração
-  ROLLOVER          // rollover do ciclo anterior
-  MANUAL_ADJUST     // ajuste manual (admin)
-  REFUND            // estorno
+  PLAN_CREDIT // crédito mensal do plano
+  TOPUP_PURCHASE // compra de top-up
+  APP_CHARGE // débito mensal de integração
+  APP_SETUP // débito de ativação de integração
+  ROLLOVER // rollover do ciclo anterior
+  MANUAL_ADJUST // ajuste manual (admin)
+  REFUND // estorno
 }
 
 model StarTransaction {
   id             String              @id @default(cuid())
   organizationId String              @map("organization_id")
   type           StarTransactionType
-  amount         Int                 // positivo = crédito, negativo = débito
+  amount         Int // positivo = crédito, negativo = débito
   balanceAfter   Int                 @map("balance_after")
   description    String
   appSlug        String?             @map("app_slug")
@@ -1632,13 +1788,13 @@ model StarTransaction {
 }
 
 model WorkspaceIntegration {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  appSlug        String   @map("app_slug")
-  installedAt    DateTime @default(now()) @map("installed_at")
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  appSlug        String    @map("app_slug")
+  installedAt    DateTime  @default(now()) @map("installed_at")
   lastChargedAt  DateTime? @map("last_charged_at")
-  isActive       Boolean  @default(true) @map("is_active")
-  config         Json     @default("{}") // credenciais cifradas ou metadata
+  isActive       Boolean   @default(true) @map("is_active")
+  config         Json      @default("{}") // credenciais cifradas ou metadata
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1652,10 +1808,10 @@ model MemberStarBudget {
   id             String    @id @default(cuid())
   organizationId String    @map("organization_id")
   userId         String    @map("user_id")
-  monthlyBudget  Int       @default(0)  @map("monthly_budget")  // stars/mês alocadas ao usuário
-  currentUsage   Int       @default(0)  @map("current_usage")   // uso no ciclo atual
+  monthlyBudget  Int       @default(0) @map("monthly_budget") // stars/mês alocadas ao usuário
+  currentUsage   Int       @default(0) @map("current_usage") // uso no ciclo atual
   cycleStart     DateTime? @map("cycle_start")
-  updatedAt      DateTime  @updatedAt   @map("updated_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1678,20 +1834,20 @@ enum NBoxItemType {
 }
 
 model NBoxFolder {
-  id             String       @id @default(cuid())
-  organizationId String       @map("organization_id")
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
   name           String
   color          String?
-  parentId       String?      @map("parent_id")
-  createdById    String       @map("created_by_id")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
+  parentId       String?  @map("parent_id")
+  createdById    String   @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parent         NBoxFolder?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children       NBoxFolder[] @relation("FolderChildren")
-  createdBy      User         @relation("NBoxFolderCreatedBy", fields: [createdById], references: [id])
-  items          NBoxItem[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       NBoxFolder?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children     NBoxFolder[] @relation("FolderChildren")
+  createdBy    User         @relation("NBoxFolderCreatedBy", fields: [createdById], references: [id])
+  items        NBoxItem[]
 
   @@index([organizationId])
   @@index([parentId])
@@ -1699,25 +1855,25 @@ model NBoxFolder {
 }
 
 model NBoxItem {
-  id               String       @id @default(cuid())
-  organizationId   String       @map("organization_id")
-  folderId         String?      @map("folder_id")
-  type             NBoxItemType
-  name             String
-  url              String?
-  mimeType         String?      @map("mime_type")
-  size             Int?
-  description      String?
-  tags             String[]
-  forgeContractId  String?      @map("forge_contract_id")
-  forgeProposalId  String?      @map("forge_proposal_id")
-  createdById      String       @map("created_by_id")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  folderId        String?      @map("folder_id")
+  type            NBoxItemType
+  name            String
+  url             String?
+  mimeType        String?      @map("mime_type")
+  size            Int?
+  description     String?
+  tags            String[]
+  forgeContractId String?      @map("forge_contract_id")
+  forgeProposalId String?      @map("forge_proposal_id")
+  createdById     String       @map("created_by_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  folder           NBoxFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  createdBy        User         @relation("NBoxItemCreatedBy", fields: [createdById], references: [id])
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  folder              NBoxFolder?              @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  createdBy           User                     @relation("NBoxItemCreatedBy", fields: [createdById], references: [id])
   campaignBrandAssets NasaCampaignBrandAsset[]
 
   @@index([organizationId])
@@ -1751,52 +1907,52 @@ enum NasaPlannerCardStatus {
 }
 
 model NasaPlanner {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
+  id             String  @id @default(cuid())
+  organizationId String  @map("organization_id")
   name           String
   description    String?
 
-  brandName       String?  @map("brand_name")
-  brandSlogan     String?  @map("brand_slogan")
-  website         String?
+  brandName   String? @map("brand_name")
+  brandSlogan String? @map("brand_slogan")
+  website     String?
 
-  icp             String?  @map("icp")
-  swot            Json     @default("{}")
-  positioning     String?
+  icp         String? @map("icp")
+  swot        Json    @default("{}")
+  positioning String?
 
-  toneOfVoice     String?  @map("tone_of_voice")
-  keyMessages     String[] @map("key_messages")
-  forbiddenWords  String[] @map("forbidden_words")
+  toneOfVoice    String?  @map("tone_of_voice")
+  keyMessages    String[] @map("key_messages")
+  forbiddenWords String[] @map("forbidden_words")
 
   primaryColors   String[] @map("primary_colors")
   secondaryColors String[] @map("secondary_colors")
   fonts           Json     @default("{}")
 
-  logoLight       String?  @map("logo_light")
-  logoDark        String?  @map("logo_dark")
-  logoSquare      String?  @map("logo_square")
-  logoHorizontal  String?  @map("logo_horizontal")
+  logoLight      String? @map("logo_light")
+  logoDark       String? @map("logo_dark")
+  logoSquare     String? @map("logo_square")
+  logoHorizontal String? @map("logo_horizontal")
 
   defaultHashtags String[] @map("default_hashtags")
   defaultCtas     String[] @map("default_ctas")
   examplePosts    String[] @map("example_posts")
   showBranding    Boolean  @default(true) @map("show_branding")
 
-  anthropicApiKey String?  @map("anthropic_api_key")
-  clientOrgId    String?  @map("client_org_id")
-  clientOrgName  String?  @map("client_org_name")
+  anthropicApiKey String? @map("anthropic_api_key")
+  clientOrgId     String? @map("client_org_id")
+  clientOrgName   String? @map("client_org_name")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  orgProjectId   String?  @map("org_project_id")
+  orgProjectId String? @map("org_project_id")
 
-  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  orgProject     OrgProject?               @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
-  posts          NasaPlannerPost[]
-  mindMaps       NasaPlannerMindMap[]
-  calendarShares NasaPlannerCalendarShare[]
-  campaignPlanners NasaCampaignPlanner[]
+  organization              Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orgProject                OrgProject?                @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  posts                     NasaPlannerPost[]
+  mindMaps                  NasaPlannerMindMap[]
+  calendarShares            NasaPlannerCalendarShare[]
+  campaignPlanners          NasaCampaignPlanner[]
   clientOnboardingProcesses ClientOnboardingProcess[]
 
   @@index([organizationId])
@@ -1804,40 +1960,40 @@ model NasaPlanner {
 }
 
 model NasaPlannerPost {
-  id             String                @id @default(cuid())
-  plannerId      String                @map("planner_id")
-  organizationId String                @map("organization_id")
-  createdById    String                @map("created_by_id")
+  id             String @id @default(cuid())
+  plannerId      String @map("planner_id")
+  organizationId String @map("organization_id")
+  createdById    String @map("created_by_id")
 
-  type           NasaPlannerPostType   @default(STATIC)
-  status         NasaPlannerPostStatus @default(DRAFT)
+  type   NasaPlannerPostType   @default(STATIC)
+  status NasaPlannerPostStatus @default(DRAFT)
 
-  title          String?
-  caption        String?
-  hashtags       String[]
-  cta            String?
+  title    String?
+  caption  String?
+  hashtags String[]
+  cta      String?
 
-  aiPrompt       String?  @map("ai_prompt")
-  starsSpent     Int      @default(0) @map("stars_spent")
+  aiPrompt   String? @map("ai_prompt")
+  starsSpent Int     @default(0) @map("stars_spent")
 
-  scheduledAt    DateTime? @map("scheduled_at")
-  publishedAt    DateTime? @map("published_at")
+  scheduledAt DateTime? @map("scheduled_at")
+  publishedAt DateTime? @map("published_at")
 
   targetNetworks String[] @map("target_networks")
   thumbnail      String?
 
-  orgProjectId    String?  @map("org_project_id")
-  clientOrgName   String?  @map("client_org_name")
-  campaignId      String?  @map("campaign_id")
-  referenceLinks  String[] @default([]) @map("reference_links")
+  orgProjectId   String?  @map("org_project_id")
+  clientOrgName  String?  @map("client_org_name")
+  campaignId     String?  @map("campaign_id")
+  referenceLinks String[] @default([]) @map("reference_links")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  planner    NasaPlanner             @relation(fields: [plannerId], references: [id], onDelete: Cascade)
-  createdBy  User                    @relation("NasaPlannerPostCreatedBy", fields: [createdById], references: [id])
-  orgProject OrgProject?             @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
-  campaign   NasaCampaignPlanner?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  planner    NasaPlanner            @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+  createdBy  User                   @relation("NasaPlannerPostCreatedBy", fields: [createdById], references: [id])
+  orgProject OrgProject?            @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  campaign   NasaCampaignPlanner?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   slides     NasaPlannerPostSlide[]
 
   @@index([plannerId, status])
@@ -1851,10 +2007,10 @@ model NasaPlannerPostSlide {
   postId String @map("post_id")
   order  Int    @default(0)
 
-  imageKey      String?  @map("image_key")
+  imageKey      String? @map("image_key")
   headline      String?
   subtext       String?
-  overlayConfig Json     @default("{}") @map("overlay_config")
+  overlayConfig Json    @default("{}") @map("overlay_config")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1874,7 +2030,7 @@ model NasaPlannerMindMap {
   viewport  Json    @default("{}")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   planner NasaPlanner       @relation(fields: [plannerId], references: [id], onDelete: Cascade)
   cards   NasaPlannerCard[]
@@ -1901,7 +2057,7 @@ model NasaPlannerCard {
   nodeId    String? @map("node_id")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   mindMap NasaPlannerMindMap @relation(fields: [mindMapId], references: [id], onDelete: Cascade)
 
@@ -1924,20 +2080,21 @@ model NasaPlannerCalendarShare {
   @@index([plannerId])
   @@map("nasa_planner_calendar_shares")
 }
+
 // ─── Permissions & Activity ───────────────────────────────────────────────────
 
 model OrgPermission {
   id             String       @id @default(cuid())
   organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  role           String       // owner(master), admin, member(single), moderador
+  role           String // owner(master), admin, member(single), moderador
   appKey         String       @map("app_key")
-  canView        Boolean      @default(true)  @map("can_view")
-  canCreate      Boolean      @default(true)  @map("can_create")
+  canView        Boolean      @default(true) @map("can_view")
+  canCreate      Boolean      @default(true) @map("can_create")
   canEdit        Boolean      @default(false) @map("can_edit")
   canDelete      Boolean      @default(false) @map("can_delete")
   createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt      @map("updated_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   @@unique([organizationId, role, appKey])
   @@index([organizationId])
@@ -2002,25 +2159,25 @@ model UserPresence {
 // ─── Workspace Tags ───────────────────────────────────────────────────────────
 
 model WorkspaceTag {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  color       String    @default("#7C3AED")
-  workspaceId String    @map("workspace_id")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  color       String   @default("#7C3AED")
+  workspaceId String   @map("workspace_id")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  actions     ActionTag[]
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actions   ActionTag[]
 
   @@index([workspaceId])
   @@map("workspace_tags")
 }
 
 model ActionTag {
-  actionId  String @map("action_id")
-  tagId     String @map("tag_id")
+  actionId String @map("action_id")
+  tagId    String @map("tag_id")
 
-  action    Action       @relation(fields: [actionId], references: [id], onDelete: Cascade)
-  tag       WorkspaceTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  action Action       @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  tag    WorkspaceTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([actionId, tagId])
   @@index([tagId])
@@ -2036,8 +2193,8 @@ model WorkspaceFolder {
   order          Int      @default(0)
   createdAt      DateTime @default(now()) @map("created_at")
 
-  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  items          WorkspaceFolderItem[]
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items        WorkspaceFolderItem[]
 
   @@index([organizationId])
   @@map("workspace_folders")
@@ -2069,7 +2226,7 @@ model WorkspaceAutomation {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@map("workspace_automations")
@@ -2087,8 +2244,8 @@ model WorkspaceWorkflow {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user      User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  workspace Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   nodes       WorkspaceNode[]
   connections WorkspaceConnection[]
@@ -2179,26 +2336,26 @@ model ActionMirror {
 // ─── Cross-Company Card Sharing ───────────────────────────────────────────────
 
 model ActionShare {
-  id               String    @id @default(cuid())
-  sourceActionId   String    @map("source_action_id")
-  sourceOrgId      String    @map("source_org_id")
-  targetOrgId      String    @map("target_org_id")
-  targetWorkspaceId String?  @map("target_workspace_id")
-  requestedBy      String    @map("requested_by")
-  message          String?
-  status           String    @default("PENDING") // PENDING | APPROVED | REJECTED
-  approvedBy       String?   @map("approved_by")
-  rejectedBy       String?   @map("rejected_by")
-  approvedAt       DateTime? @map("approved_at")
-  rejectedAt       DateTime? @map("rejected_at")
-  copiedActionId   String?   @map("copied_action_id")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  sourceActionId    String    @map("source_action_id")
+  sourceOrgId       String    @map("source_org_id")
+  targetOrgId       String    @map("target_org_id")
+  targetWorkspaceId String?   @map("target_workspace_id")
+  requestedBy       String    @map("requested_by")
+  message           String?
+  status            String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  approvedBy        String?   @map("approved_by")
+  rejectedBy        String?   @map("rejected_by")
+  approvedAt        DateTime? @map("approved_at")
+  rejectedAt        DateTime? @map("rejected_at")
+  copiedActionId    String?   @map("copied_action_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  sourceAction    Action       @relation("SharedAction", fields: [sourceActionId], references: [id], onDelete: Cascade)
-  sourceOrg       Organization @relation("SentShares", fields: [sourceOrgId], references: [id], onDelete: Cascade)
-  targetOrg       Organization @relation("ReceivedShares", fields: [targetOrgId], references: [id], onDelete: Cascade)
-  requester       User         @relation("ShareRequester", fields: [requestedBy], references: [id])
+  sourceAction Action       @relation("SharedAction", fields: [sourceActionId], references: [id], onDelete: Cascade)
+  sourceOrg    Organization @relation("SentShares", fields: [sourceOrgId], references: [id], onDelete: Cascade)
+  targetOrg    Organization @relation("ReceivedShares", fields: [targetOrgId], references: [id], onDelete: Cascade)
+  requester    User         @relation("ShareRequester", fields: [requestedBy], references: [id])
 
   @@index([sourceOrgId])
   @@index([targetOrgId])
@@ -2209,12 +2366,12 @@ model ActionShare {
 // ─── Sidebar Preferences ─────────────────────────────────────────────────────
 
 model UserSidebarPreference {
-  id       String  @id @default(cuid())
-  userId   String  @map("user_id")
-  itemKey  String  @map("item_key") // "app:nasachat" | "workspace:{id}"
-  visible  Boolean @default(true)
+  id      String  @id @default(cuid())
+  userId  String  @map("user_id")
+  itemKey String  @map("item_key") // "app:nasachat" | "workspace:{id}"
+  visible Boolean @default(true)
 
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, itemKey])
   @@index([userId])
@@ -2227,7 +2384,7 @@ model UserNotification {
   id             String    @id @default(cuid())
   userId         String    @map("user_id")
   organizationId String?   @map("organization_id")
-  type           String    // NEW_LEAD | AI_TOKEN_ALERT | STARS_ALERT | CARD_EDIT | APPOINTMENT_REMINDER | INSIGHTS_MOVEMENT | PLAN_EXPIRY | ADMIN_MESSAGE | CUSTOM
+  type           String // NEW_LEAD | AI_TOKEN_ALERT | STARS_ALERT | CARD_EDIT | APPOINTMENT_REMINDER | INSIGHTS_MOVEMENT | PLAN_EXPIRY | ADMIN_MESSAGE | CUSTOM
   title          String
   body           String
   appKey         String?   @map("app_key")
@@ -2238,7 +2395,7 @@ model UserNotification {
   sentWhatsApp   Boolean   @default(false) @map("sent_whatsapp")
   createdAt      DateTime  @default(now()) @map("created_at")
 
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
@@ -2251,12 +2408,12 @@ model UserNotificationPreference {
   userId         String   @map("user_id")
   organizationId String   @map("organization_id")
   notifType      String   @map("notif_type")
-  inApp          Boolean  @default(true)  @map("in_app")
+  inApp          Boolean  @default(true) @map("in_app")
   whatsApp       Boolean  @default(false) @map("whats_app")
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, organizationId, notifType])
   @@index([userId])
@@ -2266,21 +2423,21 @@ model UserNotificationPreference {
 // ─── Admin Notifications ──────────────────────────────────────────────────────
 
 model AdminNotification {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   title          String
   body           String
-  type           String    @default("info")   // info | warning | success | error
-  appKey         String?   @map("app_key")
-  actionUrl      String?   @map("action_url")
+  type           String   @default("info") // info | warning | success | error
+  appKey         String?  @map("app_key")
+  actionUrl      String?  @map("action_url")
   metadata       Json?
-  targetType     String    @default("all")    // all | org | user
-  targetId       String?   @map("target_id")  // orgId ou userId
-  organizationId String?   @map("organization_id")
-  createdBy      String    @map("created_by") // userID ou "SYSTEM"
-  sentWhatsApp   Boolean   @default(false)    @map("sent_whatsapp")
-  createdAt      DateTime  @default(now())    @map("created_at")
+  targetType     String   @default("all") // all | org | user
+  targetId       String?  @map("target_id") // orgId ou userId
+  organizationId String?  @map("organization_id")
+  createdBy      String   @map("created_by") // userID ou "SYSTEM"
+  sentWhatsApp   Boolean  @default(false) @map("sent_whatsapp")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  reads       AdminNotificationRead[]
+  reads AdminNotificationRead[]
 
   @@index([targetType])
   @@index([createdAt])
@@ -2288,13 +2445,12 @@ model AdminNotification {
   @@map("admin_notification")
 }
 
-
 model AdminNotificationRead {
-  id             String             @id @default(cuid())
-  notificationId String             @map("notification_id")
-  notification   AdminNotification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  userId         String             @map("user_id")
-  readAt         DateTime           @default(now()) @map("read_at")
+  id             String            @id @default(cuid())
+  notificationId String            @map("notification_id")
+  notification   AdminNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String            @map("user_id")
+  readAt         DateTime          @default(now()) @map("read_at")
 
   @@unique([notificationId, userId])
   @@index([userId])
@@ -2307,30 +2463,30 @@ model AdminNotificationRead {
 
 /// Predefined level thresholds (seeded once, global for all orgs)
 model SpacePointLevel {
-  id             String   @id @default(cuid())
-  order          Int      @unique
-  name           String   // "Terra", "Lua", "Marte", "Saturno"…
-  requiredPoints Int      @map("required_points")
-  badgeNumber    Int      @map("badge_number")   // 1-24 → /public/space-point/badges/{n}.svg
-  planetEmoji    String   @default("🪐")          @map("planet_emoji")
+  id             String @id @default(cuid())
+  order          Int    @unique
+  name           String // "Terra", "Lua", "Marte", "Saturno"…
+  requiredPoints Int    @map("required_points")
+  badgeNumber    Int    @map("badge_number") // 1-24 → /public/space-point/badges/{n}.svg
+  planetEmoji    String @default("🪐") @map("planet_emoji")
 
-  seals          UserSpacePointSeal[]
+  seals UserSpacePointSeal[]
 
   @@map("space_point_level")
 }
 
 /// Per-org Star consumption rules (debits per action)
 model StarRule {
-  id                String   @id @default(cuid())
-  orgId             String   @map("org_id")
-  action            String
-  label             String
-  stars             Int      @default(0)  // 0 = free
-  cooldownHours     Int?     @map("cooldown_hours")
-  isActive          Boolean  @default(true) @map("is_active")
-  popupTemplateId   String?  @map("popup_template_id")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt      @map("updated_at")
+  id              String   @id @default(cuid())
+  orgId           String   @map("org_id")
+  action          String
+  label           String
+  stars           Int      @default(0) // 0 = free
+  cooldownHours   Int?     @map("cooldown_hours")
+  isActive        Boolean  @default(true) @map("is_active")
+  popupTemplateId String?  @map("popup_template_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -2341,15 +2497,15 @@ model StarRule {
 
 /// Global configurable rules: which actions earn how many points (fixed for all users)
 model SpacePointRule {
-  id                String   @id @default(cuid())
-  action            String   @unique // "lead_won" | "create_event" | ...
-  label             String   // human-readable, shown in settings
-  points            Int      @default(0)
-  cooldownHours     Int?     @map("cooldown_hours") // null = unlimited
-  isActive          Boolean  @default(true) @map("is_active")
-  popupTemplateId   String?  @map("popup_template_id") // optional linked popup template
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt      @map("updated_at")
+  id              String   @id @default(cuid())
+  action          String   @unique // "lead_won" | "create_event" | ...
+  label           String // human-readable, shown in settings
+  points          Int      @default(0)
+  cooldownHours   Int?     @map("cooldown_hours") // null = unlimited
+  isActive        Boolean  @default(true) @map("is_active")
+  popupTemplateId String?  @map("popup_template_id") // optional linked popup template
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   transactions SpacePointTransaction[]
 
@@ -2360,13 +2516,13 @@ model SpacePointRule {
 model SpacePointRankingPrize {
   id          String   @id @default(cuid())
   orgId       String   @map("org_id")
-  rank        Int      // 1 = 1st place, 2 = 2nd, etc.
+  rank        Int // 1 = 1st place, 2 = 2nd, etc.
   period      String   @default("monthly") // "weekly" | "biweekly" | "monthly" | "annual" | "alltime"
   title       String
   description String?
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt      @map("updated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -2380,14 +2536,14 @@ model UserSpacePoint {
   id           String    @id @default(cuid())
   userId       String    @unique @map("user_id")
   orgId        String    @map("org_id")
-  totalPoints  Int       @default(0)  @map("total_points")
-  weeklyPoints Int       @default(0)  @map("weekly_points")
+  totalPoints  Int       @default(0) @map("total_points")
+  weeklyPoints Int       @default(0) @map("weekly_points")
   weekStart    DateTime? @map("week_start")
   createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt      @map("updated_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org          Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
   transactions SpacePointTransaction[]
   seals        UserSpacePointSeal[]
 
@@ -2396,18 +2552,18 @@ model UserSpacePoint {
 
 /// Audit log of every point event
 model SpacePointTransaction {
-  id              String   @id @default(cuid())
-  userPointId     String   @map("user_point_id")
-  ruleId          String?  @map("rule_id")
-  orgId           String?  @map("org_id") // Track which org triggered the earn
-  points          Int
-  description     String
-  metadata        Json?    @default("{}")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  userPointId String   @map("user_point_id")
+  ruleId      String?  @map("rule_id")
+  orgId       String?  @map("org_id") // Track which org triggered the earn
+  points      Int
+  description String
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  userPoint       UserSpacePoint @relation(fields: [userPointId], references: [id], onDelete: Cascade)
-  rule            SpacePointRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
-  org             Organization?   @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  userPoint UserSpacePoint  @relation(fields: [userPointId], references: [id], onDelete: Cascade)
+  rule      SpacePointRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  org       Organization?   @relation(fields: [orgId], references: [id], onDelete: SetNull)
 
   @@index([userPointId])
   @@index([userPointId, createdAt])
@@ -2423,8 +2579,8 @@ model UserSpacePointSeal {
   levelId     String   @map("level_id")
   earnedAt    DateTime @default(now()) @map("earned_at")
 
-  userPoint   UserSpacePoint  @relation(fields: [userPointId], references: [id], onDelete: Cascade)
-  level       SpacePointLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  userPoint UserSpacePoint  @relation(fields: [userPointId], references: [id], onDelete: Cascade)
+  level     SpacePointLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
 
   @@unique([userPointId, levelId])
   @@index([userPointId])
@@ -2434,10 +2590,10 @@ model UserSpacePointSeal {
 /// Key→URL store for all configurable platform assets (badges, app icons, integration icons, branding)
 model PlatformAsset {
   id        String   @id @default(cuid())
-  key       String   @unique   // "badge:1", "app:tracking", "integration:whatsapp-business", "platform:logo"
+  key       String   @unique // "badge:1", "app:tracking", "integration:whatsapp-business", "platform:logo"
   url       String
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt       @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("platform_asset")
 }
@@ -2445,18 +2601,18 @@ model PlatformAsset {
 /// Platform-level payment gateway configurations (Stripe, Asaas, etc.)
 model PaymentGatewayConfig {
   id            String   @id @default(cuid())
-  provider      String   // "stripe" | "asaas"
+  provider      String // "stripe" | "asaas"
   label         String?
   secretKey     String
-  publicKey     String?  // Stripe publishable key
-  webhookSecret String?  // Stripe webhook signing secret
+  publicKey     String? // Stripe publishable key
+  webhookSecret String? // Stripe webhook signing secret
   environment   String   @default("production") // "sandbox" | "production"
-  isActive      Boolean  @default(true)          @map("is_active")
-  isDefault     Boolean  @default(false)         @map("is_default")
-  createdAt     DateTime @default(now())          @map("created_at")
-  updatedAt     DateTime @updatedAt               @map("updated_at")
+  isActive      Boolean  @default(true) @map("is_active")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  payments      StarsPayment[]
+  payments StarsPayment[]
 
   @@map("payment_gateway_config")
 }
@@ -2476,8 +2632,8 @@ model StarsPayment {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  gatewayConfig  PaymentGatewayConfig? @relation(fields: [gatewayId], references: [id])
-  gatewayId      String?               @map("gateway_id")
+  gatewayConfig PaymentGatewayConfig? @relation(fields: [gatewayId], references: [id])
+  gatewayId     String?               @map("gateway_id")
 
   @@index([userId])
   @@index([organizationId])
@@ -2491,29 +2647,29 @@ model StarsPayment {
 // ─────────────────────────────────────────────
 
 enum FinancialEntryStatus {
-  PENDING    // Pendente
-  PARTIAL    // Pago Parcial
-  PAID       // Pago
-  OVERDUE    // Vencido
-  CANCELLED  // Cancelado
+  PENDING // Pendente
+  PARTIAL // Pago Parcial
+  PAID // Pago
+  OVERDUE // Vencido
+  CANCELLED // Cancelado
 }
 
 enum FinancialEntryType {
-  RECEIVABLE  // Conta a Receber
-  PAYABLE     // Conta a Pagar
+  RECEIVABLE // Conta a Receber
+  PAYABLE // Conta a Pagar
 }
 
 enum PaymentAccountType {
-  CHECKING  // Conta Corrente
-  SAVINGS   // Poupança
-  CASH      // Caixa físico
-  DIGITAL   // Carteira digital
+  CHECKING // Conta Corrente
+  SAVINGS // Poupança
+  CASH // Caixa físico
+  DIGITAL // Carteira digital
 }
 
 enum FinancialCategoryType {
-  REVENUE   // Receita
-  EXPENSE   // Despesa
-  COST      // Custo
+  REVENUE // Receita
+  EXPENSE // Despesa
+  COST // Custo
 }
 
 model PaymentBankAccount {
@@ -2525,15 +2681,15 @@ model PaymentBankAccount {
   agency         String?
   account        String?
   type           PaymentAccountType @default(CHECKING)
-  balance        Int                @default(0)     // em centavos
-  isActive       Boolean            @default(true)  @map("is_active")
+  balance        Int                @default(0) // em centavos
+  isActive       Boolean            @default(true) @map("is_active")
   isDefault      Boolean            @default(false) @map("is_default")
   color          String?            @default("#1E90FF")
   createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt      @map("updated_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entries        PaymentEntry[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries      PaymentEntry[]
 
   @@index([organizationId])
   @@map("payment_bank_accounts")
@@ -2549,12 +2705,12 @@ model PaymentCategory {
   parentId       String?               @map("parent_id")
   isActive       Boolean               @default(true) @map("is_active")
   createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt      @map("updated_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
 
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parent         PaymentCategory?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children       PaymentCategory[]  @relation("CategoryHierarchy")
-  entries        PaymentEntry[]
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       PaymentCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     PaymentCategory[] @relation("CategoryHierarchy")
+  entries      PaymentEntry[]
 
   @@index([organizationId])
   @@map("payment_categories")
@@ -2567,10 +2723,10 @@ model PaymentCostCenter {
   description    String?
   isActive       Boolean  @default(true) @map("is_active")
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entries        PaymentEntry[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries      PaymentEntry[]
 
   @@index([organizationId])
   @@map("payment_cost_centers")
@@ -2580,18 +2736,18 @@ model PaymentContact {
   id             String   @id @default(cuid())
   organizationId String   @map("organization_id")
   name           String
-  document       String?  // CPF ou CNPJ
+  document       String? // CPF ou CNPJ
   email          String?
   phone          String?
   contactType    String   @default("BOTH") @map("contact_type") // CUSTOMER, SUPPLIER, BOTH
   notes          String?
   isActive       Boolean  @default(true) @map("is_active")
-  creditLimit    Int      @default(0)    @map("credit_limit") // em centavos
+  creditLimit    Int      @default(0) @map("credit_limit") // em centavos
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entries        PaymentEntry[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries      PaymentEntry[]
 
   @@index([organizationId])
   @@map("payment_contacts")
@@ -2603,14 +2759,14 @@ model PaymentAccess {
   organizationId String   @map("organization_id")
   passwordHash   String   @map("password_hash")
   isAuthorized   Boolean  @default(false) @map("is_authorized")
-  phone          String?  // para envio de PIN via WhatsApp
+  phone          String? // para envio de PIN via WhatsApp
   authorizedById String?  @map("authorized_by_id")
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  user           User         @relation("PaymentAccessUser",        fields: [userId],         references: [id], onDelete: Cascade)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  authorizedBy   User?        @relation("PaymentAccessAuthorizer",  fields: [authorizedById], references: [id])
+  user         User         @relation("PaymentAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  authorizedBy User?        @relation("PaymentAccessAuthorizer", fields: [authorizedById], references: [id])
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -2624,20 +2780,20 @@ model PaymentEntry {
   status         FinancialEntryStatus @default(PENDING)
 
   description    String
-  amount         Int                  // em centavos
-  paidAmount     Int                  @default(0) @map("paid_amount") // em centavos
-  dueDate        DateTime             @map("due_date")
-  paidAt         DateTime?            @map("paid_at")
-  competenceDate DateTime?            @map("competence_date")
+  amount         Int // em centavos
+  paidAmount     Int       @default(0) @map("paid_amount") // em centavos
+  dueDate        DateTime  @map("due_date")
+  paidAt         DateTime? @map("paid_at")
+  competenceDate DateTime? @map("competence_date")
 
-  documentNumber String?  @map("document_number")
+  documentNumber String? @map("document_number")
   notes          String?
-  attachmentUrl  String?  @map("attachment_url")
+  attachmentUrl  String? @map("attachment_url")
 
-  categoryId    String?  @map("category_id")
-  costCenterId  String?  @map("cost_center_id")
-  contactId     String?  @map("contact_id")
-  accountId     String?  @map("account_id")
+  categoryId   String? @map("category_id")
+  costCenterId String? @map("cost_center_id")
+  contactId    String? @map("contact_id")
+  accountId    String? @map("account_id")
 
   // Parcelamento
   installmentTotal   Int?    @map("installment_total")
@@ -2648,16 +2804,16 @@ model PaymentEntry {
   isRecurring    Boolean @default(false) @map("is_recurring")
   recurrenceType String? @map("recurrence_type") // daily, weekly, monthly, yearly
 
-  createdById   String?  @map("created_by_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt      @map("updated_at")
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  category       PaymentCategory?    @relation(fields: [categoryId], references: [id])
-  costCenter     PaymentCostCenter?  @relation(fields: [costCenterId], references: [id])
-  contact        PaymentContact?     @relation(fields: [contactId], references: [id])
-  account        PaymentBankAccount? @relation(fields: [accountId], references: [id])
-  createdBy      User?               @relation("PaymentEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category     PaymentCategory?    @relation(fields: [categoryId], references: [id])
+  costCenter   PaymentCostCenter?  @relation(fields: [costCenterId], references: [id])
+  contact      PaymentContact?     @relation(fields: [contactId], references: [id])
+  account      PaymentBankAccount? @relation(fields: [accountId], references: [id])
+  createdBy    User?               @relation("PaymentEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([type])
@@ -2672,38 +2828,38 @@ model PaymentEntry {
 // ─── ORG PROJECTS / CLIENTES ────────────────────────────────────────────────
 
 model OrgProject {
-  id             String    @id @default(cuid())
-  organizationId String    @map("organization_id")
+  id             String  @id @default(cuid())
+  organizationId String  @map("organization_id")
   name           String
   avatar         String?
-  type           String    @default("client") // "project" | "client" | "entity" | custom
+  type           String  @default("client") // "project" | "client" | "entity" | custom
   description    String?
-  color          String?   @default("#7c3aed")
-  isActive       Boolean   @default(true)  @map("is_active")
+  color          String? @default("#7c3aed")
+  isActive       Boolean @default(true) @map("is_active")
 
   // Marca / Brand
-  slogan           String?
-  website          String?
-  icp              String?
-  positioning      String?
-  voiceTone        String?  @map("voice_tone")
-  visual           Json     @default("{}")
-  aiInstructions   String?  @map("ai_instructions")
-  swot             Json     @default("{}")
+  slogan         String?
+  website        String?
+  icp            String?
+  positioning    String?
+  voiceTone      String? @map("voice_tone")
+  visual         Json    @default("{}")
+  aiInstructions String? @map("ai_instructions")
+  swot           Json    @default("{}")
 
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt      @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leads             Lead[]
-  trackings         Tracking[]
-  actions           Action[]
-  workspaces        Workspace[]
-  appointments      Appointment[]
-  forgeProposals    ForgeProposal[]
-  nasaPlanners      NasaPlanner[]
-  campaignPlanners  NasaCampaignPlanner[]
-  nasaPlannerPosts  NasaPlannerPost[]
+  organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads                     Lead[]
+  trackings                 Tracking[]
+  actions                   Action[]
+  workspaces                Workspace[]
+  appointments              Appointment[]
+  forgeProposals            ForgeProposal[]
+  nasaPlanners              NasaPlanner[]
+  campaignPlanners          NasaCampaignPlanner[]
+  nasaPlannerPosts          NasaPlannerPost[]
   clientOnboardingProcesses ClientOnboardingProcess[]
 
   @@index([organizationId])
@@ -2762,39 +2918,39 @@ enum NasaCampaignTaskPriority {
 }
 
 model NasaCampaignPlanner {
-  id             String               @id @default(cuid())
-  organizationId String               @map("organization_id")
-  userId         String               @map("user_id")
-  plannerId      String?              @map("planner_id")
-  forgeProposalId String?             @map("forge_proposal_id")
-  orgProjectId   String?              @map("org_project_id")
-  title          String
-  description    String?
-  campaignType   String?              @map("campaign_type")
-  status         NasaCampaignStatus   @default(DRAFT)
-  companyCode    String?              @unique @map("company_code")
-  startDate      DateTime?            @map("start_date")
-  endDate        DateTime?            @map("end_date")
-  clientName     String?              @map("client_name")
-  clientLogo     String?              @map("client_logo")
-  color          String?              @default("#7c3aed")
-  metadata       Json                 @default("{}")
-  createdAt      DateTime             @default(now()) @map("created_at")
-  updatedAt      DateTime             @updatedAt      @map("updated_at")
-  deletedAt      DateTime?            @map("deleted_at")
+  id              String             @id @default(cuid())
+  organizationId  String             @map("organization_id")
+  userId          String             @map("user_id")
+  plannerId       String?            @map("planner_id")
+  forgeProposalId String?            @map("forge_proposal_id")
+  orgProjectId    String?            @map("org_project_id")
+  title           String
+  description     String?
+  campaignType    String?            @map("campaign_type")
+  status          NasaCampaignStatus @default(DRAFT)
+  companyCode     String?            @unique @map("company_code")
+  startDate       DateTime?          @map("start_date")
+  endDate         DateTime?          @map("end_date")
+  clientName      String?            @map("client_name")
+  clientLogo      String?            @map("client_logo")
+  color           String?            @default("#7c3aed")
+  metadata        Json               @default("{}")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  deletedAt       DateTime?          @map("deleted_at")
 
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User                 @relation("NasaCampaignPlannerCreatedBy", fields: [userId], references: [id])
-  planner        NasaPlanner?         @relation(fields: [plannerId], references: [id], onDelete: SetNull)
-  forgeProposal  ForgeProposal?       @relation(fields: [forgeProposalId], references: [id], onDelete: SetNull)
-  orgProject     OrgProject?          @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          User           @relation("NasaCampaignPlannerCreatedBy", fields: [userId], references: [id])
+  planner       NasaPlanner?   @relation(fields: [plannerId], references: [id], onDelete: SetNull)
+  forgeProposal ForgeProposal? @relation(fields: [forgeProposalId], references: [id], onDelete: SetNull)
+  orgProject    OrgProject?    @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
 
-  onboarding     NasaCampaignOnboarding?
-  events         NasaCampaignEvent[]
-  brandAssets    NasaCampaignBrandAsset[]
-  tasks          NasaCampaignTask[]
-  publicAccess   NasaCampaignPublicAccess?
-  posts          NasaPlannerPost[]
+  onboarding                NasaCampaignOnboarding?
+  events                    NasaCampaignEvent[]
+  brandAssets               NasaCampaignBrandAsset[]
+  tasks                     NasaCampaignTask[]
+  publicAccess              NasaCampaignPublicAccess?
+  posts                     NasaPlannerPost[]
   clientOnboardingProcesses ClientOnboardingProcess[]
 
   @@index([organizationId])
@@ -2804,40 +2960,40 @@ model NasaCampaignPlanner {
 }
 
 model NasaCampaignOnboarding {
-  id                 String              @id @default(cuid())
-  campaignPlannerId  String              @unique @map("campaign_planner_id")
-  stage              String              @default("forge_pending")
-  forgeCompletedAt   DateTime?           @map("forge_completed_at")
-  onboardingStartedAt DateTime?          @map("onboarding_started_at")
-  notes              String?
-  responsibleUserId  String?             @map("responsible_user_id")
-  metadata           Json                @default("{}")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt      @map("updated_at")
+  id                  String    @id @default(cuid())
+  campaignPlannerId   String    @unique @map("campaign_planner_id")
+  stage               String    @default("forge_pending")
+  forgeCompletedAt    DateTime? @map("forge_completed_at")
+  onboardingStartedAt DateTime? @map("onboarding_started_at")
+  notes               String?
+  responsibleUserId   String?   @map("responsible_user_id")
+  metadata            Json      @default("{}")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  campaignPlanner    NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
-  responsibleUser    User?               @relation("NasaCampaignOnboardingResponsible", fields: [responsibleUserId], references: [id])
+  campaignPlanner NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
+  responsibleUser User?               @relation("NasaCampaignOnboardingResponsible", fields: [responsibleUserId], references: [id])
 
   @@map("nasa_campaign_onboardings")
 }
 
 model NasaCampaignEvent {
-  id                 String                  @id @default(cuid())
-  campaignPlannerId  String                  @map("campaign_planner_id")
-  eventType          NasaCampaignEventType   @map("event_type")
-  title              String
-  description        String?
-  scheduledAt        DateTime                @map("scheduled_at")
-  durationMinutes    Int                     @default(60) @map("duration_minutes")
-  participants       Json                    @default("[]")
-  meetingLink          String?                 @map("meeting_link")
-  status               NasaCampaignEventStatus @default(SCHEDULED)
-  linkedActionId       String?                 @map("linked_action_id")
-  linkedAppointmentId  String?                 @map("linked_appointment_id")
-  createdAt            DateTime                @default(now()) @map("created_at")
-  updatedAt            DateTime                @updatedAt      @map("updated_at")
+  id                  String                  @id @default(cuid())
+  campaignPlannerId   String                  @map("campaign_planner_id")
+  eventType           NasaCampaignEventType   @map("event_type")
+  title               String
+  description         String?
+  scheduledAt         DateTime                @map("scheduled_at")
+  durationMinutes     Int                     @default(60) @map("duration_minutes")
+  participants        Json                    @default("[]")
+  meetingLink         String?                 @map("meeting_link")
+  status              NasaCampaignEventStatus @default(SCHEDULED)
+  linkedActionId      String?                 @map("linked_action_id")
+  linkedAppointmentId String?                 @map("linked_appointment_id")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
 
-  campaignPlanner    NasaCampaignPlanner     @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
+  campaignPlanner NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
 
   @@index([campaignPlannerId])
   @@index([scheduledAt])
@@ -2845,54 +3001,54 @@ model NasaCampaignEvent {
 }
 
 model NasaCampaignBrandAsset {
-  id                 String                     @id @default(cuid())
-  campaignPlannerId  String                     @map("campaign_planner_id")
-  nboxItemId         String?                    @map("nbox_item_id")
-  assetType          NasaCampaignBrandAssetType @map("asset_type")
-  name               String
-  url                String?
-  filePath           String?                    @map("file_path")
-  metadata           Json                       @default("{}")
-  createdAt          DateTime                   @default(now()) @map("created_at")
+  id                String                     @id @default(cuid())
+  campaignPlannerId String                     @map("campaign_planner_id")
+  nboxItemId        String?                    @map("nbox_item_id")
+  assetType         NasaCampaignBrandAssetType @map("asset_type")
+  name              String
+  url               String?
+  filePath          String?                    @map("file_path")
+  metadata          Json                       @default("{}")
+  createdAt         DateTime                   @default(now()) @map("created_at")
 
-  campaignPlanner    NasaCampaignPlanner        @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
-  nboxItem           NBoxItem?                  @relation(fields: [nboxItemId], references: [id], onDelete: SetNull)
+  campaignPlanner NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
+  nboxItem        NBoxItem?           @relation(fields: [nboxItemId], references: [id], onDelete: SetNull)
 
   @@index([campaignPlannerId])
   @@map("nasa_campaign_brand_assets")
 }
 
 model NasaCampaignTask {
-  id                 String                   @id @default(cuid())
-  campaignPlannerId  String                   @map("campaign_planner_id")
-  title              String
-  description        String?
-  assignedTo         String?                  @map("assigned_to")
-  priority           NasaCampaignTaskPriority @default(MEDIUM)
-  status             NasaCampaignTaskStatus   @default(PENDING)
-  dueDate            DateTime?                @map("due_date")
-  tags               Json                     @default("[]")
-  createdAt          DateTime                 @default(now()) @map("created_at")
-  updatedAt          DateTime                 @updatedAt      @map("updated_at")
+  id                String                   @id @default(cuid())
+  campaignPlannerId String                   @map("campaign_planner_id")
+  title             String
+  description       String?
+  assignedTo        String?                  @map("assigned_to")
+  priority          NasaCampaignTaskPriority @default(MEDIUM)
+  status            NasaCampaignTaskStatus   @default(PENDING)
+  dueDate           DateTime?                @map("due_date")
+  tags              Json                     @default("[]")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
 
-  campaignPlanner    NasaCampaignPlanner      @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
-  assignee           User?                    @relation("NasaCampaignTaskAssignee", fields: [assignedTo], references: [id])
+  campaignPlanner NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
+  assignee        User?               @relation("NasaCampaignTaskAssignee", fields: [assignedTo], references: [id])
 
   @@index([campaignPlannerId])
   @@map("nasa_campaign_tasks")
 }
 
 model NasaCampaignPublicAccess {
-  id                 String              @id @default(cuid())
-  campaignPlannerId  String              @unique @map("campaign_planner_id")
-  accessCode         String              @unique @map("access_code")
-  isActive           Boolean             @default(true) @map("is_active")
-  allowedViews       Json                @default("[\"calendar\"]") @map("allowed_views")
-  expiresAt          DateTime?           @map("expires_at")
-  lastAccessedAt     DateTime?           @map("last_accessed_at")
-  createdAt          DateTime            @default(now()) @map("created_at")
+  id                String    @id @default(cuid())
+  campaignPlannerId String    @unique @map("campaign_planner_id")
+  accessCode        String    @unique @map("access_code")
+  isActive          Boolean   @default(true) @map("is_active")
+  allowedViews      Json      @default("[\"calendar\"]") @map("allowed_views")
+  expiresAt         DateTime? @map("expires_at")
+  lastAccessedAt    DateTime? @map("last_accessed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
-  campaignPlanner    NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
+  campaignPlanner NasaCampaignPlanner @relation(fields: [campaignPlannerId], references: [id], onDelete: Cascade)
 
   @@index([accessCode])
   @@map("nasa_campaign_public_access")
@@ -2914,13 +3070,13 @@ model ClientOnboardingProcess {
   id               String                @id @default(cuid())
   organizationId   String                @map("organization_id")
   orgProjectId     String?               @map("org_project_id")
-  proposalId       String?  @unique       @map("proposal_id")
+  proposalId       String?               @unique @map("proposal_id")
   leadId           String?               @map("lead_id")
   plannerId        String?               @map("planner_id")
   campaignId       String?               @map("campaign_id")
   brandFormId      String?               @map("brand_form_id")
   onboardingFormId String?               @map("onboarding_form_id")
-  clientPortalCode String  @unique       @map("client_portal_code")
+  clientPortalCode String                @unique @map("client_portal_code")
   kickoffLink      String?               @map("kickoff_link")
   stage            ClientOnboardingStage @default(PAYMENT_CONFIRMED)
 
@@ -2932,7 +3088,7 @@ model ClientOnboardingProcess {
   activatedAt        DateTime? @map("activated_at")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   orgProject     OrgProject?          @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
@@ -2940,7 +3096,7 @@ model ClientOnboardingProcess {
   lead           Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
   planner        NasaPlanner?         @relation(fields: [plannerId], references: [id], onDelete: SetNull)
   campaign       NasaCampaignPlanner? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  brandForm      Form?                @relation("OnboardingBrandForm",      fields: [brandFormId],      references: [id], onDelete: SetNull)
+  brandForm      Form?                @relation("OnboardingBrandForm", fields: [brandFormId], references: [id], onDelete: SetNull)
   onboardingForm Form?                @relation("OnboardingOnboardingForm", fields: [onboardingFormId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
@@ -2950,23 +3106,23 @@ model ClientOnboardingProcess {
 
 /// Customizable popup templates for achievements and stars rewards
 model AchievementPopupTemplate {
-  id                String   @id @default(cuid())
-  name              String   // e.g., "Parabéns Lua", "Conquista Especial"
-  type              String   // "achievement" | "stars_reward" | "level_up"
-  title             String   // e.g., "Parabéns você chegou na Lua"
-  message           String   // e.g., "Você completou um grande feito"
-  primaryColor      String   @default("#7a1fe7")   // Hex color for primary elements
-  accentColor       String   @default("#a855f7")   // Hex color for accents
-  backgroundColor   String   @default("#1a0a3d")   // Card background
-  textColor         String   @default("#ffffff")   // Main text color
-  iconUrl           String?  // Optional custom icon/badge URL
-  enableConfetti    Boolean  @default(true)        // Enable confetti animation
-  enableSound       Boolean  @default(true)        // Enable success sound
-  dismissDuration   Int      @default(5000)        // Auto-dismiss in milliseconds
-  customJson        Json     @default("{}")        // Store additional customization
-  isActive          Boolean  @default(true)        @map("is_active")
-  createdAt         DateTime @default(now())       @map("created_at")
-  updatedAt         DateTime @updatedAt            @map("updated_at")
+  id              String   @id @default(cuid())
+  name            String // e.g., "Parabéns Lua", "Conquista Especial"
+  type            String // "achievement" | "stars_reward" | "level_up"
+  title           String // e.g., "Parabéns você chegou na Lua"
+  message         String // e.g., "Você completou um grande feito"
+  primaryColor    String   @default("#7a1fe7") // Hex color for primary elements
+  accentColor     String   @default("#a855f7") // Hex color for accents
+  backgroundColor String   @default("#1a0a3d") // Card background
+  textColor       String   @default("#ffffff") // Main text color
+  iconUrl         String? // Optional custom icon/badge URL
+  enableConfetti  Boolean  @default(true) // Enable confetti animation
+  enableSound     Boolean  @default(true) // Enable success sound
+  dismissDuration Int      @default(5000) // Auto-dismiss in milliseconds
+  customJson      Json     @default("{}") // Store additional customization
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@index([type])
   @@map("achievement_popup_template")
@@ -2974,10 +3130,10 @@ model AchievementPopupTemplate {
 
 // Enum para os status do ticket
 enum SupportStatus {
-  PENDING      // Aguardando análise
-  IN_PROGRESS  // Sendo desenvolvido/analisado
-  RESOLVED     // Concluído/Implementado
-  REJECTED     // Rejeitado/Não aplicável
+  PENDING // Aguardando análise
+  IN_PROGRESS // Sendo desenvolvido/analisado
+  RESOLVED // Concluído/Implementado
+  REJECTED // Rejeitado/Não aplicável
 }
 
 model SupportTicket {
@@ -2989,14 +3145,13 @@ model SupportTicket {
   userId      String        @map("user_id")
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([status])
   @@map("support_tickets")
 }
-
 
 // ─────────────────────────────────────────────
 // SCRIPTS
@@ -3014,4 +3169,451 @@ model Script {
 
   @@index([trackingId])
   @@map("scripts")
+}
+
+// ─────────────────────────────────────────────
+// LINNKER — Link Bio & QR Code
+// ─────────────────────────────────────────────
+
+enum LinnkerLinkType {
+  TRACKING
+  FORM
+  CHAT
+  EXTERNAL
+  AGENDA
+}
+
+model LinnkerPage {
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  userId            String   @map("user_id")
+  slug              String   @unique
+  title             String
+  bio               String?
+  avatarUrl         String?  @map("avatar_url")
+  coverColor        String   @default("#6366f1") @map("cover_color")
+  buttonStyle       String   @default("rounded") @map("button_style")
+  isPublished       Boolean  @default(false) @map("is_published")
+  bannerUrl         String?  @map("banner_url")
+  backgroundColor   String?  @map("background_color")
+  backgroundImage   String?  @map("background_image")
+  backgroundOpacity Float    @default(0.15) @map("background_opacity")
+  socialLinks       Json?    @map("social_links")
+  socialIconColor   String?  @map("social_icon_color")
+  titleColor        String?  @map("title_color")
+  bioColor          String?  @map("bio_color")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links        LinnkerLink[]
+  scans        LinnkerScan[]
+
+  @@index([organizationId])
+  @@map("linnker_pages")
+}
+
+model LinnkerLink {
+  id           String          @id @default(cuid())
+  pageId       String          @map("page_id")
+  title        String
+  description  String?
+  url          String
+  type         LinnkerLinkType @default(EXTERNAL)
+  icon         String?
+  emoji        String?
+  imageUrl     String?         @map("image_url")
+  displayStyle String          @default("button") @map("display_style")
+  color        String?
+  position     Int             @default(0)
+  isActive     Boolean         @default(true) @map("is_active")
+  clicks       Int             @default(0)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  page LinnkerPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("linnker_links")
+}
+
+model LinnkerScan {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  leadId    String?  @map("lead_id")
+  name      String?
+  email     String?
+  phone     String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page LinnkerPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  lead Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([pageId])
+  @@map("linnker_scans")
+}
+
+// ─────────────────────────────────────────────
+// SPACE STATION
+// ─────────────────────────────────────────────
+
+enum StationType {
+  USER
+  ORG
+}
+
+enum StationRank {
+  COMMANDER
+  CREW
+}
+
+enum StationModule {
+  FORM
+  CHAT
+  AGENDA
+  INTEGRATION
+  NBOX
+  FORGE
+  APPS
+  NOTIFICATIONS
+}
+
+enum StationAccessMode {
+  OPEN
+  MEMBERS_ONLY
+  REQUEST
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model SpaceStation {
+  id            String            @id @default(cuid())
+  type          StationType
+  userId        String?           @unique @map("user_id")
+  orgId         String?           @unique @map("org_id")
+  nick          String            @unique
+  isPublic      Boolean           @default(false) @map("is_public")
+  bio           String?
+  avatarUrl     String?           @map("avatar_url")
+  bannerUrl     String?           @map("banner_url")
+  theme         Json?
+  rank          StationRank       @default(CREW)
+  starsReceived Int               @default(0) @map("stars_received")
+  config        Json?
+  accessMode    StationAccessMode @default(OPEN) @map("access_mode")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  user           User?                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org            Organization?          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  receivedStars  SpaceStationStar[]     @relation("ReceivedStars")
+  sentStars      SpaceStationStar[]     @relation("SentStars")
+  worldConfig    SpaceStationWorld?
+  publicModules  StationPublicModule[]
+  accessRequests StationAccessRequest[]
+
+  @@map("space_stations")
+}
+
+model StationAccessRequest {
+  id          String              @id @default(cuid())
+  stationId   String              @map("station_id")
+  station     SpaceStation        @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  userId      String              @map("user_id")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message     String?
+  status      AccessRequestStatus @default(PENDING)
+  decidedById String?             @map("decided_by_id")
+  decidedAt   DateTime?           @map("decided_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  @@unique([stationId, userId])
+  @@index([stationId, status])
+  @@map("station_access_requests")
+}
+
+model SpaceStationWorld {
+  id            String   @id @default(cuid())
+  stationId     String   @unique @map("station_id")
+  mapData       Json?    @map("map_data")
+  planetColor   String   @default("#4B0082") @map("planet_color")
+  ambientTheme  String   @default("space") @map("ambient_theme")
+  avatarConfig  Json?    @map("avatar_config")
+  npcConfig     Json?    @map("npc_config")
+  meetingPoints Json?    @map("meeting_points")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  station SpaceStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@map("space_station_worlds")
+}
+
+model SpaceStationStar {
+  id        String   @id @default(cuid())
+  fromId    String   @map("from_id")
+  toId      String   @map("to_id")
+  amount    Int
+  message   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  from SpaceStation @relation("SentStars", fields: [fromId], references: [id], onDelete: Cascade)
+  to   SpaceStation @relation("ReceivedStars", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId])
+  @@index([toId])
+  @@map("space_station_stars")
+}
+
+model StationPublicModule {
+  id         String        @id @default(cuid())
+  stationId  String        @map("station_id")
+  module     StationModule
+  resourceId String?       @map("resource_id")
+  isActive   Boolean       @default(true) @map("is_active")
+  config     Json?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  station SpaceStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@unique([stationId, module])
+  @@index([stationId])
+  @@map("station_public_modules")
+}
+
+model WorldGameAsset {
+  id         String   @id @default(cuid())
+  type       String
+  name       String
+  imageUrl   String   @map("image_url")
+  previewUrl String?  @map("preview_url")
+  config     Json?
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("world_game_assets")
+}
+
+enum TemplateCategory {
+  OFFICE
+  SPACE
+  NATURE
+  FANTASY
+  TECH
+  OTHER
+}
+
+model WorldTemplate {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  authorId    String           @map("author_id")
+  stationId   String?          @map("station_id")
+  previewUrl  String?          @map("preview_url")
+  mapData     Json             @map("map_data")
+  category    TemplateCategory @default(OTHER)
+  isPublic    Boolean          @default(false) @map("is_public")
+  usedCount   Int              @default(0) @map("used_count")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([isPublic, category])
+  @@map("world_templates")
+}
+
+model AvatarTemplate {
+  id         String   @id @default(cuid())
+  name       String
+  authorId   String   @map("author_id")
+  previewUrl String?  @map("preview_url")
+  spriteUrl  String   @map("sprite_url")
+  overlays   Json?
+  isPublic   Boolean  @default(false) @map("is_public")
+  usedCount  Int      @default(0) @map("used_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([isPublic])
+  @@map("avatar_templates")
+}
+
+model UserConnection {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  connectedId String   @map("connected_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User @relation("UserConnectionsAsUser", fields: [userId], references: [id], onDelete: Cascade)
+  connected User @relation("UserConnectionsAsConnected", fields: [connectedId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, connectedId])
+  @@index([userId])
+  @@index([connectedId])
+  @@map("user_connections")
+}
+
+// ─────────────────────────────────────────────
+// NASA PAGES
+// ─────────────────────────────────────────────
+
+enum NasaPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NasaPageIntent {
+  INSTITUTIONAL
+  LANDING
+  BIO_LINK
+  EVENT
+  PRODUCT
+  PORTFOLIO
+  CUSTOM
+}
+
+enum NasaPageDomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum NasaPageDomainSource {
+  EXTERNAL
+  PURCHASED_VIA_NASA
+}
+
+enum NasaPageDomainPurchaseStatus {
+  NOT_STARTED
+  SEARCHING
+  AWAITING_PAYMENT
+  PAID
+  REGISTERING
+  ACTIVE
+  FAILED
+}
+
+model NasaPage {
+  id                        String                @id @default(cuid())
+  organizationId            String                @map("organization_id")
+  userId                    String                @map("user_id")
+  slug                      String                @unique
+  title                     String
+  description               String?
+  faviconUrl                String?               @map("favicon_url")
+  ogImageUrl                String?               @map("og_image_url")
+  intent                    NasaPageIntent        @default(CUSTOM)
+  status                    NasaPageStatus        @default(DRAFT)
+  layerCount                Int                   @default(1) @map("layer_count")
+  palette                   Json                  @default("{}")
+  fontFamily                String?               @map("font_family")
+  layout                    Json                  @default("{}")
+  publishedLayout           Json?                 @map("published_layout")
+  publishedAt               DateTime?             @map("published_at")
+  customDomain              String?               @unique @map("custom_domain")
+  domainStatus              NasaPageDomainStatus? @map("domain_status")
+  domainSource              NasaPageDomainSource? @map("domain_source")
+  domainVerifyToken         String?               @map("domain_verify_token")
+  isTemplate                Boolean               @default(false) @map("is_template")
+  templateMarkedByModerator Boolean               @default(false) @map("template_marked_by_moderator")
+  templateCategory          String?               @map("template_category")
+  starsSpent                Int                   @default(0) @map("stars_spent")
+  createdAt                 DateTime              @default(now()) @map("created_at")
+  updatedAt                 DateTime              @updatedAt @map("updated_at")
+
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions       NasaPageVersion[]
+  visits         NasaPageVisit[]
+  assets         NasaPageAsset[]
+  domainPurchase NasaPageDomainPurchase?
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([customDomain])
+  @@map("nasa_pages")
+}
+
+model NasaPageVersion {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  snapshot  Json
+  label     String?
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@map("nasa_page_versions")
+}
+
+model NasaPageAsset {
+  id             String   @id @default(cuid())
+  pageId         String   @map("page_id")
+  organizationId String   @map("organization_id")
+  url            String
+  kind           String
+  originalName   String?  @map("original_name")
+  sizeBytes      Int?     @map("size_bytes")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([organizationId])
+  @@map("nasa_page_assets")
+}
+
+model NasaPageVisit {
+  id        String   @id @default(cuid())
+  pageId    String   @map("page_id")
+  path      String?
+  referrer  String?
+  userAgent String?  @map("user_agent")
+  country   String?
+  ipAddress String?  @map("ip_address")
+  device    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([createdAt])
+  @@map("nasa_page_visits")
+}
+
+model NasaPageDomainPurchase {
+  id              String                       @id @default(cuid())
+  pageId          String                       @unique @map("page_id")
+  provider        String
+  requestedDomain String                       @map("requested_domain")
+  tldPriceCents   Int?                         @map("tld_price_cents")
+  currency        String?
+  checkoutUrl     String?                      @map("checkout_url")
+  externalOrderId String?                      @map("external_order_id")
+  status          NasaPageDomainPurchaseStatus @default(NOT_STARTED)
+  lastError       String?                      @map("last_error")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+
+  page NasaPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("nasa_page_domain_purchases")
 }

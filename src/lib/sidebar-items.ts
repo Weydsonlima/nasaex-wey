@@ -12,6 +12,7 @@ import {
   Map,
   Hammer,
   Landmark,
+  Link2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
@@ -40,6 +41,7 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   { key: "nasa-planner", title: "Planner",      url: "/nasa-planner",   icon: Map,                       alwaysVisible: false, defaultVisible: false },
   { key: "forge",        title: "Forge",        url: "/forge",          icon: Hammer,                    alwaysVisible: false, defaultVisible: false },
   { key: "payment",      title: "Payment",      url: "/payment",        icon: Landmark,                  alwaysVisible: false, defaultVisible: false },
+  { key: "linnker",      title: "Linnker",      url: "/linnker",        icon: Link2,                     alwaysVisible: false, defaultVisible: false },
   // ── Sempre visível ──────────────────────────────────────────────────────
   { key: "apps",         title: "Apps",         url: "/apps",           icon: LayoutGrid,                alwaysVisible: true,  defaultVisible: true  },
 ];
@@ -54,6 +56,7 @@ export const APP_TO_SIDEBAR_KEY: Record<string, string> = {
   "nasa-planner": "nasa-planner",
   forge:          "forge",
   payment:        "payment",
+  linnker:        "linnker",
   insights:       "insights",
   integrations:   "integrations",
   contatos:       "contatos",

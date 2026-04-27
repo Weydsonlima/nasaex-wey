@@ -312,6 +312,7 @@ export function ConversationsList() {
 
 function matchesChannel(
   item: {
+    channel?: string | null;
     lead: {
       source: LeadSource;
     };
@@ -322,18 +323,14 @@ function matchesChannel(
     return true;
   }
 
-  // A tela de Tracking Chat hoje é alimentada pela instância de WhatsApp
-  // configurada no tracking. Ao selecionar WhatsApp, não filtramos nada
-  // para garantir que todos os leads dessa instância apareçam.
+  // Use conversation.channel when available (new field), fall back to lead.source
+  const channel = item.channel ?? "WHATSAPP";
+
   if (selectedChannel === "WHATSAPP") {
-    return true;
+    return channel === "WHATSAPP";
   }
 
-  if (selectedChannel === "FACEBOOK") {
-    return item.lead.source === LeadSource.OTHER;
-  }
-
-  return item.lead.source === selectedChannel;
+  return channel === selectedChannel;
 }
 
 function isFavoriteConversation(item: {

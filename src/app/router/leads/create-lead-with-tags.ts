@@ -3,7 +3,7 @@ import { requiredAuthMiddleware } from "../../middlewares/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/client";
-import { LeadAction } from "@/generated/prisma/enums";
+import { LeadAction, StatusFlow } from "@/generated/prisma/enums";
 import { recordLeadHistory } from "./utils/history";
 import { assignLeadRoundRobin } from "@/http/rodizio/create-lead";
 import { validWhatsappPhone } from "@/http/uazapi/valid-whatsapp-phone";
@@ -126,6 +126,7 @@ export const createLeadWithTags = base
           order: newOrder,
           responsibleId,
           orgProjectId: input.orgProjectId,
+          statusFlow: StatusFlow.NEW,
         },
         include: {
           tracking: {

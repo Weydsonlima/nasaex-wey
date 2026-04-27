@@ -14,7 +14,7 @@ export const requireAdminMiddleware = base.middleware(
     });
 
     if (!sessionData?.session || !sessionData.user) {
-      throw errors.UNAUTHORIZED;
+      throw errors.UNAUTHORIZED({ message: "Não autorizado" });
     }
 
     // Verify isSystemAdmin directly from DB — do not trust session cache
@@ -24,7 +24,7 @@ export const requireAdminMiddleware = base.middleware(
     });
 
     if (!dbUser?.isSystemAdmin) {
-      throw errors.FORBIDDEN;
+      throw errors.FORBIDDEN({ message: "Sem permissão" });
     }
 
     return next({

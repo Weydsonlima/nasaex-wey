@@ -12,6 +12,7 @@ import AddLeadSheet from "@/features/trackings/components/modal/add-lead-sheet";
 import { AiLeadButton } from "@/features/trackings/components/modal/ai-lead-button";
 import { useAddLead } from "@/hooks/modal/use-add-lead";
 import { SorterLead } from "./sort-leads";
+import { StatusFlowFilter } from "./status-flow-filter";
 
 export function FiltersTracking() {
   const { trackingId } = useParams<{ trackingId: string }>();
@@ -25,8 +26,9 @@ export function FiltersTracking() {
             <TrackingSwitcher />
             <ParticipantsSwitcher />
             <TagsFilter />
+            <StatusFlowFilter />
             <CalendarFilter />
-            <SorterLead />
+            {/* <SorterLead /> */}
           </div>
           <Filters />
         </div>

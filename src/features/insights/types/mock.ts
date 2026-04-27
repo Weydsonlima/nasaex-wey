@@ -15,7 +15,10 @@ export const mockDashboardData: DashboardReport = {
     sentMessages: 0,
     receivedMessages: 0,
     avgTimeToFirstResponse: 0, // seconds
+    leadsActive: 0,
+    leadsWaiting: 0,
   },
+
   byStatus: [
     {
       status: { id: "1", name: "Novo", color: "#3B82F6" },

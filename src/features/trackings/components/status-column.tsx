@@ -37,6 +37,7 @@ export function StatusColumn({
   const [tagsFilter] = useQueryState("tags");
   const [temperatureFilter] = useQueryState("temperature");
   const [actionFilter] = useQueryState("filter");
+  const [statusFlowFilter] = useQueryState("status_flow");
   const {
     attributes,
     listeners,
@@ -70,6 +71,7 @@ export function StatusColumn({
         ? temperatureFilter.split(",")
         : undefined,
       actionFilter: actionFilter || "ACTIVE",
+      statusFlowFilter: statusFlowFilter ? statusFlowFilter.split(",") : undefined,
     }),
     [
       dateInit,
@@ -78,6 +80,7 @@ export function StatusColumn({
       tagsFilter,
       temperatureFilter,
       actionFilter,
+      statusFlowFilter,
     ],
   );
 

@@ -158,6 +158,8 @@ export const publicOrganizationDashboard = base
         sentMessages,
         receivedMessages,
         ttfrRes,
+        leadsWaiting,
+        leadsActive,
       ] = await Promise.all([
         prisma.lead.count({ where: baseWhere }),
         prisma.lead.count({ where: { ...baseWhere, currentAction: "WON" } }),
@@ -336,6 +338,9 @@ export const publicOrganizationDashboard = base
             AND first_outbound IS NOT NULL 
             AND first_outbound > first_inbound
         `,
+
+        prisma.lead.count({ where: { ...baseWhere, statusFlow: "WAITING" } }),
+        prisma.lead.count({ where: { ...baseWhere, statusFlow: "ACTIVE" } }),
       ]);
 
       const soldActiveRes = Number(soldThisMonthRes._sum.amount || 0);
@@ -509,6 +514,8 @@ export const publicOrganizationDashboard = base
           totalMessages,
           sentMessages,
           receivedMessages,
+          leadsWaiting,
+          leadsActive,
           avgTimeToFirstResponse: ttfrRes?.[0]?.avg_ttfr
             ? Math.round(Number(ttfrRes[0].avg_ttfr))
             : null,

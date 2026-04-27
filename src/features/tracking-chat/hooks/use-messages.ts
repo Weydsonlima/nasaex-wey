@@ -23,6 +23,29 @@ interface UseMutationTextMessageProps {
   messageSelected?: MarkedMessage;
 }
 
+function markConversationLeadActive(
+  queryClient: ReturnType<typeof useQueryClient>,
+  leadId: string,
+) {
+  queryClient.setQueriesData<any>(
+    { queryKey: ["conversations.list"] },
+    (old: any) => {
+      if (!old?.pages) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page: any) => ({
+          ...page,
+          items: page.items.map((item: any) =>
+            item.lead?.id === leadId
+              ? { ...item, lead: { ...item.lead, statusFlow: "ACTIVE" } }
+              : item,
+          ),
+        })),
+      };
+    },
+  );
+}
+
 const updateCacheWithOptimisticMessage = (
   old: any,
   optimisticMessage: Message,
@@ -171,6 +194,7 @@ export function useMutationTextMessage({
               data.message as Message,
             ),
         );
+        markConversationLeadActive(queryClient, lead.id);
       },
       onError(_err, _variables, context) {
         if (context?.previousData) {
@@ -277,6 +301,7 @@ export function useMutationImageMessage({
               data.message as Message,
             ),
         );
+        markConversationLeadActive(queryClient, lead.id);
       },
       onError(_err, _variables, context) {
         if (context?.previousData) {
@@ -368,6 +393,7 @@ export function useMutationFileMessage({
               data.message as Message,
             ),
         );
+        markConversationLeadActive(queryClient, lead.id);
       },
       onError(_err, _variables, context) {
         if (context?.previousData) {
@@ -456,6 +482,7 @@ export function useMutationAudioMessage({
               quotedMessageId: data.message.quotedMessageId ?? undefined,
             } as Message),
         );
+        markConversationLeadActive(queryClient, lead.id);
       },
       onError(_err, _variables, context) {
         if (context?.previousData) {
@@ -632,6 +659,25 @@ export function useMutationMarkReadMessage() {
         queryClient.invalidateQueries({
           queryKey: ["conversations.list"],
         });
+      },
+    }),
+  );
+}
+
+// ── Buttons / List message ────────────────────────────────────────────────────
+
+export function useMutationButtonsMessage({
+  conversationId,
+}: {
+  conversationId: string;
+}) {
+  return useMutation(
+    orpc.message.createWithButtons.mutationOptions({
+      onSuccess: () => {
+        toast.success("Mensagem enviada!");
+      },
+      onError: (err) => {
+        toast.error("Erro ao enviar botões: " + err.message);
       },
     }),
   );

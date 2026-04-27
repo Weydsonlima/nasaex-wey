@@ -83,6 +83,8 @@ export const getTrackingDashboardReport = base
         sentMessages,
         receivedMessages,
         ttfrRes,
+        leadsWaiting,
+        leadsActive,
       ] = await Promise.all([
         prisma.lead.count({ where: baseWhere }),
         prisma.lead.count({ where: { ...baseWhere, currentAction: "WON" } }),
@@ -283,6 +285,12 @@ export const getTrackingDashboardReport = base
             AND first_outbound IS NOT NULL 
             AND first_outbound > first_inbound
         `,
+
+        // Leads aguardando atendimento (WAITING)
+        prisma.lead.count({ where: { ...baseWhere, statusFlow: "WAITING" } }),
+
+        // Leads em atendimento (ACTIVE)
+        prisma.lead.count({ where: { ...baseWhere, statusFlow: "ACTIVE" } }),
       ]);
 
       const soldThisMonth = Number(soldActiveRes._sum.amount || 0);
@@ -581,6 +589,8 @@ export const getTrackingDashboardReport = base
           totalMessages,
           sentMessages,
           receivedMessages,
+          leadsWaiting,
+          leadsActive,
           avgTimeToFirstResponse: ttfrRes?.[0]?.avg_ttfr
             ? Math.round(Number(ttfrRes[0].avg_ttfr))
             : null,

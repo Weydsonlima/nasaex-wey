@@ -13,29 +13,57 @@ interface InsightReportProps {
   period: { startDate?: string; endDate?: string };
   orgName: string;
   tracking?: {
-    totalLeads: number; wonLeads: number; activeLeads: number; conversionRate: number;
+    totalLeads: number;
+    wonLeads: number;
+    activeLeads: number;
+    conversionRate: number;
   };
   chat?: {
-    totalConversations: number; totalMessages: number;
-    attendedConversations: number; unattendedConversations: number; attendanceRate: number;
+    totalConversations: number;
+    totalMessages: number;
+    attendedConversations: number;
+    unattendedConversations: number;
+    attendanceRate: number;
   };
   forge?: {
-    totalProposals: number; rascunho: number; enviadas: number; visualizadas: number;
-    pagas: number; expiradas: number; canceladas: number;
-    revenueTotal: number; revenuePipeline: number;
-    totalContracts: number; contractsAtivo: number;
+    totalProposals: number;
+    rascunho: number;
+    enviadas: number;
+    visualizadas: number;
+    pagas: number;
+    expiradas: number;
+    canceladas: number;
+    revenueTotal: number;
+    revenuePipeline: number;
+    totalContracts: number;
+    contractsAtivo: number;
   };
   spacetime?: {
-    total: number; pending: number; confirmed: number; done: number;
-    cancelled: number; noShow: number; withLead: number; conversionRate: number;
+    total: number;
+    pending: number;
+    confirmed: number;
+    done: number;
+    cancelled: number;
+    noShow: number;
+    withLead: number;
+    conversionRate: number;
   };
   nasaPlanner?: {
-    total: number; draft: number; published: number; scheduled: number;
-    starsSpent: number; byNetwork: Record<string, number>;
+    total: number;
+    draft: number;
+    published: number;
+    scheduled: number;
+    starsSpent: number;
+    byNetwork: Record<string, number>;
   };
   metaAds?: {
-    spend?: number; roas?: number; leads?: number;
-    clicks?: number; impressions?: number; ctr?: number; cpl?: number;
+    spend?: number;
+    roas?: number;
+    leads?: number;
+    clicks?: number;
+    impressions?: number;
+    ctr?: number;
+    cpl?: number;
   };
 }
 
@@ -52,15 +80,22 @@ function parsedToHtml(text: string): string {
       // **bold**
       line = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
       // numbered lists
-      if (/^\d+\./.test(line.trim())) return `<p style="margin:6px 0 6px 16px">${line.trim()}</p>`;
+      if (/^\d+\./.test(line.trim()))
+        return `<p style="margin:6px 0 6px 16px">${line.trim()}</p>`;
       // bullet
-      if (/^[-•]/.test(line.trim())) return `<p style="margin:4px 0 4px 16px">${line.trim().replace(/^[-•]\s*/, "• ")}</p>`;
+      if (/^[-•]/.test(line.trim()))
+        return `<p style="margin:4px 0 4px 16px">${line.trim().replace(/^[-•]\s*/, "• ")}</p>`;
       return `<p style="margin:4px 0">${line}</p>`;
     })
     .join("");
 }
 
-async function downloadPDF(reportText: string, orgName: string, period: string, modules: string[]) {
+async function downloadPDF(
+  reportText: string,
+  orgName: string,
+  period: string,
+  modules: string[],
+) {
   const { default: jsPDF } = await import("jspdf");
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -125,7 +160,10 @@ async function downloadPDF(reportText: string, orgName: string, period: string, 
 
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) { y += 3; continue; }
+    if (!line) {
+      y += 3;
+      continue;
+    }
 
     // Section heading (starts with **)
     if (line.startsWith("**") && line.endsWith("**")) {
@@ -166,7 +204,9 @@ async function downloadPDF(reportText: string, orgName: string, period: string, 
     doc.setFontSize(7);
     doc.setTextColor(160, 160, 180);
     doc.text(`NASA Explorer · ${orgName} · ${period}`, marginL, 291);
-    doc.text(`Página ${i} de ${pageCount}`, W - marginR, 291, { align: "right" });
+    doc.text(`Página ${i} de ${pageCount}`, W - marginR, 291, {
+      align: "right",
+    });
     doc.setDrawColor(220, 220, 230);
     doc.setLineWidth(0.3);
     doc.line(marginL, 287, W - marginR, 287);
@@ -202,17 +242,18 @@ export function InsightReport({
         forge: forge ?? undefined,
         spacetime: spacetime ?? undefined,
         nasaPlanner: nasaPlanner ?? undefined,
-        metaAds: metaAds?.spend !== undefined
-          ? {
-              spend: metaAds.spend ?? 0,
-              roas: metaAds.roas ?? 0,
-              leads: metaAds.leads ?? 0,
-              clicks: metaAds.clicks ?? 0,
-              impressions: metaAds.impressions ?? 0,
-              ctr: metaAds.ctr ?? 0,
-              cpl: metaAds.cpl ?? 0,
-            }
-          : undefined,
+        metaAds:
+          metaAds?.spend !== undefined
+            ? {
+                spend: metaAds.spend ?? 0,
+                roas: metaAds.roas ?? 0,
+                leads: metaAds.leads ?? 0,
+                clicks: metaAds.clicks ?? 0,
+                impressions: metaAds.impressions ?? 0,
+                ctr: metaAds.ctr ?? 0,
+                cpl: metaAds.cpl ?? 0,
+              }
+            : undefined,
       }),
     onSuccess: (data) => setReport(data.report),
   });
@@ -231,7 +272,12 @@ export function InsightReport({
         integrations: "Integrações",
       };
       const moduleNames = selectedModules.map((m) => moduleLabels[m] ?? m);
-      await downloadPDF(report || "Sem relatório gerado.", orgName, periodStr, moduleNames);
+      await downloadPDF(
+        report || "Sem relatório gerado.",
+        orgName,
+        periodStr,
+        moduleNames,
+      );
     } finally {
       setIsPdfLoading(false);
     }
@@ -247,7 +293,9 @@ export function InsightReport({
           </div>
           <div>
             <h2 className="text-sm font-semibold">Relatório da Análise</h2>
-            <p className="text-[11px] text-muted-foreground">{periodStr} · {orgName}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {periodStr} · {orgName}
+            </p>
           </div>
         </div>
 
@@ -272,7 +320,7 @@ export function InsightReport({
             size="sm"
             onClick={() => generateReport()}
             disabled={isPending}
-            className="gap-1.5 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0"
+            className="gap-1.5 text-xs bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0"
           >
             {isPending ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -294,8 +342,9 @@ export function InsightReport({
               <Sparkles className="size-5 text-violet-500" />
             </div>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Clique em <strong>Gerar por IA</strong> para receber uma análise profissional
-              dos seus dados consolidados, com insights e recomendações estratégicas.
+              Clique em <strong>Gerar por IA</strong> para receber uma análise
+              profissional dos seus dados consolidados, com insights e
+              recomendações estratégicas.
             </p>
           </div>
         )}
@@ -303,7 +352,9 @@ export function InsightReport({
         {isPending && (
           <div className="flex items-center gap-3 py-8 justify-center">
             <Loader2 className="size-5 text-violet-500 animate-spin" />
-            <p className="text-sm text-muted-foreground">Analisando dados com IA...</p>
+            <p className="text-sm text-muted-foreground">
+              Analisando dados com IA...
+            </p>
           </div>
         )}
 

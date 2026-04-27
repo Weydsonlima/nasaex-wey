@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Rocket, Globe, Users, Settings, Gamepad2, Star } from "lucide-react";
+import { Rocket, Globe, Users, Settings, Gamepad2, Star, ExternalLink } from "lucide-react";
 import { useMyStation, useCreateStation, useUpdateStation, useUpdateWorld, useUpdateModules } from "../hooks/use-station";
+import { MyStationsList } from "./my-stations-list";
 import { AMBIENT_THEMES, MODULE_ICONS, MODULE_LABELS } from "../types";
 import type { StationModule, AmbientTheme } from "../types";
 
@@ -135,6 +136,9 @@ export function SpaceStationAdmin() {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Lista de stations do usuário */}
+      <MyStationsList />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-indigo-600/20">
@@ -203,13 +207,27 @@ export function SpaceStationAdmin() {
             </div>
           )}
 
-          <Button
-            onClick={form.handleSubmit(onSubmitProfile)}
-            disabled={createStation.isPending || updateStation.isPending}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            {station ? "Salvar Perfil" : "Criar Space Station"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={form.handleSubmit(onSubmitProfile)}
+              disabled={createStation.isPending || updateStation.isPending}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {station ? "Salvar Perfil" : "Criar Space Station"}
+            </Button>
+            {station?.nick && (
+              <Button
+                variant="outline"
+                className="border-indigo-500/40 text-indigo-400 hover:bg-indigo-600/10 hover:text-indigo-300"
+                asChild
+              >
+                <a href={`/station/${station.nick}/world`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Abrir Space Station
+                </a>
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

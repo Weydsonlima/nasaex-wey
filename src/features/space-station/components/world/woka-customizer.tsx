@@ -271,7 +271,7 @@ interface CustomUploadTabProps {
   previewUrl:    string | null;
   faceApplied:   boolean;
   dirIdx:        number;
-  overlays:      Record<Exclude<TabId, "body" | "custom">, string | null>;
+  overlays:      Record<Exclude<TabId, "body" | "custom" | "comunidade">, string | null>;
   onFileSelect:  (f: File) => void;
   onFaceSelect:  (f: File) => void;
   onRemoveFace:  () => void;
@@ -446,7 +446,7 @@ export function WokaCustomizer({ avatarConfig, onChange, onClose }: Props) {
   const [tab, setTab]     = useState<TabId>("body");
   const [dirIdx, setDirIdx] = useState(0);
 
-  const [overlays, setOverlays] = useState<Record<Exclude<TabId, "body" | "custom">, string | null>>({
+  const [overlays, setOverlays] = useState<Record<Exclude<TabId, "body" | "custom" | "comunidade">, string | null>>({
     eyes:      avatarConfig?.wokaEyesUrl      ?? null,
     hair:      avatarConfig?.wokaHairUrl      ?? null,
     clothes:   avatarConfig?.wokaClothesUrl   ?? null,

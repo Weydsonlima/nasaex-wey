@@ -1,7 +1,7 @@
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import z from "zod";
 
 const avatarConfigSchema = z.object({
@@ -14,8 +14,22 @@ const avatarConfigSchema = z.object({
   hairColor: z.string().optional(),
   beardStyle: z.enum(["none", "stubble", "short", "full"]).optional(),
   faceAccessory: z.enum(["none", "glasses", "sunglasses"]).optional(),
-  lpcSpritesheetUrl: z.union([z.string().url(), z.literal("pixel_astronaut")]).optional().nullable(),
+  lpcSpritesheetUrl: z.union([
+    z.string().url(),                      // URLs absolutas (ex: CDN externo)
+    z.literal("pixel_astronaut"),          // legado
+    z.string().startsWith("/woka/"),       // spritesheets Pipoya locais
+    z.string().startsWith("/uploads/"),    // sprites customizados enviados via upload
+  ]).optional().nullable(),
   lpcCharacterName: z.string().max(60).optional().nullable(),
+  // WokaCustomizer overlay URLs (LPC assets). Accept any http(s) URL so we
+  // can reference WorkAdventure's CDN, the LimeZu mirror, or self-hosted files.
+  wokaEyesUrl:      z.string().url().optional().nullable(),
+  wokaHairUrl:      z.string().url().optional().nullable(),
+  wokaClothesUrl:   z.string().url().optional().nullable(),
+  wokaHatUrl:       z.string().url().optional().nullable(),
+  wokaAccessoryUrl: z.string().url().optional().nullable(),
+  // Multiplicador do tamanho visual do avatar no mapa
+  avatarScale:      z.number().min(0.5).max(2.5).optional().nullable(),
 });
 
 export const updateWorld = base
@@ -61,7 +75,7 @@ export const updateWorld = base
     try {
       const world = await prisma.spaceStationWorld.upsert({
         where: { stationId },
-        create: { stationId, ...data },
+        create: { stationId, ...data } as Prisma.SpaceStationWorldUncheckedCreateInput,
         update: data,
       });
       return { world };

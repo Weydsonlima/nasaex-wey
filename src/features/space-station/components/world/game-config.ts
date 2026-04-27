@@ -1,10 +1,10 @@
-import type { Types } from "phaser";
+import type { Types, Scene } from "phaser";
 
 export function buildGameConfig(
   parent: string,
   width: number,
   height: number,
-  scenes: Types.Scene[],
+  scenes: Array<typeof Scene>,
 ): Types.Core.GameConfig {
   return {
     type: globalThis.Phaser?.AUTO ?? 0,
@@ -17,6 +17,12 @@ export function buildGameConfig(
       arcade: { gravity: { x: 0, y: 0 }, debug: false },
     },
     scene: scenes,
+    input: {
+      keyboard: {
+        // Don't capture keys when focus is on an input element
+        capture: [],
+      },
+    },
     pixelArt: true,
     roundPixels: true,
     scale: {

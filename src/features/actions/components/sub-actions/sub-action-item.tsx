@@ -126,7 +126,7 @@ export function SubActionItem({
         ) : (
           <button
             className={cn(
-              "flex-1 text-sm text-left truncate py-0.5",
+              "flex-1 min-w-0 text-sm text-left truncate py-0.5",
               sub.isDone && "line-through text-muted-foreground",
             )}
             onClick={onToggleExpand}

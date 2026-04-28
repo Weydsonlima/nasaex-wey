@@ -44,6 +44,7 @@ import { scriptsRouter } from "./scripts";
 import { linnkerRouter } from "./linnker";
 import { spaceStationRouter } from "./space-station";
 import { pagesRouter } from "./pages";
+import { reminderRouter } from "./reminder";
 
 export const router = {
   tracking: trackingRoutes,
@@ -91,4 +92,5 @@ export const router = {
   linnker: linnkerRouter,
   spaceStation: spaceStationRouter,
   pages: pagesRouter,
+  reminder: reminderRouter,
 };

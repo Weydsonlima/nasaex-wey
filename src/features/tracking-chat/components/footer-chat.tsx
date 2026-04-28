@@ -2,6 +2,7 @@
 
 import {
   ArchiveIcon,
+  BellIcon,
   CalendarIcon,
   FileIcon,
   FileTextIcon,
@@ -12,7 +13,6 @@ import {
   PlusIcon,
   ScrollTextIcon,
   SendIcon,
-  SparklesIcon,
   StickerIcon,
 } from "lucide-react";
 import pt from "emoji-picker-react/dist/data/emojis-pt.json";
@@ -52,6 +52,7 @@ import { AgendaPanel } from "./agenda-panel";
 import { FormsPanel } from "./forms-panel";
 import { NBoxPanel } from "./nbox-panel";
 import { ButtonsPanel } from "./buttons-panel";
+import { ReminderPanel } from "./reminder-panel";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -108,6 +109,7 @@ export function Footer({
   const [showForms, setShowForms] = useState(false);
   const [showNBox, setShowNBox] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -257,6 +259,16 @@ export function Footer({
               }}
             />
           )}
+          {showReminder && (
+            <ReminderPanel
+              onClose={() => setShowReminder(false)}
+              conversationId={conversationId}
+              leadId={lead.id}
+              trackingId={trackingId}
+              lead={lead}
+              phone={lead.phone}
+            />
+          )}
           {!showAudioRecorder ? (
             <InputGroup
               className={cn(
@@ -283,6 +295,7 @@ export function Footer({
                             setShowAgenda(false);
                             setShowScripts(false);
                             setShowForge(false);
+                            setShowReminder(false);
                             setOpen(false);
                           }}
                         >
@@ -298,6 +311,7 @@ export function Footer({
                             setShowAgenda(false);
                             setShowScripts(false);
                             setShowForge(false);
+                            setShowReminder(false);
                             setOpen(false);
                           }}
                         >
@@ -313,6 +327,7 @@ export function Footer({
                             setShowAgenda(false);
                             setShowScripts(false);
                             setShowForge(false);
+                            setShowReminder(false);
                             setOpen(false);
                           }}
                         >
@@ -328,6 +343,7 @@ export function Footer({
                             setShowForms(false);
                             setShowNBox(false);
                             setShowButtons(false);
+                            setShowReminder(false);
                             setOpen(false);
                           }}
                         >
@@ -343,6 +359,7 @@ export function Footer({
                             setShowForms(false);
                             setShowNBox(false);
                             setShowButtons(false);
+                            setShowReminder(false);
                             setOpen(false);
                           }}
                         >
@@ -358,11 +375,28 @@ export function Footer({
                             setShowForms(false);
                             setShowNBox(false);
                             setShowButtons(false);
+                            setShowReminder(false);
                             setOpen(false);
                           }}
                         >
                           <HammerIcon className="size-4" />
                           <p className="text-sm">Forge</p>
+                        </div>
+                        <div
+                          className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4 cursor-pointer"
+                          onClick={() => {
+                            setShowReminder((v) => !v);
+                            setShowForge(false);
+                            setShowScripts(false);
+                            setShowAgenda(false);
+                            setShowForms(false);
+                            setShowNBox(false);
+                            setShowButtons(false);
+                            setOpen(false);
+                          }}
+                        >
+                          <BellIcon className="size-4" />
+                          <p className="text-sm">Lembrete</p>
                         </div>
                         <div className="relative w-full h-full cursor-pointer overflow-hidden">
                           <div className="relative flex items-center gap-2 hover:bg-foreground/10 py-3 px-4">

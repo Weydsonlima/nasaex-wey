@@ -6,75 +6,56 @@ import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { UserProfileDropdown } from "./user-profile-dropdown";
 
-interface ChartNode {
-  id:             string;
-  parentId:       string | null;
-  department:     string | null;
-  customLabel:    string | null;
-  jobTitle:       { id: string; title: string; category: string; level: number };
-  user:           { id: string; displayName: string | null; image: string | null } | null;
-  isOpenPosition: boolean;
-}
-
-interface MemberCard {
-  nodeId:      string;
+interface CrewMemberData {
+  memberId:    string;
   userId:      string;
   displayName: string;
   image:       string | null;
   jobTitle:    string;
+  level:       number;
+  group:       string;
+  role:        string;
 }
 
 interface PyramidRow {
-  depth:   number;
-  members: MemberCard[];
+  tier:    string;
+  members: CrewMemberData[];
 }
 
-/** Constrói pirâmide hierárquica: cada linha = profundidade no organograma. */
-function buildPyramid(nodes: ChartNode[]): PyramidRow[] {
-  const map = new Map<string, ChartNode>();
-  nodes.forEach((n) => map.set(n.id, n));
-
-  // Calcula profundidade subindo até a raiz
-  const depthOf = (id: string, seen = new Set<string>()): number => {
-    if (seen.has(id)) return 0;
-    seen.add(id);
-    const node = map.get(id);
-    if (!node?.parentId || !map.has(node.parentId)) return 0;
-    return 1 + depthOf(node.parentId, seen);
+/**
+ * Agrupa por tier hierárquico (4 níveis) → cada tier vira uma linha da
+ * pirâmide. Liderança no topo, descendo até Entrada na base.
+ */
+function buildPyramid(crew: CrewMemberData[]): PyramidRow[] {
+  const tiers: Record<string, CrewMemberData[]> = {
+    lideranca:   [],
+    gestao:      [],
+    operacional: [],
+    entrada:     [],
   };
-
-  const grouped = new Map<number, MemberCard[]>();
-  for (const n of nodes) {
-    if (n.isOpenPosition || !n.user) continue;
-    const d = depthOf(n.id);
-    if (!grouped.has(d)) grouped.set(d, []);
-    grouped.get(d)!.push({
-      nodeId:      n.id,
-      userId:      n.user.id,
-      displayName: n.user.displayName ?? "Sem nome",
-      image:       n.user.image,
-      jobTitle:    n.customLabel || n.jobTitle.title,
-    });
+  for (const m of crew) {
+    if (tiers[m.group]) tiers[m.group].push(m);
   }
-
-  return Array.from(grouped.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([depth, members]) => ({ depth, members }));
+  const order = ["lideranca", "gestao", "operacional", "entrada"];
+  return order
+    .map((tier) => ({ tier, members: tiers[tier] }))
+    .filter((r) => r.members.length > 0);
 }
 
 /**
  * Tripulação no canto superior direito do banner — pirâmide hierárquica
- * onde cada linha representa um nível do organograma (topo = liderança,
- * descendo até as bases). Visual seguindo o mockup do usuário:
- * avatares grandes circulares com borda branca, nome em destaque e cargo
- * compacto logo abaixo.
+ * agrupando membros por tier (Liderança / Gestão / Operação / Entrada).
+ *
+ * Usa `getCrew` (membros reais da org com cargo) em vez de `getOrgChart`
+ * (organograma com publicConsent), para que apareçam mesmo sem
+ * organograma configurado.
  */
 export function HeaderMembersHierarchy({ nick }: { nick: string }) {
   const { data, isLoading } = useQuery(
-    orpc.public.space.getOrgChart.queryOptions({ input: { nick } }),
+    orpc.public.space.getCrew.queryOptions({ input: { nick } }),
   );
 
-  const rows = useMemo(() => buildPyramid(data?.nodes ?? []), [data]);
+  const rows = useMemo(() => buildPyramid(data?.crew ?? []), [data]);
   const [openProfile, setOpenProfile] = useState<string | null>(null);
 
   if (isLoading || rows.length === 0) return null;
@@ -86,10 +67,10 @@ export function HeaderMembersHierarchy({ nick }: { nick: string }) {
         aria-label="Tripulação da empresa"
       >
         {rows.map((row) => (
-          <div key={row.depth} className="flex flex-wrap justify-end gap-x-5 gap-y-3">
+          <div key={row.tier} className="flex flex-wrap justify-end gap-x-5 gap-y-3">
             {row.members.slice(0, 16).map((m) => (
               <CrewMember
-                key={m.nodeId}
+                key={m.memberId}
                 member={m}
                 onClick={() => setOpenProfile(m.userId)}
               />
@@ -113,7 +94,7 @@ export function HeaderMembersHierarchy({ nick }: { nick: string }) {
   );
 }
 
-function CrewMember({ member, onClick }: { member: MemberCard; onClick: () => void }) {
+function CrewMember({ member, onClick }: { member: CrewMemberData; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -129,6 +110,7 @@ function CrewMember({ member, onClick }: { member: MemberCard; onClick: () => vo
             fill
             className="object-cover"
             sizes="48px"
+            unoptimized
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm font-bold text-white/80">
@@ -139,7 +121,7 @@ function CrewMember({ member, onClick }: { member: MemberCard; onClick: () => vo
       <span className="text-[12px] font-bold leading-tight text-white drop-shadow">
         {member.displayName.split(" ")[0]}
       </span>
-      <span className="-mt-0.5 text-[10px] leading-tight text-white/70 drop-shadow">
+      <span className="-mt-0.5 max-w-[90px] truncate text-[10px] leading-tight text-white/70 drop-shadow">
         {member.jobTitle}
       </span>
     </button>

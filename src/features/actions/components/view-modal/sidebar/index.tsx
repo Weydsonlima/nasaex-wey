@@ -10,6 +10,7 @@ import { CoverImageField } from "./cover-image-field";
 import { OrgProjectField } from "./org-project-field";
 import { Action } from "../../../types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PublicVisibilityField } from "@/features/public-calendar/components/public-visibility-field";
 
 interface SidebarProps {
   action?: Action;
@@ -56,6 +57,18 @@ export function ActionSidebar({
   return (
     <ScrollArea className="h-full border-l bg-muted/80">
       <div className="p-4 space-y-4">
+        <PublicVisibilityField
+          isPublic={action?.isPublic}
+          publicSlug={action?.publicSlug}
+          eventCategory={action?.eventCategory}
+          state={action?.state}
+          city={action?.city}
+          address={action?.address}
+          registrationUrl={action?.registrationUrl}
+          onUpdate={(data) => onUpdateAction(data)}
+          disabled={isUpdating}
+        />
+
         <OrgProjectField
           value={action?.orgProjectId}
           onValueChange={(orgProjectId) => onUpdateAction({ orgProjectId })}

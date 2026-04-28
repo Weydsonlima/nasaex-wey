@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Loader2, Rocket, User, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2, Rocket, User, Mail, Lock, Building2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
+import { COMPANY_TYPES, COMPANY_TYPE_SLUGS } from "@/features/company/constants";
+import { client as orpcClient } from "@/lib/orpc";
 
 const signUpSchema = z
   .object({
@@ -17,6 +19,9 @@ const signUpSchema = z
     email:           z.string().email("E-mail inválido"),
     password:        z.string().min(8, "Mínimo 8 caracteres"),
     confirmPassword: z.string().min(8, "Mínimo 8 caracteres"),
+    companyType:     z.string().refine((v) => COMPANY_TYPE_SLUGS.includes(v), {
+      message: "Selecione o tipo de empresa",
+    }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "As senhas não conferem",
@@ -124,6 +129,18 @@ export function SignupForm() {
     if (emailParam) setValue("email", emailParam);
   }, [emailParam, setValue]);
 
+  const persistCompanyType = async (companyType: string) => {
+    try {
+      await orpcClient.orgs.updateCompanyProfile({
+        companyType,
+        companySegment: null,
+      });
+    } catch (err) {
+      // Não bloqueia a continuação do signup — usuário pode definir depois em /settings
+      console.error("[signup] Falha ao salvar tipo de empresa:", err);
+    }
+  };
+
   const onSignUp = (data: SignUpData) => {
     setIsLoading(async () => {
       const result = await authClient.signUp.email({
@@ -150,6 +167,7 @@ export function SignupForm() {
           // Account was created – verify by checking whether we now have a session
           const session = await authClient.getSession();
           if (session.data) {
+            await persistCompanyType(data.companyType);
             toast.success("🚀 Conta criada! Bem-vindo ao NASA.ex!");
             router.push(callbackUrl ?? "/home");
             return;
@@ -165,6 +183,7 @@ export function SignupForm() {
         return;
       }
 
+      await persistCompanyType(data.companyType);
       toast.success("🚀 Conta criada! Bem-vindo ao NASA.ex!");
       router.push(callbackUrl ?? "/home");
     });
@@ -263,6 +282,54 @@ export function SignupForm() {
         register={register("confirmPassword")}
         rightElement={<EyeToggle show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)} />}
       />
+
+      {/* Tipo de empresa */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label htmlFor="companyType" style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 500 }}>
+          Tipo da sua empresa
+        </label>
+        <div style={{ position: "relative" }}>
+          <Building2 style={{
+            position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+            width: 15, height: 15, color: "rgba(255,255,255,0.3)", pointerEvents: "none",
+          }} />
+          <select
+            id="companyType"
+            disabled={isLoading}
+            defaultValue=""
+            {...register("companyType")}
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,0.06)",
+              border: errors.companyType
+                ? "1.5px solid rgba(239,68,68,0.6)"
+                : "1.5px solid rgba(255,255,255,0.1)",
+              borderRadius: 10,
+              padding: "10px 12px 10px 36px",
+              color: "white",
+              fontSize: 14,
+              outline: "none",
+              appearance: "none",
+              boxSizing: "border-box",
+              cursor: "pointer",
+            }}
+          >
+            <option value="" disabled style={{ background: "#0a0a0a" }}>
+              Selecione…
+            </option>
+            {COMPANY_TYPES.map((t) => (
+              <option key={t.slug} value={t.slug} style={{ background: "#0a0a0a" }}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {errors.companyType && (
+          <p style={{ color: "rgba(239,68,68,0.85)", fontSize: 12, marginTop: -2 }}>
+            {errors.companyType.message}
+          </p>
+        )}
+      </div>
 
       {/* Submit */}
       <button

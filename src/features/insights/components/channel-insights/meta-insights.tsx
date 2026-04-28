@@ -1,18 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertCircle,
@@ -28,20 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type DatePreset = "today" | "yesterday" | "last_7d" | "last_30d" | "last_90d" | "this_month" | "last_month";
-
-const DATE_PRESET_LABELS: Record<DatePreset, string> = {
-  today: "Hoje",
-  yesterday: "Ontem",
-  last_7d: "Últimos 7 dias",
-  last_30d: "Últimos 30 dias",
-  last_90d: "Últimos 90 dias",
-  this_month: "Este mês",
-  last_month: "Mês passado",
-};
+import { useDashboardFilters } from "@/features/insights/hooks/use-dashboard-store";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -131,12 +110,20 @@ function NotConnected() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function MetaInsights() {
-  const [datePreset, setDatePreset] = useState<DatePreset>("last_30d");
+  const { dateRange } = useDashboardFilters();
+
+  const metaInput = {
+    level: "account" as const,
+    ...(dateRange.from && dateRange.to
+      ? {
+          startDate: dateRange.from.toISOString(),
+          endDate: dateRange.to.toISOString(),
+        }
+      : { datePreset: "last_30d" as const }),
+  };
 
   const { data, isLoading, refetch, isRefetching } = useQuery(
-    orpc.channelInsights.meta.queryOptions({
-      input: { datePreset, level: "account" },
-    }),
+    orpc.channelInsights.meta.queryOptions({ input: metaInput }),
   );
 
   if (!isLoading && !data?.connected) return <NotConnected />;
@@ -171,16 +158,6 @@ export function MetaInsights() {
           <span className="text-sm text-muted-foreground">Dados da conta de anúncios</span>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-            <SelectTrigger className="w-[160px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(DATE_PRESET_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={loading} className="h-8 w-8 p-0">
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
           </Button>

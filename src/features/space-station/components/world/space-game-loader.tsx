@@ -17,6 +17,7 @@ interface Props {
   userImage?:   string | null;
   userId?:      string;
   userName?:    string;
+  userNick?:    string;
 }
 
 export function SpaceGameLoader(props: Props) {

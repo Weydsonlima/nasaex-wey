@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { ChartType, DashboardSettings, DateRange } from "../types";
+import type { AppModule, ChartType, DashboardSettings, DateRange } from "../types";
+import { ALL_MODULES } from "../types";
 
 interface DashboardState {
   trackingId?: string;
@@ -8,6 +9,7 @@ interface DashboardState {
   tagIds: string[];
   dateRange: DateRange;
   settings: DashboardSettings;
+  selectedModules: AppModule[];
 }
 
 interface DashboardActions {
@@ -23,6 +25,7 @@ interface DashboardActions {
     type: ChartType,
   ) => void;
   resetSettings: () => void;
+  setSelectedModules: (modules: AppModule[]) => void;
 }
 
 const defaultSettings: DashboardSettings = {
@@ -49,6 +52,7 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
       tagIds: [],
       dateRange: { from: undefined, to: undefined },
       settings: defaultSettings,
+      selectedModules: ALL_MODULES,
 
       setTrackingId: (trackingId) => set({ trackingId }),
       setDateRange: (dateRange) => set({ dateRange }),
@@ -105,6 +109,9 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
         })),
 
       resetSettings: () => set({ settings: defaultSettings }),
+
+      setSelectedModules: (modules) =>
+        set({ selectedModules: modules.length > 0 ? modules : ALL_MODULES }),
     }),
     {
       name: "insights-storage",
@@ -116,6 +123,7 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
         organizationIds: state.organizationIds,
         tagIds: state.tagIds,
         dateRange: state.dateRange,
+        selectedModules: state.selectedModules,
       }),
       onRehydrateStorage: () => (state) => {
         // Converte strings de data de volta para objetos Date após a rehidratação

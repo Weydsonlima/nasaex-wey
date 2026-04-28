@@ -8,7 +8,8 @@ export type PageIntent =
   | "EVENT"
   | "PRODUCT"
   | "PORTFOLIO"
-  | "CUSTOM";
+  | "CUSTOM"
+  | "SPACE_PAGE";
 
 export type DomainStatus = "PENDING" | "VERIFIED" | "FAILED";
 export type DomainSource = "EXTERNAL" | "PURCHASED_VIA_NASA";

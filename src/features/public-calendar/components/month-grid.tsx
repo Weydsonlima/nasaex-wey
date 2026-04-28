@@ -25,6 +25,16 @@ interface MonthGridProps {
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MAX_VISIBLE = 4;
+// Altura visual do MiniCard (h-[52px])
+const CARD_HEIGHT = 52;
+// Gap vertical entre mini cards (0,1 × CARD_HEIGHT ≈ 5px)
+const CARD_GAP = 5;
+// Padding interno da célula até a borda (0,1 × CARD_HEIGHT ≈ 5px)
+const CELL_PADDING = 5;
+// Altura do botão "+X mais" (aparece abaixo do último card quando há overflow)
+const PLUS_MORE_HEIGHT = 25;
+// Altura mínima para linhas 100% vazias (apenas números de dia)
+const EMPTY_ROW_HEIGHT = 56;
 
 function MiniCard({
   ev,
@@ -120,6 +130,42 @@ export function MonthGrid({ events, onSelect, selectedId }: MonthGridProps) {
     return days;
   }, [cursor]);
 
+  // Altura de cada linha (semana) da grade:
+  // - N = máximo de mini-cards visíveis em uma célula da linha (cap em MAX_VISIBLE)
+  // - altura base = 2 × CELL_PADDING + N × CARD_HEIGHT + (N - 1) × CARD_GAP
+  //   N=1 → 62  ·  N=2 → 119  ·  N=3 → 176  ·  N=4 → 233
+  // - se algum dia da linha tem overflow (count > MAX_VISIBLE), soma CARD_GAP + PLUS_MORE_HEIGHT
+  //   N=4 com overflow → 233 + 5 + 25 = 263
+  // - linhas sem evento algum usam EMPTY_ROW_HEIGHT
+  // - número do dia fica absolute (não consome altura)
+  // Todas as 7 células da linha herdam essa altura (stretch default do CSS Grid).
+  const rowHeights = useMemo(() => {
+    const heights: number[] = [];
+    for (let i = 0; i < grid.length; i += 7) {
+      const row = grid.slice(i, i + 7);
+      let maxCards = 0;
+      let rowHasOverflow = false;
+      for (const day of row) {
+        const key = day.format("YYYY-MM-DD");
+        const count = eventsByDay.get(key)?.length ?? 0;
+        maxCards = Math.max(maxCards, Math.min(count, MAX_VISIBLE));
+        if (count > MAX_VISIBLE) rowHasOverflow = true;
+      }
+      if (maxCards === 0) {
+        heights.push(EMPTY_ROW_HEIGHT);
+      } else {
+        const base =
+          2 * CELL_PADDING +
+          maxCards * CARD_HEIGHT +
+          (maxCards - 1) * CARD_GAP;
+        heights.push(
+          rowHasOverflow ? base + CARD_GAP + PLUS_MORE_HEIGHT : base,
+        );
+      }
+    }
+    return heights;
+  }, [grid, eventsByDay]);
+
   const today = dayjs().startOf("day");
 
   // Scroll so today's row is at the top; past rows scroll above and hide
@@ -193,16 +239,19 @@ export function MonthGrid({ events, onSelect, selectedId }: MonthGridProps) {
       </div>
 
       {/*
-        CSS Grid with gridAutoRows: minmax(56px, auto)
-        — empty rows: exactly 56px (compact, just the day number)
-        — rows with events: grow to fit tallest cell naturally
-        — ALL cells in the same row STRETCH to the row height (default Grid behavior)
-          so every sibling cell fills with its background colour, matching the event cell's height
+        CSS Grid com alturas de linha explícitas:
+        — altura da linha = (N+1) × CARD_HEIGHT, onde N = máx. de mini-cards na linha (cap MAX_VISIBLE)
+        — linhas vazias usam EMPTY_ROW_HEIGHT
+        — TODAS as 7 células da linha herdam a mesma altura (stretch default)
+          garantindo que células vazias fiquem do mesmo tamanho das com eventos
       */}
       <div
         ref={gridRef}
         className="grid flex-1 grid-cols-7 gap-1 overflow-auto px-3 pb-3"
-        style={{ gridAutoRows: "minmax(56px, auto)", alignContent: "start" }}
+        style={{
+          gridTemplateRows: rowHeights.map((h) => `${h}px`).join(" "),
+          alignContent: "start",
+        }}
       >
         {grid.map((day) => {
           const dayKey = day.format("YYYY-MM-DD");
@@ -216,29 +265,37 @@ export function MonthGrid({ events, onSelect, selectedId }: MonthGridProps) {
               key={dayKey}
               ref={isToday ? todayCellRef : undefined}
               className={cn(
-                "flex flex-col gap-1 rounded-lg p-1.5",
+                "relative overflow-hidden rounded-lg",
                 isToday
                   ? "bg-primary/15 ring-1 ring-primary/40"
                   : isOutside
                     ? "bg-violet-500/8"
                     : "bg-card/60",
               )}
+              style={{ padding: `${CELL_PADDING}px` }}
             >
-              {/* Day number */}
+              {/* Número do dia — absolute, NÃO consome altura da cédula */}
               <div
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                  "pointer-events-none absolute left-[5px] top-[5px] z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold shadow-sm",
                   isToday && "bg-primary text-primary-foreground",
-                  isOutside && !isToday && "text-muted-foreground/40",
-                  !isToday && !isOutside && "text-foreground/80",
+                  isOutside &&
+                    !isToday &&
+                    "bg-background/50 text-muted-foreground/50",
+                  !isToday &&
+                    !isOutside &&
+                    "bg-background/85 text-foreground/90 backdrop-blur-sm",
                 )}
               >
                 {day.date()}
               </div>
 
-              {/* Events — up to MAX_VISIBLE, rest in popover */}
+              {/* Mini cards — gap de 0,1 × CARD_HEIGHT entre eles + "+X mais" no fluxo */}
               {dayEvents.length > 0 && (
-                <div className="flex flex-col gap-0.5">
+                <div
+                  className="flex h-full flex-col"
+                  style={{ gap: `${CARD_GAP}px` }}
+                >
                   {dayEvents.slice(0, MAX_VISIBLE).map((ev) => (
                     <MiniCard
                       key={ev.id}
@@ -253,7 +310,8 @@ export function MonthGrid({ events, onSelect, selectedId }: MonthGridProps) {
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="w-full rounded px-0.5 text-left text-[9px] text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                          style={{ height: `${PLUS_MORE_HEIGHT}px` }}
+                          className="w-full shrink-0 rounded bg-muted/50 px-2 text-[11px] font-semibold text-foreground transition hover:bg-primary hover:text-primary-foreground"
                         >
                           +{overflow} mais
                         </button>

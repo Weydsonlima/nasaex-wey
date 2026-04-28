@@ -16,6 +16,7 @@ export const INTENT_LABELS: Record<PageIntent, string> = {
   PRODUCT:       "Produto",
   PORTFOLIO:     "Portfólio",
   CUSTOM:        "Personalizado",
+  SPACE_PAGE:    "Space Page",
 };
 
 export const INTENT_DESCRIPTIONS: Record<PageIntent, string> = {
@@ -26,6 +27,7 @@ export const INTENT_DESCRIPTIONS: Record<PageIntent, string> = {
   PRODUCT:       "Divulgar um produto ou serviço",
   PORTFOLIO:     "Mostrar projetos realizados",
   CUSTOM:        "Comece do zero, do seu jeito",
+  SPACE_PAGE:    "Página oficial da empresa na rede",
 };
 
 export const ELEMENT_TYPES = [

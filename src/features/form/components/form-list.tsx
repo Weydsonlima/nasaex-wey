@@ -44,6 +44,7 @@ export function FormList() {
               formId={form.id}
               name={form.name}
               published={form.published}
+              isPublicOnSpace={form.isPublicOnSpace}
               createdAt={form.createdAt}
               responses={form.responses}
               handlePublish={handlePublish}

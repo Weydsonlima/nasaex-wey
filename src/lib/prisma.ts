@@ -14,8 +14,14 @@ const SCHEMA_VERSION = "v21-payments-regen";
 const createClient = () => {
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
+    max: 5,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 30000,
   });
-  return new PrismaClient({ adapter });
+  return new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === "development" ? ["error"] : [],
+  });
 };
 
 const shouldCreateNew =

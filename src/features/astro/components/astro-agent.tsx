@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,26 @@ import {
   Maximize2,
   RotateCcw,
   CheckCircle2,
+  ExternalLink,
+  Youtube,
+  BookOpen,
+  GraduationCap,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useMarketplace } from "@/features/integrations/context/marketplace-context";
 import { integrations } from "@/data/integrations";
 import type { Integration } from "@/types/integration";
 import { CATEGORY_LABELS } from "@/types/integration";
+import { orpc } from "@/lib/orpc";
+import {
+  suggestSpaceHelp,
+  type SuggesterFeature,
+  type SuggesterTrack,
+  type SpaceHelpResource,
+} from "../lib/space-help-suggester";
+import { parseYoutubeId } from "@/features/space-help/lib/youtube";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +46,7 @@ interface Message {
   text: string;
   quickReplies?: QuickReply[];
   integration?: Integration;
+  spaceHelpResources?: SpaceHelpResource[];
 }
 
 // ─── ASTRO Intelligence ───────────────────────────────────────────────────────
@@ -39,12 +54,12 @@ interface Message {
 const GREETING: Message = {
   id: "greeting",
   role: "astro",
-  text: "Olá! Sou o **ASTRO** 👨‍🚀 Seu assistente inteligente do NASA.\n\nConheço toda a plataforma: Tracking, FORGE, Workspace, Agendas, Stars, Padrões NASA e muito mais. Como posso ajudar?",
+  text: "Olá! Sou o **ASTRO** 👨‍🚀 Seu assistente inteligente do NASA.\n\nConheço toda a plataforma e o **Space Help** com tutoriais ricos (prints + vídeos). Pergunte como fazer qualquer coisa: \"como conectar WhatsApp\", \"como criar uma tag\", \"como usar Forge\"...",
   quickReplies: [
+    { label: "📚 Hub Space Help", value: "abrir space help", link: "/space-help" },
+    { label: "🎓 Rotas de Conhecimento", value: "rotas de conhecimento", link: "/space-help/trilhas" },
     { label: "🚀 Método NASA", value: "o que é o método nasa" },
-    { label: "📋 Ver todas funcionalidades", value: "quais são as funcionalidades" },
     { label: "🔌 Instalar integração", value: "quero instalar uma integração" },
-    { label: "⭐ O que são Stars?", value: "o que são stars" },
   ],
 };
 
@@ -95,6 +110,8 @@ function buildAstroResponse(
   input: string,
   history: Message[],
   pendingInstall?: Integration | null,
+  spaceHelpFeatures: SuggesterFeature[] = [],
+  spaceHelpTracks: SuggesterTrack[] = [],
 ): Message[] {
   const q = input.toLowerCase();
   const msgs: Message[] = [];
@@ -116,6 +133,44 @@ function buildAstroResponse(
         ],
       },
     ];
+  }
+
+  // ── Space Help — tutoriais ricos (prints + vídeos + links) ───────────────
+  // Roda primeiro: se a query casa com algum tutorial/trilha, prioriza isso.
+  // Excluímos casos onde já temos branch dedicado (método NASA, Stars, integração específica)
+  // para não atrapalhar fluxos importantes.
+  const isExplicitOtherIntent =
+    q.includes("método nasa") || q.includes("metodo nasa") ||
+    q.includes("o que são stars") || q.includes("o que sao stars") ||
+    q.startsWith("instalar ") || q.startsWith("__install:") ||
+    q === "início" || q === "inicio" ||
+    /^detalhes\s+/.test(q);
+
+  if (!isExplicitOtherIntent && (spaceHelpFeatures.length > 0 || spaceHelpTracks.length > 0)) {
+    const resources = suggestSpaceHelp(input, spaceHelpFeatures, spaceHelpTracks, 3);
+    if (resources.length > 0) {
+      const featureCount = resources.filter((r) => r.kind === "feature").length;
+      const trackCount = resources.filter((r) => r.kind === "track").length;
+      const intro =
+        trackCount > 0 && featureCount > 0
+          ? `Encontrei tutoriais e trilhas que podem te ajudar! 📚`
+          : trackCount > 0
+            ? `Olha que trilha bacana pra você! 🎓`
+            : `Encontrei tutorial(is) com print e passo a passo! 📸`;
+      return [
+        {
+          id: id(),
+          role: "astro",
+          text: intro,
+          spaceHelpResources: resources,
+          quickReplies: [
+            { label: "🎓 Ver todas as trilhas", value: "trilhas academy", link: "/space-help/trilhas" },
+            { label: "📚 Hub Space Help", value: "abrir space help", link: "/space-help" },
+            { label: "🔍 Outra dúvida", value: "ajuda" },
+          ],
+        },
+      ];
+    }
   }
 
   // ── Método NASA ────────────────────────────────────────────────────────────
@@ -832,6 +887,124 @@ function buildAstroResponse(
   ];
 }
 
+// ─── Space Help resource card ──────────────────────────────────────────────────
+
+function SpaceHelpResourceCard({ resource }: { resource: SpaceHelpResource }) {
+  const youtubeId = parseYoutubeId(resource.youtubeUrl ?? null);
+  const youtubeThumb = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null;
+  const previewSrc = resource.screenshotUrl || youtubeThumb;
+  const isTrack = resource.kind === "track";
+
+  return (
+    <div className="border rounded-xl overflow-hidden bg-card shadow-sm w-full">
+      {/* Thumbnail / Print */}
+      {previewSrc ? (
+        <div className="relative aspect-video w-full bg-muted overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewSrc}
+            alt={resource.title}
+            className="size-full object-cover"
+          />
+          {youtubeId && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="size-10 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
+                <svg viewBox="0 0 24 24" fill="white" className="size-5 ml-0.5">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </div>
+          )}
+          <div className="absolute top-1.5 left-1.5">
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-black/60 text-white backdrop-blur-sm flex items-center gap-1">
+              {isTrack ? <GraduationCap className="size-2.5" /> : <BookOpen className="size-2.5" />}
+              {isTrack ? "TRILHA" : resource.categoryName?.toUpperCase() ?? "TUTORIAL"}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="aspect-video w-full bg-linear-to-br from-violet-500/10 via-fuchsia-500/5 to-amber-500/5 flex items-center justify-center">
+          <Sparkles className="size-8 text-violet-500/60" />
+        </div>
+      )}
+
+      {/* Body */}
+      <div className="p-3 space-y-2">
+        <div>
+          <p className="text-[12px] font-bold leading-tight">{resource.title}</p>
+          {resource.summary && (
+            <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">
+              {resource.summary}
+            </p>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center gap-2 flex-wrap text-[9px] text-muted-foreground">
+          {isTrack && resource.lessonCount != null && (
+            <span className="flex items-center gap-0.5">
+              <BookOpen className="size-2.5" />
+              {resource.lessonCount} aulas
+            </span>
+          )}
+          {!isTrack && resource.stepCount != null && resource.stepCount > 0 && (
+            <span className="flex items-center gap-0.5">
+              <BookOpen className="size-2.5" />
+              {resource.stepCount} passos
+            </span>
+          )}
+          {isTrack && (resource.rewardStars ?? 0) > 0 && (
+            <span className="flex items-center gap-0.5 text-amber-600">
+              ⭐ {resource.rewardStars} STARs
+            </span>
+          )}
+          {isTrack && (resource.rewardSpacePoints ?? 0) > 0 && (
+            <span className="flex items-center gap-0.5 text-violet-600">
+              ✨ {resource.rewardSpacePoints} SP
+            </span>
+          )}
+          {resource.youtubeUrl && (
+            <span className="flex items-center gap-0.5 text-red-500">
+              <Youtube className="size-2.5" />
+              vídeo
+            </span>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-1.5">
+          <Link href={resource.url} className="flex-1">
+            <Button
+              size="sm"
+              className="w-full h-7 text-[11px] bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1"
+            >
+              {isTrack ? "Iniciar trilha" : "Ver tutorial"}
+              <ExternalLink className="size-3" />
+            </Button>
+          </Link>
+          {resource.youtubeUrl && (
+            <a
+              href={resource.youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0"
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-[11px] gap-1 border-red-500/30 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500"
+                title="Abrir vídeo no YouTube"
+              >
+                <Youtube className="size-3" />
+              </Button>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Message bubble ────────────────────────────────────────────────────────────
 
 function formatText(text: string) {
@@ -889,6 +1062,15 @@ function MessageBubble({
             {formatText(msg.text)}
           </p>
         </div>
+
+        {/* Space Help resource cards (prints + vídeos + links) */}
+        {msg.spaceHelpResources && msg.spaceHelpResources.length > 0 && (
+          <div className="space-y-2 w-full">
+            {msg.spaceHelpResources.map((resource, idx) => (
+              <SpaceHelpResourceCard key={`${resource.url}-${idx}`} resource={resource} />
+            ))}
+          </div>
+        )}
 
         {/* Integration preview card */}
         {msg.integration && (
@@ -1005,12 +1187,63 @@ export function AstroAgent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ── Space Help data (categorias + features + tracks) ────────────────────
+  const { data: spaceHelpCategoriesData } = useQuery({
+    ...orpc.spaceHelp.listCategories.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: spaceHelpTracksData } = useQuery({
+    ...orpc.spaceHelp.listTracks.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const spaceHelpFeatures = useMemo<SuggesterFeature[]>(() => {
+    const cats = spaceHelpCategoriesData?.categories ?? [];
+    const out: SuggesterFeature[] = [];
+    for (const cat of cats) {
+      for (const f of cat.features ?? []) {
+        out.push({
+          id: f.id,
+          slug: f.slug,
+          title: f.title,
+          summary: f.summary ?? null,
+          youtubeUrl: f.youtubeUrl ?? null,
+          category: { slug: cat.slug, name: cat.name },
+          firstStepScreenshotUrl: f.steps?.[0]?.screenshotUrl ?? null,
+          stepCount: f._count?.steps ?? 0,
+        });
+      }
+    }
+    return out;
+  }, [spaceHelpCategoriesData]);
+
+  const spaceHelpTracks = useMemo<SuggesterTrack[]>(() => {
+    const tracks = spaceHelpTracksData?.tracks ?? [];
+    return tracks.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      title: t.title,
+      subtitle: t.subtitle ?? null,
+      description: t.description ?? null,
+      coverUrl: t.coverUrl ?? null,
+      rewardStars: t.rewardStars ?? 0,
+      rewardSpacePoints: t.rewardSpacePoints ?? 0,
+      lessonCount: t.lessonCount ?? 0,
+    }));
+  }, [spaceHelpTracksData]);
+
   // Handle pending install from marketplace
   useEffect(() => {
     if (pendingInstall && astroOpen) {
       setThinking(true);
       setTimeout(() => {
-        const responses = buildAstroResponse("", messages, pendingInstall);
+        const responses = buildAstroResponse(
+          "",
+          messages,
+          pendingInstall,
+          spaceHelpFeatures,
+          spaceHelpTracks,
+        );
         setMessages((prev) => [...prev, ...responses]);
         setThinking(false);
         clearPendingInstall();
@@ -1114,13 +1347,19 @@ export function AstroAgent() {
 
       // Pass full history (including new user msg) for context
       setMessages((prev) => {
-        const responses = buildAstroResponse(text, prev);
+        const responses = buildAstroResponse(
+          text,
+          prev,
+          null,
+          spaceHelpFeatures,
+          spaceHelpTracks,
+        );
         return [...prev, ...responses];
       });
       setThinking(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     },
-    [install, isInstalled],
+    [install, isInstalled, spaceHelpFeatures, spaceHelpTracks],
   );
 
   const handleSubmit = (e: React.FormEvent) => {

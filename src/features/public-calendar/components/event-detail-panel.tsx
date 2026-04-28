@@ -146,7 +146,7 @@ export function EventDetailPanel({
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="text-xs text-muted-foreground">Organizado por</div>
+            <div className="text-xs text-muted-foreground">Criado por</div>
             <div className="text-sm font-medium">{event.user.name}</div>
           </div>
         </div>

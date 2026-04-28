@@ -10,6 +10,7 @@ import {
   Bell,
   FolderIcon,
   CreditCard,
+  GraduationCap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -69,6 +70,12 @@ const tabsLink = [
     href: "/billing",
     icon: CreditCard,
     singleAllowed: true,
+  },
+  {
+    label: "NASA Route",
+    href: "/nasa-route",
+    icon: GraduationCap,
+    singleAllowed: false,
   },
 ];
 

@@ -19,6 +19,7 @@ import { getAnalytics } from "./get-analytics";
 import { listRecentActions } from "./list-recent";
 import { addParticipant } from "./add-participant";
 import { removeParticipant } from "./remove-participant";
+import { getWorkspaceCalendar } from "./get-workspace-calendar";
 
 export const actionRoutes = {
   getAnalytics,
@@ -41,4 +42,5 @@ export const actionRoutes = {
   promoteSubAction,
   addParticipant,
   removeParticipant,
+  getWorkspaceCalendar,
 };

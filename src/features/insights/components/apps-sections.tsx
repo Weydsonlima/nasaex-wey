@@ -6,8 +6,9 @@ import {
   FileText, CheckCircle2, XCircle, Clock,
   DollarSign, Instagram, Twitter, Facebook,
   MessageSquare, Users, TrendingUp, AlertCircle,
+  ListTodo, FormInput, Inbox, Wallet, Link2, Coins, Star,
+  Activity, Eye, Award, ShoppingCart, Receipt,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 // ─── Shared KPI Card ─────────────────────────────────────────────────────────
@@ -285,6 +286,432 @@ export function IntegrationsSection({ metaAds }: {
           <KpiCard label="Conversões" value={fmt(metaAds.data.conversions)}
             icon={CheckCircle2} color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-950/40"
             sub={`Taxa ${metaAds.data.conversionRate.toFixed(1)}%`} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Workspace Section ───────────────────────────────────────────────────────
+
+interface WorkspaceData {
+  total: number;
+  done: number;
+  open: number;
+  overdue: number;
+  byType: Record<string, number>;
+  topCreators: Array<{
+    id: string;
+    name: string;
+    image: string | null;
+    count: number;
+  }>;
+}
+
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  TASK: "Tarefas",
+  EVENT: "Eventos",
+  MEETING: "Reuniões",
+  CALL: "Ligações",
+  EMAIL: "E-mails",
+  NOTE: "Notas",
+  DEADLINE: "Prazos",
+};
+
+export function WorkspaceSection({ data }: { data: WorkspaceData }) {
+  const types = Object.entries(data.byType).sort((a, b) => b[1] - a[1]);
+  const completionRate = data.total > 0 ? (data.done / data.total) * 100 : 0;
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={ListTodo}
+        label="Workspace — Ações"
+        color="text-amber-600"
+        bg="bg-amber-50 dark:bg-amber-950/40"
+        description="Tarefas, eventos e ações criadas no período"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Total de ações" value={fmt(data.total)}
+          icon={ListTodo} color="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/40" />
+        <KpiCard label="Concluídas" value={fmt(data.done)}
+          icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40"
+          badge={`${completionRate.toFixed(0)}%`} badgeVariant="default" />
+        <KpiCard label="Em aberto" value={fmt(data.open)}
+          icon={Clock} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-950/40" />
+        <KpiCard label="Atrasadas" value={fmt(data.overdue)}
+          icon={AlertCircle} color="text-red-500" bg="bg-red-50 dark:bg-red-950/40"
+          sub="Vencidas e não concluídas" />
+      </div>
+
+      {types.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Por tipo</p>
+          <div className="flex flex-wrap gap-2">
+            {types.map(([type, count]) => (
+              <div key={type} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/40 text-xs font-medium">
+                {ACTION_TYPE_LABELS[type] ?? type}: <span className="font-bold ml-1">{fmt(count)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.topCreators.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Top criadores</p>
+          <div className="space-y-2">
+            {data.topCreators.map((u, i) => (
+              <div key={u.id} className="flex items-center justify-between gap-3 py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}º</span>
+                  <div className="w-6 h-6 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-[10px] font-bold text-amber-600 shrink-0 overflow-hidden">
+                    {u.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={u.image} alt={u.name} className="w-full h-full object-cover" />
+                    ) : (
+                      u.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <p className="text-sm truncate">{u.name}</p>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">{fmt(u.count)} ações</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Forms Section ───────────────────────────────────────────────────────────
+
+interface FormsData {
+  totalForms: number;
+  publishedForms: number;
+  totalResponses: number;
+  responsesWithLead: number;
+  totalViews: number;
+  topForms: Array<{ id: string; name: string; responses: number }>;
+}
+
+export function FormsSection({ data }: { data: FormsData }) {
+  const conversionRate = data.totalViews > 0 ? (data.totalResponses / data.totalViews) * 100 : 0;
+  const leadRate = data.totalResponses > 0 ? (data.responsesWithLead / data.totalResponses) * 100 : 0;
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={FormInput}
+        label="Formulários"
+        color="text-teal-600"
+        bg="bg-teal-50 dark:bg-teal-950/40"
+        description="Formulários publicados e respostas captadas"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Formulários" value={fmt(data.totalForms)}
+          icon={FormInput} color="text-teal-600" bg="bg-teal-50 dark:bg-teal-950/40"
+          sub={`${data.publishedForms} publicados`} />
+        <KpiCard label="Respostas" value={fmt(data.totalResponses)}
+          icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40"
+          badge={`${conversionRate.toFixed(0)}%`} badgeVariant="default"
+          sub="Taxa de conversão" />
+        <KpiCard label="Visualizações" value={fmt(data.totalViews)}
+          icon={Eye} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-950/40" />
+        <KpiCard label="Geraram lead" value={fmt(data.responsesWithLead)}
+          icon={Users} color="text-violet-600" bg="bg-violet-50 dark:bg-violet-950/40"
+          sub={`${leadRate.toFixed(0)}% das respostas`} />
+      </div>
+
+      {data.topForms.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Top formulários por respostas</p>
+          <div className="space-y-2">
+            {data.topForms.map((f, i) => (
+              <div key={f.id} className="flex items-center justify-between gap-3 py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}º</span>
+                  <p className="text-sm truncate">{f.name}</p>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">{fmt(f.responses)} respostas</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── N-Box Section ───────────────────────────────────────────────────────────
+
+interface NBoxData {
+  totalItems: number;
+  publicItems: number;
+  totalSize: number;
+  byType: Record<string, number>;
+}
+
+const NBOX_TYPE_LABELS: Record<string, string> = {
+  FILE: "Arquivos",
+  FOLDER: "Pastas",
+  LINK: "Links",
+  NOTE: "Notas",
+  IMAGE: "Imagens",
+  VIDEO: "Vídeos",
+};
+
+function fmtSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+export function NBoxSection({ data }: { data: NBoxData }) {
+  const types = Object.entries(data.byType).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={Inbox}
+        label="N-Box — Arquivos"
+        color="text-slate-600"
+        bg="bg-slate-50 dark:bg-slate-950/40"
+        description="Itens armazenados no N-Box"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Total de itens" value={fmt(data.totalItems)}
+          icon={Inbox} color="text-slate-600" bg="bg-slate-50 dark:bg-slate-950/40" />
+        <KpiCard label="Públicos" value={fmt(data.publicItems)}
+          icon={Eye} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-950/40" />
+        <KpiCard label="Espaço usado" value={fmtSize(data.totalSize)}
+          icon={Activity} color="text-violet-600" bg="bg-violet-50 dark:bg-violet-950/40"
+          sub="Soma do tamanho dos arquivos" />
+      </div>
+
+      {types.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Por tipo</p>
+          <div className="flex flex-wrap gap-2">
+            {types.map(([type, count]) => (
+              <div key={type} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/40 text-xs font-medium">
+                {NBOX_TYPE_LABELS[type] ?? type}: <span className="font-bold ml-1">{fmt(count)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Payment Section ─────────────────────────────────────────────────────────
+
+interface PaymentData {
+  totalEntries: number;
+  revenue: number;
+  expense: number;
+  pendingCount: number;
+  pendingAmount: number;
+  overdueCount: number;
+  overdueAmount: number;
+  avgTicket: number;
+}
+
+export function PaymentSection({ data }: { data: PaymentData }) {
+  const profit = data.revenue - data.expense;
+  const margin = data.revenue > 0 ? (profit / data.revenue) * 100 : 0;
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={Wallet}
+        label="Pagamentos — Hub Financeiro"
+        color="text-green-600"
+        bg="bg-green-50 dark:bg-green-950/40"
+        description="Fluxo financeiro: receitas, despesas e pendências"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Receita realizada" value={fmtBRL(data.revenue)}
+          icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40"
+          sub="Recebimentos pagos" />
+        <KpiCard label="Despesa realizada" value={fmtBRL(data.expense)}
+          icon={ShoppingCart} color="text-red-500" bg="bg-red-50 dark:bg-red-950/40"
+          sub="Pagamentos efetuados" />
+        <KpiCard label="Resultado líquido" value={fmtBRL(profit)}
+          icon={DollarSign}
+          color={profit >= 0 ? "text-emerald-600" : "text-red-500"}
+          bg={profit >= 0 ? "bg-emerald-50 dark:bg-emerald-950/40" : "bg-red-50 dark:bg-red-950/40"}
+          badge={`${margin.toFixed(0)}%`}
+          badgeVariant={profit >= 0 ? "default" : "destructive"}
+          sub="Margem do período" />
+        <KpiCard label="Ticket médio" value={fmtBRL(data.avgTicket)}
+          icon={Receipt} color="text-blue-600" bg="bg-blue-50 dark:bg-blue-950/40"
+          sub="Por entrada paga" />
+        <KpiCard label="A receber/pagar" value={fmt(data.pendingCount)}
+          icon={Clock} color="text-amber-500" bg="bg-amber-50 dark:bg-amber-950/40"
+          sub={fmtBRL(data.pendingAmount)} />
+        <KpiCard label="Em atraso" value={fmt(data.overdueCount)}
+          icon={AlertCircle} color="text-red-500" bg="bg-red-50 dark:bg-red-950/40"
+          sub={fmtBRL(data.overdueAmount)}
+          badge={data.overdueCount > 0 ? "Atenção" : undefined}
+          badgeVariant="destructive" />
+        <KpiCard label="Total de lançamentos" value={fmt(data.totalEntries)}
+          icon={FileText} color="text-zinc-500" bg="bg-zinc-100 dark:bg-zinc-800" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Linnker Section ─────────────────────────────────────────────────────────
+
+interface LinnkerData {
+  totalScans: number;
+  scansWithLead: number;
+  totalClicks: number;
+  topLinks: Array<{ id: string; title: string; clicks: number }>;
+}
+
+export function LinnkerSection({ data }: { data: LinnkerData }) {
+  const captureRate = data.totalScans > 0 ? (data.scansWithLead / data.totalScans) * 100 : 0;
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={Link2}
+        label="Linnker — Páginas & QR"
+        color="text-purple-600"
+        bg="bg-purple-50 dark:bg-purple-950/40"
+        description="Acessos a páginas e cliques em links"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Acessos" value={fmt(data.totalScans)}
+          icon={Activity} color="text-purple-600" bg="bg-purple-50 dark:bg-purple-950/40" />
+        <KpiCard label="Capturaram lead" value={fmt(data.scansWithLead)}
+          icon={Users} color="text-violet-600" bg="bg-violet-50 dark:bg-violet-950/40"
+          badge={`${captureRate.toFixed(0)}%`} badgeVariant="default" />
+        <KpiCard label="Total de cliques" value={fmt(data.totalClicks)}
+          icon={TrendingUp} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-950/40"
+          sub="Em links ativos" />
+      </div>
+
+      {data.topLinks.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Top links por cliques</p>
+          <div className="space-y-2">
+            {data.topLinks.map((l, i) => (
+              <div key={l.id} className="flex items-center justify-between gap-3 py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}º</span>
+                  <p className="text-sm truncate">{l.title}</p>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">{fmt(l.clicks)} cliques</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Space Points Section ────────────────────────────────────────────────────
+
+interface SpacePointsData {
+  totalBalance: number;
+  weeklyBalance: number;
+  granted: number;
+  spent: number;
+  activeUsers: number;
+  totalUsers: number;
+}
+
+export function SpacePointsSection({ data }: { data: SpacePointsData }) {
+  const engagementRate = data.totalUsers > 0 ? (data.activeUsers / data.totalUsers) * 100 : 0;
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={Coins}
+        label="Space Points — Gamificação"
+        color="text-yellow-600"
+        bg="bg-yellow-50 dark:bg-yellow-950/40"
+        description="Pontos distribuídos e consumidos pela equipe"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Saldo total" value={fmt(data.totalBalance)}
+          icon={Coins} color="text-yellow-600" bg="bg-yellow-50 dark:bg-yellow-950/40"
+          sub="SP acumulados pelos usuários" />
+        <KpiCard label="Saldo semanal" value={fmt(data.weeklyBalance)}
+          icon={Activity} color="text-orange-500" bg="bg-orange-50 dark:bg-orange-950/40" />
+        <KpiCard label="SP distribuídos" value={fmt(data.granted)}
+          icon={Award} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40"
+          sub="Ganhos no período" />
+        <KpiCard label="SP gastos" value={fmt(data.spent)}
+          icon={ShoppingCart} color="text-red-500" bg="bg-red-50 dark:bg-red-950/40"
+          sub="Resgates no período" />
+        <KpiCard label="Usuários ativos" value={fmt(data.activeUsers)}
+          icon={Users} color="text-violet-600" bg="bg-violet-50 dark:bg-violet-950/40"
+          badge={`${engagementRate.toFixed(0)}%`} badgeVariant="default"
+          sub={`${data.totalUsers} total`} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Stars Section ───────────────────────────────────────────────────────────
+
+interface StarsData {
+  lastBalance: number;
+  topupTotal: number;
+  appCharges: number;
+  planCredit: number;
+  byApp: Record<string, number>;
+}
+
+export function StarsSection({ data }: { data: StarsData }) {
+  const apps = Object.entries(data.byApp).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        icon={Star}
+        label="Stars — Créditos de IA"
+        color="text-fuchsia-600"
+        bg="bg-fuchsia-50 dark:bg-fuchsia-950/40"
+        description="Consumo de créditos para apps com IA"
+      />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <KpiCard label="Saldo atual" value={fmt(data.lastBalance)}
+          icon={Star} color="text-fuchsia-600" bg="bg-fuchsia-50 dark:bg-fuchsia-950/40"
+          sub="Stars disponíveis" />
+        <KpiCard label="Comprados" value={fmt(data.topupTotal)}
+          icon={ShoppingCart} color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40"
+          sub="Recargas no período" />
+        <KpiCard label="Crédito do plano" value={fmt(data.planCredit)}
+          icon={Award} color="text-blue-500" bg="bg-blue-50 dark:bg-blue-950/40"
+          sub="Mensalidade" />
+        <KpiCard label="Consumidos" value={fmt(data.appCharges)}
+          icon={Activity} color="text-red-500" bg="bg-red-50 dark:bg-red-950/40"
+          sub="Gastos por apps no período" />
+      </div>
+
+      {apps.length > 0 && (
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Top apps por consumo</p>
+          <div className="space-y-2">
+            {apps.map(([app, amount], i) => (
+              <div key={app} className="flex items-center justify-between gap-3 py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}º</span>
+                  <p className="text-sm truncate capitalize">{app.replace(/-/g, " ")}</p>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">{fmt(amount)} ⭐</Badge>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -13,10 +13,10 @@ export function CreateEventEntry() {
 
   const handleClick = () => {
     if (session?.user) {
-      router.push("/home?create=event-public");
+      router.push("/calendario/criar-evento");
       return;
     }
-    router.push("/sign-in?callbackUrl=/calendario");
+    router.push("/sign-in?callbackUrl=/calendario/criar-evento");
   };
 
   return (

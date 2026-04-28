@@ -266,6 +266,7 @@ export function Footer({
               leadId={lead.id}
               trackingId={trackingId}
               lead={lead}
+              phone={lead.phone}
             />
           )}
           {!showAudioRecorder ? (

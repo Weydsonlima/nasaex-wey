@@ -82,6 +82,7 @@ function buildOptimisticLead(out: CreateLeadOutput): Lead {
     temperature: "COLD",
     order: "0",
     createdAt: out.createdAt ? new Date(out.createdAt) : new Date(),
+    statusFlow: "NEW",
   };
 }
 

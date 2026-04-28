@@ -76,6 +76,7 @@ function buildOptimisticLead(out: CreateLeadOutput): Lead {
     email: null,
     phone: null,
     profile: null,
+    statusFlow: "NEW",
     description: null,
     responsible: null,
     leadTags: [],

@@ -18,7 +18,9 @@ interface Props {
 export function FeatureArticle({ categorySlug, featureSlug }: Props) {
   const isMod = useIsModerator();
   const { data, isLoading, refetch } = useQuery({
-    ...orpc.spaceHelp.getFeature.queryOptions({ input: { categorySlug, featureSlug } }),
+    ...orpc.spaceHelp.getFeature.queryOptions({
+      input: { categorySlug, featureSlug },
+    }),
   });
 
   if (isLoading) {
@@ -45,7 +47,9 @@ export function FeatureArticle({ categorySlug, featureSlug }: Props) {
         <span className="text-foreground">{feature.title}</span>
       </nav>
 
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{feature.title}</h1>
+      <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+        {feature.title}
+      </h1>
       {feature.summary && (
         <p className="mt-2 text-muted-foreground">{feature.summary}</p>
       )}
@@ -87,7 +91,9 @@ export function FeatureArticle({ categorySlug, featureSlug }: Props) {
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white text-sm font-bold">
                 {idx + 1}
               </span>
-              <h3 className="text-lg md:text-xl font-semibold leading-tight">{step.title}</h3>
+              <h3 className="text-lg md:text-xl font-semibold leading-tight">
+                {step.title}
+              </h3>
             </div>
             <p className="ml-11 text-sm md:text-base text-foreground/80 leading-relaxed">
               {step.description}

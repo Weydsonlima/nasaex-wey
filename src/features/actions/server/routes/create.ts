@@ -3,9 +3,21 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
-import { logOrgActivity } from "@/lib/org-activity-log";
-import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
 import { z } from "zod";
+import { generatePublicSlug } from "@/features/public-calendar/utils/slug";
+
+const EVENT_CATEGORY_VALUES = [
+  "WORKSHOP",
+  "PALESTRA",
+  "LANCAMENTO",
+  "WEBINAR",
+  "NETWORKING",
+  "CURSO",
+  "REUNIAO",
+  "HACKATHON",
+  "CONFERENCIA",
+  "OUTRO",
+] as const;
 
 export const createAction = base
   .use(requiredAuthMiddleware)
@@ -14,12 +26,19 @@ export const createAction = base
     z.object({
       title: z.string().min(1, "Título é obrigatório"),
       description: z.string().optional(),
-      priority: z.enum(["NONE", "LOW", "MEDIUM", "HIGH", "URGENT"]),
+      priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
       dueDate: z.date().optional(),
       startDate: z.date().optional(),
       workspaceId: z.string().min(1, "Workspace é obrigatório"),
       columnId: z.string().min(1, "Coluna é obrigatória"),
       orgProjectId: z.string().optional(),
+      // ─── Calendário Público ──────────────────────────────────────────
+      isPublic: z.boolean().optional(),
+      eventCategory: z.enum(EVENT_CATEGORY_VALUES).nullable().optional(),
+      state: z.string().nullable().optional(),
+      city: z.string().nullable().optional(),
+      address: z.string().nullable().optional(),
+      registrationUrl: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -41,6 +60,26 @@ export const createAction = base
       newOrder = new Prisma.Decimal(0);
     }
 
+    // Se for criado já público, geramos slug único
+    let publicSlug: string | undefined;
+    let publishedAt: Date | undefined;
+    if (input.isPublic) {
+      for (let i = 0; i < 3; i++) {
+        const candidate = generatePublicSlug(input.title);
+        const exists = await prisma.action.findUnique({
+          where: { publicSlug: candidate },
+          select: { id: true },
+        });
+        if (!exists) {
+          publicSlug = candidate;
+          break;
+        }
+      }
+      publishedAt = new Date();
+    }
+
+    console.log("[CREATE TASK]", input);
+
     const action = await prisma.action.create({
       data: {
         title: input.title,
@@ -53,6 +92,14 @@ export const createAction = base
         columnId: input.columnId,
         orgProjectId: input.orgProjectId,
         createdBy: context.user.id,
+        isPublic: input.isPublic ?? false,
+        publicSlug,
+        publishedAt,
+        eventCategory: input.eventCategory ?? undefined,
+        state: input.state ?? undefined,
+        city: input.city ?? undefined,
+        address: input.address ?? undefined,
+        registrationUrl: input.registrationUrl ?? undefined,
         participants: {
           create: {
             userId: context.user.id,
@@ -60,42 +107,6 @@ export const createAction = base
         },
       },
     });
-
-    await logOrgActivity({
-      organizationId: context.org.id,
-      userId: context.user.id,
-      userName: context.user.name ?? "Usuário",
-      userEmail: context.user.email ?? "",
-      action: "action.created",
-      resource: "action",
-      resourceId: action.id,
-      metadata: {
-        workspaceId: action.workspaceId,
-        columnId: action.columnId,
-        priority: action.priority,
-      },
-    });
-
-    try {
-      const hasMatchingWorkflow = await prisma.workflow.findFirst({
-        where: {
-          workspaceId: action.workspaceId,
-          isActive: true,
-          nodes: { some: { type: "WS_ACTION_CREATED" } },
-        },
-        select: { id: true },
-      });
-
-      if (hasMatchingWorkflow) {
-        await sendWorkspaceWorkflowEvent({
-          trigger: "WS_ACTION_CREATED",
-          workspaceId: action.workspaceId,
-          actionId: action.id,
-        });
-      }
-    } catch (err) {
-      console.error("[workspace-workflow] failed to emit action.created", err);
-    }
 
     return {
       action,

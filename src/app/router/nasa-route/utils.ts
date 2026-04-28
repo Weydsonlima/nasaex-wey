@@ -141,7 +141,7 @@ export async function awardCourseRewards(opts: {
     // Bônus extra configurado pelo criador (não passa pela rule)
     if (course.rewardSpOnComplete > 0) {
       const userPoint = await prisma.userSpacePoint.upsert({
-        where: { userId_orgId: { userId, orgId: buyerOrgId } },
+        where: { userId },
         create: { userId, orgId: buyerOrgId },
         update: {},
       });

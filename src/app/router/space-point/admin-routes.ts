@@ -146,7 +146,7 @@ export const adminAdjustUserPoints = base
   .output(z.object({ success: z.boolean(), newTotal: z.number() }))
   .handler(async ({ input }) => {
     let userPoint = await prisma.userSpacePoint.findUnique({
-      where: { userId_orgId: { userId: input.userId, orgId: input.orgId } },
+      where: { userId: input.userId },
     });
     if (!userPoint)
       userPoint = await prisma.userSpacePoint.create({
@@ -227,7 +227,6 @@ export const adminCreateOrgRule = base
   .handler(async ({ input }) => {
     const created = await prisma.spacePointRule.create({
       data: {
-        orgId: input.orgId,
         action: input.action,
         label: input.label,
         points: input.points,

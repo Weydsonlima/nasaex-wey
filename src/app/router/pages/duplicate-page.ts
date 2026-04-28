@@ -36,44 +36,34 @@ export const duplicatePage = base
     });
     if (taken) throw errors.BAD_REQUEST({ message: "Este slug já está em uso" });
 
-    try {
-      const debit = await debitStars(
-        organizationId,
-        PAGES_STARS_COST,
-        StarTransactionType.APP_SETUP,
-        `NASA Pages — duplicação de "${src.title}" → "${input.newTitle}"`,
-        "pages",
-        context.user.id,
-      );
-      if (!debit.success) {
-        throw errors.BAD_REQUEST({
-          message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
-        });
-      }
-
-      const copy = await prisma.nasaPage.create({
-        data: {
-          organizationId,
-          userId: context.user.id,
-          title: input.newTitle,
-          slug: input.newSlug,
-          description: src.description,
-          intent: src.intent,
-          layerCount: src.layerCount,
-          palette: src.palette as object,
-          fontFamily: src.fontFamily,
-          layout: src.layout as object,
-          starsSpent: PAGES_STARS_COST,
-        },
+    const debit = await debitStars(
+      organizationId,
+      PAGES_STARS_COST,
+      StarTransactionType.APP_SETUP,
+      `NASA Pages — duplicação de "${src.title}" → "${input.newTitle}"`,
+      "pages",
+      context.user.id,
+    );
+    if (!debit.success) {
+      throw errors.BAD_REQUEST({
+        message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
       });
-      return { page: copy };
-    } catch (e) {
-      const msg = (e as Error).message ?? "";
-      if (msg.startsWith("INSUFFICIENT_STARS")) {
-        throw errors.BAD_REQUEST({
-          message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
-        });
-      }
-      throw e;
     }
+
+    const copy = await prisma.nasaPage.create({
+      data: {
+        organizationId,
+        userId: context.user.id,
+        title: input.newTitle,
+        slug: input.newSlug,
+        description: src.description,
+        intent: src.intent,
+        layerCount: src.layerCount,
+        palette: src.palette as object,
+        fontFamily: src.fontFamily,
+        layout: src.layout as object,
+        starsSpent: PAGES_STARS_COST,
+      },
+    });
+    return { page: copy };
   });

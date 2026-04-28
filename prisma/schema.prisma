@@ -252,7 +252,6 @@ model Organization {
 
   companyType    String? @map("company_type")    // slug ex: "agencia-publicidade" — vide src/features/company/constants.ts
   companySegment String? @map("company_segment") // texto livre opcional (sub-nicho)
-  spacePointRules  SpacePointRule[]
   cnpj          String?
   contactEmail  String?  @map("contact_email")
   contactPhone  String?  @map("contact_phone")
@@ -2497,11 +2496,7 @@ model SpacePointRule {
 
   transactions SpacePointTransaction[]
 
-  orgId             String   @map("org_id")
-  org          Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   @@map("space_point_rule")
-  @@unique([orgId, action])
-  @@index([orgId])
 }
 
 /// Prizes/awards per ranking position per org
@@ -2540,8 +2535,6 @@ model UserSpacePoint {
   seals        UserSpacePointSeal[]
 
   @@map("user_space_point")
-  @@unique([userId, orgId])
-  @@index([orgId, totalPoints])
 }
 
 /// Audit log of every point event

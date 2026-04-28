@@ -118,7 +118,7 @@ export async function awardTrackRewards(opts: {
   let spAwarded = 0;
   if (track.rewardSpacePoints > 0) {
     const userPoint = await prisma.userSpacePoint.upsert({
-      where: { userId_orgId: { userId, orgId } },
+      where: { userId },
       create: { userId, orgId },
       update: {},
     });
@@ -422,7 +422,7 @@ export async function awardSetupRewards(opts: {
   let spAwarded = 0;
   if (SETUP_REWARD_SP > 0) {
     const userPoint = await prisma.userSpacePoint.upsert({
-      where: { userId_orgId: { userId, orgId } },
+      where: { userId },
       create: { userId, orgId },
       update: {},
     });

@@ -357,7 +357,7 @@ export const getUserStats = base
       return { totalInPeriod: 0, appBreakdown: [], history: [], seals: [] };
 
     const userPoint = await prisma.userSpacePoint.findUnique({
-      where: { userId_orgId: { userId: input.targetUserId, orgId } },
+      where: { userId: input.targetUserId },
     });
     if (!userPoint)
       return { totalInPeriod: 0, appBreakdown: [], history: [], seals: [] };
@@ -501,7 +501,6 @@ export const createSpacePointRule = base
       return { success: false };
     const created = await prisma.spacePointRule.create({
       data: {
-        orgId,
         action: input.action,
         label: input.label,
         points: input.points,

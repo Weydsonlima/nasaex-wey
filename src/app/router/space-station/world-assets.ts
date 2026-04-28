@@ -1,4 +1,4 @@
-import { requiredAuthMiddleware } from "@/app/middlewares/auth";
+import { requireAdminMiddleware } from "@/app/middlewares/admin";
 import { base } from "@/app/middlewares/base";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
@@ -29,7 +29,7 @@ export const listWorldAssets = base
   });
 
 export const createWorldAsset = base
-  .use(requiredAuthMiddleware)
+  .use(requireAdminMiddleware)
   .route({
     method: "POST",
     path: "/admin/space-station/world-assets",
@@ -44,8 +44,7 @@ export const createWorldAsset = base
       config: z.record(z.string(), z.unknown()).optional(),
     }),
   )
-  .handler(async ({ input, context, errors }) => {
-    if (!context.user.isSystemAdmin) throw errors.FORBIDDEN({ message: "Apenas admins podem criar assets" });
+  .handler(async ({ input }) => {
     const asset = await prisma.worldGameAsset.create({
       data: {
         type: input.type,
@@ -61,7 +60,7 @@ export const createWorldAsset = base
   });
 
 export const updateWorldAsset = base
-  .use(requiredAuthMiddleware)
+  .use(requireAdminMiddleware)
   .route({
     method: "PATCH",
     path: "/admin/space-station/world-assets/:id",
@@ -77,29 +76,29 @@ export const updateWorldAsset = base
       isActive: z.boolean().optional(),
     }),
   )
-  .handler(async ({ input, context, errors }) => {
-    if (!context.user.isSystemAdmin) throw errors.FORBIDDEN({ message: "Apenas admins podem editar assets" });
+  .handler(async ({ input }) => {
     const { id, config, ...rest } = input;
     const data: Prisma.WorldGameAssetUpdateInput = {
       ...rest,
-      ...(config !== undefined
-        ? { config: config === null ? Prisma.DbNull : (config as Prisma.InputJsonValue) }
-        : {}),
+      ...(config === null
+        ? { config: Prisma.JsonNull }
+        : config !== undefined
+          ? { config: config as Prisma.InputJsonValue }
+          : {}),
     };
     const asset = await prisma.worldGameAsset.update({ where: { id }, data });
     return { asset };
   });
 
 export const deleteWorldAsset = base
-  .use(requiredAuthMiddleware)
+  .use(requireAdminMiddleware)
   .route({
     method: "DELETE",
     path: "/admin/space-station/world-assets/:id",
     summary: "Delete a world game asset (admin only)",
   })
   .input(z.object({ id: z.string() }))
-  .handler(async ({ input, context, errors }) => {
-    if (!context.user.isSystemAdmin) throw errors.FORBIDDEN({ message: "Apenas admins podem deletar assets" });
+  .handler(async ({ input }) => {
     await prisma.worldGameAsset.delete({ where: { id: input.id } });
     return { ok: true };
   });

@@ -38,7 +38,7 @@ export async function ensureOrgStarRules(orgId: string) {
 
 export async function ensureUserPoint(userId: string, orgId: string) {
   return prisma.userSpacePoint.upsert({
-    where: { userId_orgId: { userId, orgId } },
+    where: { userId },
     create: { userId, orgId },
     update: {},
   });
@@ -104,7 +104,7 @@ export async function awardPoints(
   await ensureOrgStarRules(orgId);
 
   const rule = await prisma.spacePointRule.findFirst({
-    where: { orgId, action, isActive: true },
+    where: { action, isActive: true },
   });
   if (!rule || rule.points === 0)
     return { points: 0, newSeals: [], totalPoints: 0, popupTemplateId: null };
@@ -113,8 +113,8 @@ export async function awardPoints(
     const cutoff = new Date(Date.now() - rule.cooldownHours * 3_600_000);
     const recent = await prisma.spacePointTransaction.findFirst({
       where: {
-        rule: { action, orgId },
-        userPoint: { userId, orgId },
+        rule: { action },
+        userPoint: { userId },
         createdAt: { gte: cutoff },
       },
     });

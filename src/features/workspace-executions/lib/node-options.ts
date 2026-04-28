@@ -62,13 +62,13 @@ export const wsTriggerNodes: WsNodeTypeOption[] = [
     description: "Executa ao concluir ação",
     icon: CheckCircle2Icon,
   },
-  {
-    type: NodeType.WS_ACTION_PARTICIPANT_ADDED,
-    category: "trigger",
-    label: "Participante adicionado",
-    description: "Executa ao adicionar participante",
-    icon: UserPlusIcon,
-  },
+  // {
+  //   type: NodeType.WS_ACTION_PARTICIPANT_ADDED,
+  //   category: "trigger",
+  //   label: "Participante adicionado",
+  //   description: "Executa ao adicionar participante",
+  //   icon: UserPlusIcon,
+  // },
 ];
 
 export const wsExecutionNodes: WsNodeTypeOption[] = [
@@ -100,13 +100,13 @@ export const wsExecutionNodes: WsNodeTypeOption[] = [
     description: "Adiciona participante à ação",
     icon: UserPlusIcon,
   },
-  {
-    type: NodeType.WS_SET_RESPONSIBLE,
-    category: "execution",
-    label: "Definir responsável",
-    description: "Define responsável da ação",
-    icon: UserRoundPlusIcon,
-  },
+  // {
+  //   type: NodeType.WS_SET_RESPONSIBLE,
+  //   category: "execution",
+  //   label: "Definir responsável",
+  //   description: "Define responsável da ação",
+  //   icon: UserRoundPlusIcon,
+  // },
   {
     type: NodeType.WS_CREATE_SUB_ACTION,
     category: "execution",
@@ -142,11 +142,11 @@ export const wsExecutionNodes: WsNodeTypeOption[] = [
     description: "Aguarda antes de continuar",
     icon: TimerIcon,
   },
-  // {
-  //   type: NodeType.WS_FILTER,
-  //   category: "execution",
-  //   label: "Filtrar",
-  //   description: "Condição booleana sobre a ação",
-  //   icon: FunnelIcon,
-  // },
+  {
+    type: NodeType.WS_FILTER,
+    category: "execution",
+    label: "Filtrar",
+    description: "Condição booleana sobre a ação",
+    icon: FunnelIcon,
+  },
 ];

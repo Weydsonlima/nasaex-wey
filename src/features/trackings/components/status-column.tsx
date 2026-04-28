@@ -1,4 +1,5 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useRef } from "react";
 import { useInfiniteLeadsByStatus } from "../hooks/use-trackings";
 import { LeadItem } from "./lead-item";
@@ -11,6 +12,7 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { EMPTY_LEADS, useKanbanStore } from "../lib/kanban-store";
 import { useQueryState } from "nuqs";
 import dayjs from "dayjs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface StatusColumnProps {
   status: {
@@ -31,6 +33,8 @@ export function StatusColumn({
   isOverlay,
 }: StatusColumnProps) {
   const registerColumn = useKanbanStore((s) => s.registerColumn);
+  const isMobile = useIsMobile();
+
   const [dateInit] = useQueryState("date_init");
   const [dateEnd] = useQueryState("date_end");
   const [participantFilter] = useQueryState("participant");
@@ -38,6 +42,7 @@ export function StatusColumn({
   const [temperatureFilter] = useQueryState("temperature");
   const [actionFilter] = useQueryState("filter");
   const [statusFlowFilter] = useQueryState("status_flow");
+
   const {
     attributes,
     listeners,
@@ -58,7 +63,7 @@ export function StatusColumn({
     transform: CSS.Transform.toString(transform),
   };
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver>(null);
 
   const queryInput = useMemo(
@@ -71,7 +76,9 @@ export function StatusColumn({
         ? temperatureFilter.split(",")
         : undefined,
       actionFilter: actionFilter || "ACTIVE",
-      statusFlowFilter: statusFlowFilter ? statusFlowFilter.split(",") : undefined,
+      statusFlowFilter: statusFlowFilter
+        ? statusFlowFilter.split(",")
+        : undefined,
     }),
     [
       dateInit,
@@ -92,34 +99,42 @@ export function StatusColumn({
       ...queryInput,
     });
 
+  // Observer só ativo no desktop e quando não for overlay
   useEffect(() => {
-    if (!scrollRef.current || isOverlay) return;
-
-    if (observerRef.current) {
-      observerRef.current.disconnect();
+    if (isMobile || isOverlay) {
+      observerRef.current?.disconnect();
+      return;
     }
+
+    const sentinel = sentinelRef.current;
+    const scrollContainer = sentinel?.closest(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+
+    if (!sentinel || !scrollContainer) return;
+
+    observerRef.current?.disconnect();
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-
         if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
           fetchNextPage();
         }
       },
-      { threshold: 0.1 },
+      {
+        root: scrollContainer,
+        threshold: 0.1,
+        rootMargin: "0px 0px 50px 0px",
+      },
     );
 
-    if (scrollRef.current) {
-      observerRef.current.observe(scrollRef.current);
-    }
+    observerRef.current.observe(sentinel);
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
+      observerRef.current?.disconnect();
     };
-  }, [hasNextPage, fetchNextPage, isOverlay, isFetchingNextPage]);
+  }, [isMobile, isOverlay, hasNextPage, fetchNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     if (isOverlay) return;
@@ -143,7 +158,7 @@ export function StatusColumn({
         index === 0 && "ml-4",
       )}
     >
-      <div className="flex flex-col flex-1 min-h-0 rounded-md bg-muted/60  shadow-md ">
+      <div className="flex flex-col flex-1 min-h-0 rounded-md bg-muted/60 shadow-md">
         <StatusHeader
           data={useMemo(
             () => ({ ...status, trackingId }),
@@ -154,7 +169,7 @@ export function StatusColumn({
         />
 
         <ScrollArea className="flex-1 min-h-0">
-          <ol className=" mx-1 px-1 py-2 flex flex-col gap-y-2">
+          <ol className="mx-1 px-1 py-2 flex flex-col gap-y-2">
             <SortableContext items={leadIds}>
               {isLoading && (
                 <div className="flex flex-col gap-y-3">
@@ -167,14 +182,33 @@ export function StatusColumn({
                 leads.map((lead) => <LeadItem key={lead.id} data={lead} />)}
             </SortableContext>
 
-            {/* ✅ Elemento sentinela no final da lista */}
             {hasNextPage && (
-              <div
-                ref={scrollRef}
-                className="h-10 flex items-center justify-center"
-              >
-                {isFetchingNextPage && <Spinner className="size-4" />}
-              </div>
+              <li className="list-none">
+                {isMobile ? (
+                  // Mobile: botão explícito abaixo do último card
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-1"
+                    disabled={isFetchingNextPage}
+                    onClick={() => fetchNextPage()}
+                  >
+                    {isFetchingNextPage ? (
+                      <Spinner className="size-4" />
+                    ) : (
+                      "Buscar mais"
+                    )}
+                  </Button>
+                ) : (
+                  // Desktop: sentinel invisível para o IntersectionObserver
+                  <div
+                    ref={sentinelRef}
+                    className="h-10 flex items-center justify-center"
+                  >
+                    {isFetchingNextPage && <Spinner className="size-4" />}
+                  </div>
+                )}
+              </li>
             )}
           </ol>
         </ScrollArea>

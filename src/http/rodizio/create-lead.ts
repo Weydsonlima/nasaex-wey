@@ -25,6 +25,9 @@ export async function assignLeadRoundRobin(prisma: PrismaTx, leadId: string) {
       trackingId: lead.trackingId,
       isActive: true,
     },
+    orderBy: {
+      lastAssignedAt: { sort: 'asc', nulls: 'first' },
+    },
   });
 
   // 3. fallback (sem consultores)
@@ -32,13 +35,10 @@ export async function assignLeadRoundRobin(prisma: PrismaTx, leadId: string) {
     return { status: "no-consultants" };
   }
 
-  // 4. shuffle
-  const shuffled = [...consultants].sort(() => Math.random() - 0.5);
-
-  // 5. encontrar disponível
+  // 4. encontrar disponível
   let selectedConsultant = null;
 
-  for (const c of shuffled) {
+  for (const c of consultants) {
     const leadsCount = await prisma.lead.count({
       where: {
         responsibleId: c.userId,
@@ -53,7 +53,7 @@ export async function assignLeadRoundRobin(prisma: PrismaTx, leadId: string) {
     }
   }
 
-  // 6. fallback (todos cheios)
+  // 5. fallback (todos cheios)
   if (!selectedConsultant) {
     console.log("no consultant available for lead", leadId);
     await prisma.lead.update({
@@ -66,7 +66,7 @@ export async function assignLeadRoundRobin(prisma: PrismaTx, leadId: string) {
     return { status: "no-consultant-available" };
   }
 
-  // 7. assign
+  // 6. assign
   console.log(
     "assigning lead",
     leadId,
@@ -78,6 +78,14 @@ export async function assignLeadRoundRobin(prisma: PrismaTx, leadId: string) {
     data: {
       responsibleId: selectedConsultant.userId,
       statusFlow: "ACTIVE",
+    },
+  });
+
+  // 7. update last assigned
+  await prisma.trackingConsultant.update({
+    where: { id: selectedConsultant.id },
+    data: {
+      lastAssignedAt: new Date(),
     },
   });
 

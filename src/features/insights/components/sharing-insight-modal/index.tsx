@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Dialog,
   DialogClose,
@@ -40,6 +42,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useSearchParams } from "next/navigation";
 import { ShareListItem } from "./share-list-item";
 
 interface SharingInsightsProps {
@@ -61,6 +64,19 @@ export function SharingInsights({
   const [hasError, setHasError] = useState(false);
   const [tab, setTab] = useState("create");
 
+  const searchParams = useSearchParams();
+  const urlStartDate = searchParams.get("startDate");
+  const urlEndDate = searchParams.get("endDate");
+
+  const buildShareUrl = (organizationId: string, token: string) => {
+    const base = `${process.env.NEXT_PUBLIC_APP_URL}/insights/${organizationId}/${token}`;
+    const params = new URLSearchParams();
+    if (urlStartDate) params.set("startDate", urlStartDate);
+    if (urlEndDate) params.set("endDate", urlEndDate);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  };
+
   const handleShareInsights = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -80,9 +96,7 @@ export function SharingInsights({
           toast.success(
             "Link de compartilhamento copiado para área de trabalho",
           );
-          navigator.clipboard.writeText(
-            `${process.env.NEXT_PUBLIC_APP_URL}/insights/${data.organizationId}/${data.token}`,
-          );
+          navigator.clipboard.writeText(buildShareUrl(data.organizationId, data.token));
           setNameSharing("");
         },
         onError: () => {
@@ -158,7 +172,12 @@ export function SharingInsights({
               ) : (
                 <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                   {shares.map((share) => (
-                    <ShareListItem key={share.id} share={share} />
+                    <ShareListItem
+                      key={share.id}
+                      share={share}
+                      startDate={urlStartDate}
+                      endDate={urlEndDate}
+                    />
                   ))}
                 </div>
               )}

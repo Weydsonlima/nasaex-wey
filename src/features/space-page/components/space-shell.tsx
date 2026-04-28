@@ -16,7 +16,6 @@ import { CardIntegrations } from "./cards/card-integrations";
 import { CardStars } from "./cards/card-stars";
 import { CardOrganogram } from "./cards/card-organogram";
 import { SpaceCard } from "./space-card";
-import { SpacehomeSidebar } from "./spacehome-sidebar";
 import { NasaFooterPublic } from "@/components/nasa-footer-public";
 
 /**
@@ -63,36 +62,29 @@ export function SpaceShell({ nick, initialSpace }: SpaceShellProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 pb-20 text-white">
-      <SpacehomeSidebar
-        nick={nick}
-        isViewerAuthenticated={!!viewer.userId}
-        isViewerMember={viewer.isMember}
-      />
-      <div className="md:pl-16">
-        <div className="mx-auto max-w-6xl space-y-5 px-4 pt-8 md:px-6">
-          {layout.rows.map((row, rowIdx) => (
-            <div
-              key={rowIdx}
-              className={
-                row.cards.length > 1
-                  ? "grid gap-5 md:grid-cols-2"
-                  : "grid gap-5"
-              }
-            >
-              {row.cards.map((card) =>
-                renderCard(card, {
-                  nick,
-                  org,
-                  station,
-                  counts,
-                  viewer,
-                }),
-              )}
-            </div>
-          ))}
-        </div>
-        <NasaFooterPublic />
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pt-8 md:px-6">
+        {layout.rows.map((row, rowIdx) => (
+          <div
+            key={rowIdx}
+            className={
+              row.cards.length > 1
+                ? "grid gap-5 md:grid-cols-2"
+                : "grid gap-5"
+            }
+          >
+            {row.cards.map((card) =>
+              renderCard(card, {
+                nick,
+                org,
+                station,
+                counts,
+                viewer,
+              }),
+            )}
+          </div>
+        ))}
       </div>
+      <NasaFooterPublic />
     </div>
   );
 }

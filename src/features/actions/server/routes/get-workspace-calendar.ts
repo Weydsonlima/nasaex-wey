@@ -24,9 +24,18 @@ export const getWorkspaceCalendar = base
         isArchived: false,
         AND: [
           {
+            // "Ações que participo" = qualquer relação de pertencimento.
+            // Antes só pegava createdBy + participants — agora cobre os 4
+            // vínculos possíveis para evitar buracos no calendário.
             OR: [
               { createdBy: context.user.id },
               { participants: { some: { userId: context.user.id } } },
+              { responsibles: { some: { userId: context.user.id } } },
+              {
+                workspace: {
+                  members: { some: { userId: context.user.id } },
+                },
+              },
             ],
           },
           {
@@ -42,12 +51,54 @@ export const getWorkspaceCalendar = base
         title: true,
         dueDate: true,
         startDate: true,
+        endDate: true,
         priority: true,
         isDone: true,
+        coverImage: true,
         workspaceId: true,
-        workspace: { select: { id: true, name: true } },
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+            coverImage: true,
+          },
+        },
+        // Vínculos para filtro por cliente/projeto/lead
+        orgProjectId: true,
+        orgProject: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            color: true,
+            avatar: true,
+          },
+        },
+        trackingId: true,
+        tracking: { select: { id: true, name: true } },
+        leadId: true,
+        lead: { select: { id: true, name: true, email: true } },
+        createdBy: true,
+        user: { select: { id: true, name: true, image: true } },
+        participants: {
+          select: {
+            userId: true,
+            user: { select: { id: true, name: true, image: true } },
+          },
+        },
+        responsibles: {
+          select: {
+            userId: true,
+            user: { select: { id: true, name: true, image: true } },
+          },
+        },
       },
-      orderBy: { dueDate: "asc" },
+      orderBy: [
+        { dueDate: { sort: "asc", nulls: "last" } },
+        { startDate: { sort: "asc", nulls: "last" } },
+      ],
     });
 
     return { actions };

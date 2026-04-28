@@ -111,7 +111,11 @@ export function ProposalsTab() {
     }
   };
 
-  const handleShare = (publicToken: string) => {
+  const handleShare = (publicToken: string | null | undefined) => {
+    if (!publicToken) {
+      toast.info("Re-salve a proposta para gerar o link público");
+      return;
+    }
     const url = `${window.location.origin}/proposta/${publicToken}`;
     navigator.clipboard.writeText(url);
     toast.success("Link copiado para a área de transferência");
@@ -226,15 +230,23 @@ export function ProposalsTab() {
                       {/* View */}
                       <Button
                         size="icon" variant="ghost" className="size-7"
-                        title="Visualizar proposta pública"
-                        onClick={() => window.open(`/proposta/${p.publicToken}`, "_blank")}
+                        title={p.publicToken ? "Visualizar proposta pública" : "Re-salve a proposta para gerar link"}
+                        disabled={!p.publicToken}
+                        onClick={() => {
+                          if (!p.publicToken) {
+                            toast.info("Re-salve a proposta para gerar o link público");
+                            return;
+                          }
+                          window.open(`/proposta/${p.publicToken}`, "_blank");
+                        }}
                       >
                         <Eye className="size-3.5" />
                       </Button>
                       {/* Share */}
                       <Button
                         size="icon" variant="ghost" className="size-7"
-                        title="Copiar link"
+                        title={p.publicToken ? "Copiar link" : "Re-salve a proposta para gerar link"}
+                        disabled={!p.publicToken}
                         onClick={() => handleShare(p.publicToken)}
                       >
                         <Share2 className="size-3.5" />

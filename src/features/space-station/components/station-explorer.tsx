@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,7 @@ export function StationExplorer() {
                 >
                   <div
                     className="relative h-10 w-10 rounded-full overflow-hidden flex-shrink-0 ring-2"
-                    style={{ ringColor: planetColor }}
+                    style={{ ["--tw-ring-color" as string]: planetColor } as CSSProperties}
                   >
                     {avatar ? (
                       <Image src={avatar} alt={name} fill className="object-cover" />

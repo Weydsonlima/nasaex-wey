@@ -1,7 +1,7 @@
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import prisma from "@/lib/prisma";
-import { debitStarsInTx } from "@/lib/star-service";
+import { debitStars } from "@/lib/star-service";
 import { StarTransactionType } from "@/generated/prisma/client";
 import z from "zod";
 import { PAGES_STARS_COST, emptyLayout, intentEnum, slugSchema } from "./_schemas";
@@ -58,42 +58,35 @@ export const createPage = base
       starsSeed = { palette: tmpl.palette, fontFamily: tmpl.fontFamily };
     }
 
-    try {
-      const page = await prisma.$transaction(async (tx) => {
-        await debitStarsInTx(tx, {
-          organizationId,
-          amount: PAGES_STARS_COST,
-          type: StarTransactionType.APP_SETUP,
-          description: `NASA Pages — criação de site "${input.title}"`,
-          appSlug: "pages",
-          userId: context.user.id,
-        });
-
-        return tx.nasaPage.create({
-          data: {
-            organizationId,
-            userId: context.user.id,
-            title: input.title,
-            slug: input.slug,
-            description: input.description,
-            intent: input.intent,
-            layerCount: input.layerCount,
-            palette: (input.palette ?? starsSeed.palette ?? {}) as object,
-            fontFamily: input.fontFamily ?? starsSeed.fontFamily ?? null,
-            layout: layoutSeed as object,
-            starsSpent: PAGES_STARS_COST,
-          },
-        });
+    const debit = await debitStars(
+      organizationId,
+      PAGES_STARS_COST,
+      StarTransactionType.APP_SETUP,
+      `NASA Pages — criação de site "${input.title}"`,
+      "pages",
+      context.user.id,
+    );
+    if (!debit.success) {
+      throw errors.BAD_REQUEST({
+        message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
       });
-
-      return { page };
-    } catch (e) {
-      const msg = (e as Error).message ?? "";
-      if (msg.startsWith("INSUFFICIENT_STARS")) {
-        throw errors.BAD_REQUEST({
-          message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
-        });
-      }
-      throw e;
     }
+
+    const page = await prisma.nasaPage.create({
+      data: {
+        organizationId,
+        userId: context.user.id,
+        title: input.title,
+        slug: input.slug,
+        description: input.description,
+        intent: input.intent,
+        layerCount: input.layerCount,
+        palette: (input.palette ?? starsSeed.palette ?? {}) as object,
+        fontFamily: input.fontFamily ?? starsSeed.fontFamily ?? null,
+        layout: layoutSeed as object,
+        starsSpent: PAGES_STARS_COST,
+      },
+    });
+
+    return { page };
   });

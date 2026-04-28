@@ -146,7 +146,7 @@ export const adminAdjustUserPoints = base
   .output(z.object({ success: z.boolean(), newTotal: z.number() }))
   .handler(async ({ input }) => {
     let userPoint = await prisma.userSpacePoint.findUnique({
-      where: { userId: input.userId },
+      where: { userId_orgId: { userId: input.userId, orgId: input.orgId } },
     });
     if (!userPoint)
       userPoint = await prisma.userSpacePoint.create({
@@ -161,7 +161,6 @@ export const adminAdjustUserPoints = base
       prisma.spacePointTransaction.create({
         data: {
           userPointId: userPoint.id,
-          orgId: input.orgId,
           points: input.points,
           description: input.description,
           metadata: { source: "admin_adjustment" },
@@ -213,9 +212,10 @@ export const adminGetOrgRules = base
 
 export const adminCreateOrgRule = base
   .use(requireAdminMiddleware)
-  .route({ method: "POST", summary: "Admin: create global rule" })
+  .route({ method: "POST", summary: "Admin: create org rule" })
   .input(
     z.object({
+      orgId: z.string(),
       action: z.string().min(1),
       label: z.string().min(1),
       points: z.number(),
@@ -227,12 +227,15 @@ export const adminCreateOrgRule = base
   .handler(async ({ input }) => {
     const created = await prisma.spacePointRule.create({
       data: {
-        ...input,
+        orgId: input.orgId,
+        action: input.action,
+        label: input.label,
+        points: input.points,
         cooldownHours: input.cooldownHours ?? null,
         popupTemplateId: input.popupTemplateId ?? null,
       },
     });
-    invalidateOrgRules("all"); // Might need a new clear-all function, but for now we follow pattern
+    invalidateOrgRules(input.orgId);
     return { success: true, id: created.id };
   });
 

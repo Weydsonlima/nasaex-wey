@@ -96,7 +96,7 @@ export const resolvePeerAsLead = base
           trackingId,
           order: newOrder,
           responsibleId: myUserId,
-          source: "space-station-bubble",
+          source: "WHATSAPP",
         },
         select: { id: true, name: true, phone: true },
       });

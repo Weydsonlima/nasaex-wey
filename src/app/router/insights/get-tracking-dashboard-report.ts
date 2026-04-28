@@ -249,10 +249,10 @@ export const getTrackingDashboardReport = base
 
         // Tempo Médio de Primeira Resposta (TTFR)
         prisma.$queryRaw<any[]>`
-          SELECT 
+          SELECT
             AVG(EXTRACT(EPOCH FROM (first_outbound - first_inbound))) as avg_ttfr
           FROM (
-            SELECT 
+            SELECT
               m."conversationId",
               MIN(CASE WHEN m."from_me" = false THEN m."created_at" END) as first_inbound,
               MIN(CASE WHEN m."from_me" = true THEN m."created_at" END) as first_outbound
@@ -277,10 +277,15 @@ export const getTrackingDashboardReport = base
                   ? Prisma.sql`AND m."created_at" <= ${new Date(endDate)}`
                   : Prisma.empty
               }
+              ${
+                tagIds && tagIds.length > 0
+                  ? Prisma.sql`AND EXISTS (SELECT 1 FROM "lead_tags" lt WHERE lt."lead_id" = c."lead_id" AND lt."tag_id" IN (${Prisma.join(tagIds)}))`
+                  : Prisma.empty
+              }
             GROUP BY m."conversationId"
           ) AS first_msgs
-          WHERE first_inbound IS NOT NULL 
-            AND first_outbound IS NOT NULL 
+          WHERE first_inbound IS NOT NULL
+            AND first_outbound IS NOT NULL
             AND first_outbound > first_inbound
         `,
       ]);

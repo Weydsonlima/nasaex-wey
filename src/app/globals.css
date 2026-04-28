@@ -218,6 +218,21 @@ input::placeholder {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   FORGE — Variável não preenchida (placeholder visível)
+   Renderizada via dangerouslySetInnerHTML em contratos/propostas públicos.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.forge-missing-var {
+  color: #dc2626; /* red-600 */
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px dashed rgba(220, 38, 38, 0.4);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-style: italic;
+  font-size: 0.95em;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    FORGE — Print / PDF styles
    Applies to: /proposta/[token]  and  /contrato/[token]
    ═══════════════════════════════════════════════════════════════════════════ */

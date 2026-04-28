@@ -4,6 +4,18 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 
+const clientDataShape = z
+  .object({
+    name: z.string().optional().nullable(),
+    document: z.string().optional().nullable(),
+    email: z.string().optional().nullable(),
+    phone: z.string().optional().nullable(),
+    address: z.string().optional().nullable(),
+    contactName: z.string().optional().nullable(),
+  })
+  .nullable()
+  .optional();
+
 const contractShape = z.object({
   id: z.string(),
   organizationId: z.string(),
@@ -16,6 +28,7 @@ const contractShape = z.object({
   templateId: z.string().nullable(),
   content: z.string().nullable(),
   signers: z.any(),
+  clientData: z.any().nullable(),
   isTemplate: z.boolean(),
   templateMarkedByModerator: z.boolean(),
   createdById: z.string(),
@@ -63,10 +76,11 @@ export const createForgeContract = base
       templateId: z.string().optional(),
       content: z.string().optional(),
       signers: z.array(z.object({
-        name: z.string(),
-        email: z.string(),
+        name: z.string().min(1, "Nome do assinante obrigatório"),
+        email: z.string().email("E-mail do assinante inválido"),
         whatsapp: z.string().optional(),
-      })).default([]),
+      })).min(1, "Adicione ao menos 1 assinante"),
+      clientData: clientDataShape,
     }),
   )
   .output(z.object({ contract: z.object({ id: z.string(), number: z.number() }) }))
@@ -91,16 +105,64 @@ export const createForgeContract = base
             templateId: input.templateId,
             content: input.content,
             signers: input.signers.map((s) => ({ ...s, signed_at: null, token: crypto.randomUUID() })),
+            clientData: input.clientData ?? undefined,
             createdById: context.user.id,
           },
           select: { id: true, number: true },
         });
       });
       return { contract };
-    } catch {
+    } catch (err) {
+      console.error("[forge/contracts create]", err);
       throw errors.INTERNAL_SERVER_ERROR;
     }
   });
+
+type StoredSigner = {
+  name: string;
+  email: string;
+  whatsapp?: string;
+  token: string;
+  signed_at: string | null;
+  sign_method?: string;
+};
+
+type IncomingSigner = {
+  name: string;
+  email: string;
+  whatsapp?: string;
+  token?: string;
+  signed_at?: string | null;
+  sign_method?: string;
+};
+
+function normalizeSigners(
+  incoming: IncomingSigner[],
+  existing: StoredSigner[],
+): StoredSigner[] {
+  const byToken = new Map(existing.map((s) => [s.token, s]));
+  return incoming.map((s) => {
+    const prev = s.token ? byToken.get(s.token) : undefined;
+    if (prev) {
+      // preserva o estado de assinatura: nunca permite sobrescrever signed_at ou sign_method
+      return {
+        name: s.name,
+        email: s.email,
+        whatsapp: s.whatsapp,
+        token: prev.token,
+        signed_at: prev.signed_at,
+        sign_method: prev.sign_method,
+      };
+    }
+    return {
+      name: s.name,
+      email: s.email,
+      whatsapp: s.whatsapp,
+      token: s.token ?? crypto.randomUUID(),
+      signed_at: null,
+    };
+  });
+}
 
 export const updateForgeContract = base
   .use(requiredAuthMiddleware)
@@ -115,12 +177,54 @@ export const updateForgeContract = base
       status: z.string().optional(),
       templateId: z.string().nullable().optional(),
       content: z.string().nullable().optional(),
-      signers: z.any().optional(),
+      signers: z
+        .array(
+          z.object({
+            name: z.string().min(1, "Nome do assinante obrigatório"),
+            email: z.string().email("E-mail do assinante inválido"),
+            whatsapp: z.string().optional(),
+            token: z.string().optional(),
+            signed_at: z.string().nullable().optional(),
+            sign_method: z.string().optional(),
+          }),
+        )
+        .optional(),
+      clientData: clientDataShape,
     }),
   )
   .output(z.object({ ok: z.boolean() }))
   .handler(async ({ input, context, errors }) => {
     try {
+      const existing = await prisma.forgeContract.findUnique({
+        where: { id: input.id, organizationId: context.org.id },
+        select: { signers: true, status: true },
+      });
+      if (!existing) throw errors.NOT_FOUND({ message: "Contrato não encontrado" });
+
+      const existingSigners = (existing.signers as StoredSigner[]) ?? [];
+      const anySigned = existingSigners.some((s) => s.signed_at);
+      const allSigned = anySigned && existingSigners.every((s) => s.signed_at);
+
+      if (allSigned) {
+        throw errors.FORBIDDEN({ message: "Contrato finalizado não pode ser editado" });
+      }
+
+      const blockedFieldChanged =
+        input.content !== undefined ||
+        input.signers !== undefined ||
+        input.value !== undefined ||
+        input.startDate !== undefined;
+
+      if (anySigned && blockedFieldChanged) {
+        throw errors.FORBIDDEN({
+          message: "Edição limitada — algum assinante já assinou. Apenas data de término pode ser alterada.",
+        });
+      }
+
+      const nextSigners = input.signers
+        ? normalizeSigners(input.signers, existingSigners)
+        : undefined;
+
       await prisma.forgeContract.update({
         where: { id: input.id, organizationId: context.org.id },
         data: {
@@ -130,11 +234,14 @@ export const updateForgeContract = base
           status: input.status as never,
           templateId: input.templateId,
           content: input.content,
-          signers: input.signers,
+          signers: nextSigners,
+          clientData: input.clientData === undefined ? undefined : (input.clientData ?? undefined),
         },
       });
       return { ok: true };
-    } catch {
+    } catch (err) {
+      if (err && typeof err === "object" && "code" in err) throw err;
+      console.error("[forge/contracts update]", err);
       throw errors.INTERNAL_SERVER_ERROR;
     }
   });

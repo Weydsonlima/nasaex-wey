@@ -19,4 +19,5 @@ export {
   NBoxIcon,
   TrackingIcon,
   NasaPlannerIcon,
+  NasaRouteIcon,
 } from "./app-icons-b";

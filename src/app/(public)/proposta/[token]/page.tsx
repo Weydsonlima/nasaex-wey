@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { PublicProposalView } from "@/features/forge/components/public/public-proposal";
 import { ProposalViewTracker } from "@/features/forge/components/public/proposal-view-tracker";
+import { renderTemplate, type RenderContext } from "@/features/forge/utils/render-template";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -13,8 +14,21 @@ export default async function PublicProposalPage({ params }: Props) {
   const proposal = await prisma.forgeProposal.findUnique({
     where: { publicToken: token },
     include: {
-      organization: { select: { id: true, name: true, logo: true } },
-      client: { select: { id: true, name: true, email: true, phone: true } },
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          logo: true,
+          cnpj: true,
+          contactEmail: true,
+          contactPhone: true,
+          addressLine: true,
+          city: true,
+          state: true,
+          postalCode: true,
+        },
+      },
+      client: { select: { id: true, name: true, email: true, phone: true, document: true } },
       // Include the responsible person for the PDF footer
       responsible: { select: { name: true } },
       products: {
@@ -34,8 +48,40 @@ export default async function PublicProposalPage({ params }: Props) {
     where: { organizationId: proposal.organizationId },
   });
 
+  const ctx: RenderContext = {
+    organization: {
+      name: proposal.organization.name,
+      cnpj: proposal.organization.cnpj ?? null,
+      contactEmail: proposal.organization.contactEmail ?? null,
+      contactPhone: proposal.organization.contactPhone ?? null,
+      addressLine: proposal.organization.addressLine ?? null,
+      city: proposal.organization.city ?? null,
+      state: proposal.organization.state ?? null,
+      postalCode: proposal.organization.postalCode ?? null,
+    },
+    client: proposal.client
+      ? {
+          name: proposal.client.name,
+          email: proposal.client.email,
+          document: proposal.client.document,
+          phone: proposal.client.phone,
+          address: null,
+          contactName: null,
+        }
+      : null,
+    contract: null,
+    proposal: {
+      number: proposal.number,
+      title: proposal.title,
+      validUntil: proposal.validUntil,
+    },
+  };
+
+  const renderedDescription = renderTemplate(proposal.description ?? "", ctx);
+
   const serialized = {
     ...proposal,
+    description: renderedDescription,
     discount: proposal.discount?.toString() ?? null,
     validUntil: proposal.validUntil?.toISOString() ?? null,
     createdAt: proposal.createdAt.toISOString(),

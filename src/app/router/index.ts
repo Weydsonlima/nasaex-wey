@@ -41,6 +41,11 @@ import { supportRouter } from "./support";
 import { scriptsRouter } from "./scripts";
 import { linnkerRouter } from "./linnker";
 import { spaceStationRouter } from "./space-station";
+import { companySpaceRouter } from "./company-space";
+import { profileCardRouter } from "./profile-card";
+import { spaceHelpRouter } from "./space-help";
+import { nasaRouteRouter } from "./nasa-route";
+import { pagesRouter } from "./pages";
 
 export const router = {
   tracking: trackingRoutes,
@@ -85,4 +90,9 @@ export const router = {
   scripts: scriptsRouter,
   linnker: linnkerRouter,
   spaceStation: spaceStationRouter,
+  companySpace: companySpaceRouter,
+  profileCard: profileCardRouter,
+  spaceHelp: spaceHelpRouter,
+  nasaRoute: nasaRouteRouter,
+  pages: pagesRouter,
 };

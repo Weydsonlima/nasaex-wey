@@ -40,9 +40,9 @@ export const captureLinnkerLead = base
 
     const tracking = await prisma.tracking.findUnique({
       where: { id: trackingId },
-      include: { statuses: { orderBy: { order: "asc" }, take: 1 } },
+      include: { status: { orderBy: { order: "asc" }, take: 1 } },
     });
-    if (!tracking || !tracking.statuses[0]) throw errors.NOT_FOUND({ message: "Tracking não encontrado" });
+    if (!tracking || !tracking.status[0]) throw errors.NOT_FOUND({ message: "Tracking não encontrado" });
 
     // Check for existing lead to avoid duplicates
     const existing = phone
@@ -59,7 +59,7 @@ export const captureLinnkerLead = base
           email,
           phone,
           trackingId,
-          statusId: tracking.statuses[0].id,
+          statusId: tracking.status[0].id,
           source: LeadSource.OTHER,
         },
       });

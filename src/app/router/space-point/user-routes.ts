@@ -269,7 +269,7 @@ export const getSpacePointRanking = base
       prisma.spacePointTransaction.groupBy({
         by: ["userPointId"],
         where: {
-          orgId,
+          userPoint: { orgId },
           ...(gte || lte ? { createdAt: { gte, lte } } : {}),
         },
         _sum: { points: true },
@@ -290,7 +290,7 @@ export const getSpacePointRanking = base
           userId: usp.user.id,
           name: usp.user.name,
           image: usp.user.image,
-          points: row._sum.points ?? 0,
+          points: row._sum?.points ?? 0,
           rank: i + 1,
           levelName: lvl?.name ?? null,
           badgeNumber: lvl?.badgeNumber ?? null,
@@ -357,7 +357,7 @@ export const getUserStats = base
       return { totalInPeriod: 0, appBreakdown: [], history: [], seals: [] };
 
     const userPoint = await prisma.userSpacePoint.findUnique({
-      where: { userId: input.targetUserId },
+      where: { userId_orgId: { userId: input.targetUserId, orgId } },
     });
     if (!userPoint)
       return { totalInPeriod: 0, appBreakdown: [], history: [], seals: [] };
@@ -369,7 +369,7 @@ export const getUserStats = base
     );
     const dateFilter = gte || lte ? { createdAt: { gte, lte } } : {};
     const transactions = await prisma.spacePointTransaction.findMany({
-      where: { userPointId: userPoint.id, orgId, ...dateFilter },
+      where: { userPointId: userPoint.id, ...dateFilter },
       include: { rule: { select: { action: true, label: true } } },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -501,6 +501,7 @@ export const createSpacePointRule = base
       return { success: false };
     const created = await prisma.spacePointRule.create({
       data: {
+        orgId,
         action: input.action,
         label: input.label,
         points: input.points,

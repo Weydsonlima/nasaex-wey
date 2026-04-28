@@ -23,6 +23,8 @@ export const getMetaInsights = base
   .input(z.object({
     datePreset: z.enum(DATE_PRESETS).default("last_30d"),
     level: z.enum(["account", "campaign", "adset", "ad"]).default("account"),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
   }))
   .handler(async ({ input, context }) => {
     // Get stored Meta integration credentials
@@ -48,7 +50,19 @@ export const getMetaInsights = base
 
     const accountId = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
     const apiVersion = "v19.0";
-    const url = `https://graph.facebook.com/${apiVersion}/${accountId}/insights?fields=${META_FIELDS}&date_preset=${input.datePreset}&level=${input.level}&access_token=${accessToken}`;
+
+    // Quando dateRange explícito vem do dashboard, prefere time_range. Senão, mantém date_preset.
+    const dateParam =
+      input.startDate && input.endDate
+        ? `time_range=${encodeURIComponent(
+            JSON.stringify({
+              since: input.startDate.slice(0, 10),
+              until: input.endDate.slice(0, 10),
+            }),
+          )}`
+        : `date_preset=${input.datePreset}`;
+
+    const url = `https://graph.facebook.com/${apiVersion}/${accountId}/insights?fields=${META_FIELDS}&${dateParam}&level=${input.level}&access_token=${accessToken}`;
 
     try {
       const res = await fetch(url, { next: { revalidate: 300 } }); // cache 5 min
@@ -102,6 +116,8 @@ export const getMetaInsights = base
         error: null,
         data: {
           datePreset: input.datePreset,
+          startDate: input.startDate ?? null,
+          endDate: input.endDate ?? null,
           // Delivery
           reach, impressions, frequency,
           // Engagement

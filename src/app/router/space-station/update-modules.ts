@@ -1,6 +1,7 @@
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import z from "zod";
 
 export const updatePublicModules = base
@@ -18,7 +19,7 @@ export const updatePublicModules = base
           module: z.enum(["FORM", "CHAT", "AGENDA", "INTEGRATION", "NBOX", "FORGE", "APPS", "NOTIFICATIONS"]),
           resourceId: z.string().optional(),
           isActive: z.boolean(),
-          config: z.record(z.unknown()).optional(),
+          config: z.record(z.string(), z.unknown()).optional(),
         }),
       ),
     }),
@@ -38,13 +39,25 @@ export const updatePublicModules = base
     if (!isOwner) throw errors.FORBIDDEN({ message: "Sem permissão" });
 
     await prisma.$transaction(
-      modules.map((m) =>
-        prisma.stationPublicModule.upsert({
+      modules.map((m) => {
+        const config =
+          m.config !== undefined ? (m.config as Prisma.InputJsonValue) : undefined;
+        return prisma.stationPublicModule.upsert({
           where: { stationId_module: { stationId, module: m.module } },
-          create: { stationId, ...m },
-          update: { isActive: m.isActive, resourceId: m.resourceId, config: m.config },
-        }),
-      ),
+          create: {
+            stationId,
+            module: m.module,
+            isActive: m.isActive,
+            resourceId: m.resourceId,
+            ...(config !== undefined ? { config } : {}),
+          },
+          update: {
+            isActive: m.isActive,
+            resourceId: m.resourceId,
+            ...(config !== undefined ? { config } : {}),
+          },
+        });
+      }),
     );
 
     const updated = await prisma.stationPublicModule.findMany({ where: { stationId } });

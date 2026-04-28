@@ -22,8 +22,8 @@ export interface LinnkerLink {
   position: number;
   isActive: boolean;
   clicks: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface LinnkerPage {
@@ -47,8 +47,8 @@ export interface LinnkerPage {
   bioColor?: string | null;
   links: LinnkerLink[];
   _count?: { scans: number };
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface LinnkerScan {
@@ -58,7 +58,7 @@ export interface LinnkerScan {
   name?: string | null;
   email?: string | null;
   phone?: string | null;
-  createdAt: string;
+  createdAt: Date | string;
   lead?: { id: string; name: string; email?: string | null; phone?: string | null } | null;
 }
 

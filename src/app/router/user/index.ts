@@ -30,7 +30,7 @@ export const completeOnboarding = base
     const orgId = session.activeOrganizationId;
     if (orgId) {
       const userPoint = await prisma.userSpacePoint.upsert({
-        where: { userId: user.id },
+        where: { userId_orgId: { userId: user.id, orgId } },
         create: {
           userId: user.id,
           orgId,

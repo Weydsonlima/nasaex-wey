@@ -22,12 +22,12 @@ interface ProfileCard {
 }
 
 interface SkillEntry {
-  level: string;
+  level: number;
   skill: { id: string; name: string; slug: string };
 }
 
 interface ToolEntry {
-  proficiency: string;
+  proficiency: number;
   tool: { id: string; name: string; slug: string; iconUrl: string | null };
 }
 

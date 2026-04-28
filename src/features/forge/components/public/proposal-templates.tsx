@@ -217,9 +217,10 @@ export function TemplateModern({
 
       {/* Description */}
       {proposal.description && (
-        <div className="max-w-3xl mx-auto px-8 py-8 text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-          {proposal.description}
-        </div>
+        <div
+          className="max-w-3xl mx-auto px-8 py-8 text-slate-300 text-sm leading-relaxed whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: proposal.description }}
+        />
       )}
 
       {/* Products grid */}
@@ -400,9 +401,10 @@ export function TemplateClean({
           )}
           <h1 className="text-4xl font-black text-gray-900 leading-tight">{proposal.title}</h1>
           {proposal.description && (
-            <p className="mt-4 text-gray-500 text-sm leading-relaxed whitespace-pre-wrap">
-              {proposal.description}
-            </p>
+            <p
+              className="mt-4 text-gray-500 text-sm leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: proposal.description }}
+            />
           )}
         </div>
 
@@ -586,9 +588,10 @@ export function TemplateCorporate({
           )}
           <h1 className="text-2xl font-bold text-slate-900">{proposal.title}</h1>
           {proposal.description && (
-            <p className="mt-3 text-slate-500 text-sm leading-relaxed whitespace-pre-wrap">
-              {proposal.description}
-            </p>
+            <p
+              className="mt-3 text-slate-500 text-sm leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: proposal.description }}
+            />
           )}
         </div>
 
@@ -770,9 +773,10 @@ export function TemplateBold({
             {proposal.title}
           </h1>
           {proposal.description && (
-            <p className="text-gray-400 text-lg leading-relaxed max-w-2xl whitespace-pre-wrap">
-              {proposal.description}
-            </p>
+            <p
+              className="text-gray-400 text-lg leading-relaxed max-w-2xl whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: proposal.description }}
+            />
           )}
         </div>
 
@@ -963,9 +967,10 @@ export function TemplatePremium({
             {proposal.title}
           </h1>
           {proposal.description && (
-            <p className="mt-3 text-stone-400 text-sm leading-relaxed whitespace-pre-wrap">
-              {proposal.description}
-            </p>
+            <p
+              className="mt-3 text-stone-400 text-sm leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: proposal.description }}
+            />
           )}
         </div>
 

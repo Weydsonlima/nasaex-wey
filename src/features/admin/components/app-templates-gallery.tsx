@@ -166,7 +166,7 @@ export function AppTemplatesGallery({
               <Copy className="w-3 h-3" />
               {isDuplicating === template.id ? "Duplicando..." : "Duplicar"}
             </button>
-            {(showDelete || canManage) && (
+            {canManage && (
               <button
                 onClick={() => setDeleteId(template.id)}
                 className="px-3 flex items-center justify-center bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-semibold py-2 rounded-lg transition-colors"

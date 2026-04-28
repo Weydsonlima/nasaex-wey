@@ -81,6 +81,9 @@ interface SignerRow {
 
 function ShareSignersPopover({ signers, contractTitle }: { signers: SignerRow[]; contractTitle: string }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const validSigners = signers.filter((s) => !!s.token);
+  const orphanCount = signers.length - validSigners.length;
+  const allOrphans = signers.length > 0 && validSigners.length === 0;
 
   const handleCopy = (url: string) => {
     navigator.clipboard.writeText(url).then(() => toast.success("Link copiado!"));
@@ -89,7 +92,19 @@ function ShareSignersPopover({ signers, contractTitle }: { signers: SignerRow[];
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button size="icon" variant="ghost" className="size-7" title="Visualizar / Compartilhar">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-7"
+          title={allOrphans ? "Re-salve o contrato para gerar links" : "Visualizar / Compartilhar"}
+          disabled={allOrphans}
+          onClick={(e) => {
+            if (allOrphans) {
+              e.preventDefault();
+              toast.info("Re-salve o contrato para gerar links de assinatura");
+            }
+          }}
+        >
           <Share2 className="size-3.5" />
         </Button>
       </PopoverTrigger>
@@ -100,8 +115,13 @@ function ShareSignersPopover({ signers, contractTitle }: { signers: SignerRow[];
           </p>
           <p className="text-sm font-medium truncate mt-0.5">{contractTitle}</p>
         </div>
+        {orphanCount > 0 && (
+          <div className="mx-2 mt-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-200">
+            {orphanCount} assinante{orphanCount > 1 ? "s" : ""} sem link válido — re-salve o contrato para gerar.
+          </div>
+        )}
         <div className="p-2 space-y-1">
-          {signers.map((s, idx) => {
+          {validSigners.map((s, idx) => {
             const url = `${origin}/contrato/${s.token}`;
             const waText = encodeURIComponent(`Olá ${s.name}, segue o link para assinar o contrato "${contractTitle}":\n${url}`);
             const mailSubject = encodeURIComponent(`Contrato para assinatura: ${contractTitle}`);

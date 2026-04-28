@@ -40,13 +40,13 @@ export const DEFAULT_LAYOUT: SpaceLayout = {
   slug: "default",
   rows: [
     { cards: ["header"] },
+    { cards: ["space-station"] },        // Logo abaixo do header — porta de entrada
     { cards: ["projects", "ranking"] },
     { cards: ["calendar"] },
     { cards: ["nbox", "forms"] },
     { cards: ["news"] },
     { cards: ["reviews"] },
     { cards: ["stars", "followers"] },
-    { cards: ["space-station"] },
     { cards: ["footer"] },
   ],
 };
@@ -55,13 +55,13 @@ export const CORPORATE_LAYOUT: SpaceLayout = {
   slug: "corporate",
   rows: [
     { cards: ["header"] },
+    { cards: ["space-station"] },        // Logo abaixo do header
     { cards: ["organogram"] },
     { cards: ["projects"] },
     { cards: ["integrations", "connected-orgs"] },
     { cards: ["forms"] },
     { cards: ["news"] },
     { cards: ["reviews"] },
-    { cards: ["space-station"] },
     { cards: ["footer"] },
   ],
 };
@@ -70,13 +70,13 @@ export const CREATIVE_LAYOUT: SpaceLayout = {
   slug: "creative",
   rows: [
     { cards: ["header"] },
+    { cards: ["space-station"] },        // Logo abaixo do header
     { cards: ["news"] },
     { cards: ["social-banners"] },
     { cards: ["projects"] },
     { cards: ["stars", "followers"] },
     { cards: ["linnker", "chat"] },
     { cards: ["calendar"] },
-    { cards: ["space-station"] },
     { cards: ["footer"] },
   ],
 };

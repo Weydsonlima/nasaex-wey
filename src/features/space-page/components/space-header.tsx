@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Star, UserPlus } from "lucide-react";
+import { HeaderMembersHierarchy } from "./header-members-hierarchy";
 
 interface SpaceHeaderProps {
   name: string;
@@ -49,6 +50,8 @@ export function SpaceHeader({
           <div className="h-full w-full bg-gradient-to-br from-orange-500/20 via-purple-500/10 to-blue-500/20" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+        {/* Hierarquia de membros sobreposta no canto superior direito */}
+        <HeaderMembersHierarchy nick={nick} />
       </div>
 
       {/* Identidade */}

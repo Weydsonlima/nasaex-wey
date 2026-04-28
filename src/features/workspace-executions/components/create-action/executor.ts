@@ -2,7 +2,6 @@ import { NodeExecutor } from "@/features/workspace-executions/types";
 import { NonRetriableError } from "inngest";
 import prisma from "@/lib/prisma";
 import { wsCreateActionChannel } from "@/inngest/channels/workspace";
-import { loadActionContext } from "../../lib/load-action-context";
 import { Prisma } from "@/generated/prisma/client";
 
 type Data = {
@@ -65,15 +64,13 @@ export const wsCreateActionExecutor: NodeExecutor<Data> = async ({
         },
       });
 
-      const newContext = await loadActionContext(created.id);
-
       if (realTime) {
         await publish(
           wsCreateActionChannel().status({ nodeId, status: "success" }),
         );
       }
 
-      return { ...context, action: newContext ?? context.action };
+      return { ...context, action: { id: created.id } };
     } catch (err) {
       if (realTime) {
         await publish(

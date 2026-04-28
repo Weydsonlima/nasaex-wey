@@ -3,7 +3,6 @@ import { NonRetriableError } from "inngest";
 import prisma from "@/lib/prisma";
 import { wsAddParticipantChannel } from "@/inngest/channels/workspace";
 import { ActionContext } from "../../schemas";
-import { loadActionContext } from "../../lib/load-action-context";
 
 type Data = {
   action?: { userId: string };
@@ -37,14 +36,12 @@ export const wsAddParticipantExecutor: NodeExecutor<Data> = async ({
         update: {},
       });
 
-      const refreshed = await loadActionContext(action.id);
-
       if (realTime) {
         await publish(
           wsAddParticipantChannel().status({ nodeId, status: "success" }),
         );
       }
-      return { ...context, action: refreshed ?? action };
+      return { ...context, action: { id: action.id } };
     } catch (err) {
       if (realTime) {
         await publish(

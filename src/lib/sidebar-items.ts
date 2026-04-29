@@ -13,6 +13,7 @@ import {
   Hammer,
   Landmark,
   Link2,
+  GraduationCap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
@@ -42,6 +43,7 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   { key: "forge",        title: "Forge",        url: "/forge",          icon: Hammer,                    alwaysVisible: false, defaultVisible: false },
   { key: "payment",      title: "Payment",      url: "/payment",        icon: Landmark,                  alwaysVisible: false, defaultVisible: false },
   { key: "linnker",      title: "Linnker",      url: "/linnker",        icon: Link2,                     alwaysVisible: false, defaultVisible: false },
+  { key: "nasa-route",   title: "NASA Route",   url: "/nasa-route",     icon: GraduationCap,             alwaysVisible: false, defaultVisible: false },
   // ── Sempre visível ──────────────────────────────────────────────────────
   { key: "apps",         title: "Apps",         url: "/apps",           icon: LayoutGrid,                alwaysVisible: true,  defaultVisible: true  },
 ];
@@ -57,6 +59,7 @@ export const APP_TO_SIDEBAR_KEY: Record<string, string> = {
   forge:          "forge",
   payment:        "payment",
   linnker:        "linnker",
+  "nasa-route":   "nasa-route",
   insights:       "insights",
   integrations:   "integrations",
   contatos:       "contatos",

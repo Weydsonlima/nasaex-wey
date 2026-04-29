@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
+import type { WorldAssetType } from "../types";
 
 export function useStationByNick(nick: string) {
   return useQuery(
@@ -12,6 +13,12 @@ export function useStationByNick(nick: string) {
 export function useMyStation(type: "USER" | "ORG") {
   return useQuery(
     orpc.spaceStation.getMy.queryOptions({ input: { type } }),
+  );
+}
+
+export function useMyStations() {
+  return useQuery(
+    orpc.spaceStation.listMy.queryOptions({ input: {} }),
   );
 }
 
@@ -67,108 +74,67 @@ export function useUpdateModules() {
   });
 }
 
-import type { WorldAssetType } from "../types";
-
 export function useWorldAssets(type?: WorldAssetType) {
   return useQuery(
     orpc.spaceStation.listWorldAssets.queryOptions({ input: { type } }),
   );
 }
 
-export function useListAvatarTemplates(params?: { search?: string }) {
+export type WorldTemplateCategory = "OFFICE" | "SPACE" | "NATURE" | "FANTASY" | "TECH" | "OTHER";
+
+export function useListWorldTemplates(params?: { category?: WorldTemplateCategory; search?: string; excludeMine?: boolean }) {
   return useQuery(
-    orpc.spaceStation.listAvatarTemplates.queryOptions({ input: params ?? {} }),
+    orpc.spaceStation.listWorldTemplates.queryOptions({ input: { ...params } }),
   );
 }
 
-/* ─── Map Editor hooks (world templates + my stations) ──────────────
- * NOTE: the backend procedures exist under src/app/router/space-station/
- * (list-my-world-templates, list-world-templates, get-world-template,
- *  delete-world-template, publish-world-template, list-my-stations) but
- * are not yet wired into the spaceStation router index. These hooks are
- * kept as inert stubs so the map-editor UI (which is not mounted in the
- * current app routes) type-checks without breaking the rest of the app.
- * Wire them up by adding the procedures to
- * src/app/router/space-station/index.ts and replacing these stubs.
- * ───────────────────────────────────────────────────────────────── */
-
-type WorldTemplateItem = {
-  id:          string;
-  name:        string;
-  description: string | null;
-  previewUrl:  string | null;
-  isPublic:    boolean;
-  author?:     { name: string | null } | null;
-};
-
-type MyStationItem = {
-  id:            string;
-  nick:          string;
-  type:          "USER" | "ORG";
-  bio:           string | null;
-  avatarUrl:     string | null;
-  isPublic:      boolean;
-  starsReceived: number;
-  worldConfig:   { planetColor: string; ambientTheme: string } | null;
-  user:          { name: string; image: string | null } | null;
-  org:           { name: string; logo: string | null } | null;
-};
-
-function stubQuery<T>(data: T) {
-  return {
-    data,
-    isLoading: false,
-    isError:   false as boolean,
-    isSuccess: true as const,
-    refetch:   () => Promise.resolve({ data }),
-  };
+export function useListMyWorldTemplates(params?: { category?: WorldTemplateCategory; search?: string }) {
+  return useQuery(
+    orpc.spaceStation.listMyWorldTemplates.queryOptions({ input: { ...params } }),
+  );
 }
 
-export function useListMyWorldTemplates(_params?: { category?: string; search?: string }) {
-  void _params;
-  return stubQuery<{ templates: WorldTemplateItem[] }>({ templates: [] });
-}
-
-export function useListWorldTemplates(_params?: { category?: string; search?: string; excludeMine?: boolean }) {
-  void _params;
-  return stubQuery<{ templates: WorldTemplateItem[] }>({ templates: [] });
-}
-
-export function useGetWorldTemplate() {
+export function useApplyWorldTemplate() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: { templateId: string }) => {
-      void _input;
-      return { template: { id: "", name: "", mapData: {} as unknown } };
-    },
-  });
-}
-
-export function useDeleteWorldTemplate() {
-  return useMutation({
-    mutationFn: async (_input: { templateId: string }) => {
-      void _input;
-      return { ok: true };
-    },
+    ...orpc.spaceStation.applyWorldTemplate.mutationOptions(),
+    onSuccess: () => qc.invalidateQueries(),
   });
 }
 
 export function usePublishWorldTemplate() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: {
-      name:         string;
-      description?: string;
-      category:     string;
-      mapData:      unknown;
-      previewUrl?:  string | null;
-      isPublic:     boolean;
-      stationId?:   string;
-    }) => {
-      void _input;
-      return { template: { id: "" } };
-    },
+    ...orpc.spaceStation.publishWorldTemplate.mutationOptions(),
+    // Invalida todas as queries para garantir que "Meus Salvos" e "Comunidade"
+    // reflitam o novo template imediatamente (mesma estratégia de useApplyWorldTemplate).
+    onSuccess: () => qc.invalidateQueries(),
   });
 }
 
-export function useMyStations() {
-  return stubQuery<{ stations: MyStationItem[] }>({ stations: [] });
+export function useDeleteWorldTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    ...orpc.spaceStation.deleteWorldTemplate.mutationOptions(),
+    // Após excluir, revalida "Meus Salvos" e "Comunidade"
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/**
+ * Busca o mapData completo de um template — usado para aplicação local
+ * (extrai só tileLayer + placedObjects sem sobrescrever o mundo inteiro).
+ */
+export function useGetWorldTemplate() {
+  return useMutation(orpc.spaceStation.getWorldTemplate.mutationOptions());
+}
+
+export function useListAvatarTemplates(params?: { search?: string }) {
+  return useQuery(
+    orpc.spaceStation.listAvatarTemplates.queryOptions({ input: { ...params } }),
+  );
+}
+
+export function usePublishAvatarTemplate() {
+  return useMutation(orpc.spaceStation.publishAvatarTemplate.mutationOptions());
 }

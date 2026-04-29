@@ -66,8 +66,6 @@ interface PlanRow {
   ctaGatewayId: string | null;
   highlighted: boolean;
   isActive: boolean;
-  stripeProductId: string | null;
-  stripePriceId: string | null;
   orgCount: number;
 }
 
@@ -767,22 +765,8 @@ function PlanCard({
             )}
           </div>
 
-          {(plan.stripeProductId || plan.stripePriceId) && (
-            <div className="flex flex-col gap-0.5 text-[9px] text-zinc-600 font-mono">
-              {plan.stripeProductId && (
-                <div className="flex items-center gap-1">
-                  <span className="text-zinc-700">Prod:</span>
-                  <span className="truncate">{plan.stripeProductId}</span>
-                </div>
-              )}
-              {plan.stripePriceId && (
-                <div className="flex items-center gap-1">
-                  <span className="text-zinc-700">Price:</span>
-                  <span className="truncate">{plan.stripePriceId}</span>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Stripe Product/Price IDs are now mapped via STRIPE_PRICE_<SLUG_UPPER>
+              env vars (see src/lib/auth.ts) — not stored in the Plan model. */}
         </div>
 
         {/* Actions */}

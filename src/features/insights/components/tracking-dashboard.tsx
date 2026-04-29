@@ -25,14 +25,20 @@ import { cn } from "@/lib/utils";
 
 import { WidgetList } from "./widget";
 import { ChannelInsights } from "./channel-insights";
-import { AppSelector, ALL_MODULES } from "./app-selector";
-import type { AppModule } from "./app-selector";
+import { AppSelector } from "./app-selector";
 import { CrossDataOverview } from "./cross-data-overview";
 import {
   ForgeSection,
   SpacetimeSection,
   NasaPlannerSection,
   IntegrationsSection,
+  WorkspaceSection,
+  FormsSection,
+  NBoxSection,
+  PaymentSection,
+  LinnkerSection,
+  SpacePointsSection,
+  StarsSection,
 } from "./apps-sections";
 import { useQueryAppsInsights } from "@/features/insights/hooks/use-dashboard";
 import { useQuery } from "@tanstack/react-query";
@@ -83,8 +89,6 @@ export function TrackingDashboard({
 }: TrackingDashboardProps) {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedModules, setSelectedModules] =
-    useState<AppModule[]>(ALL_MODULES);
 
   const handleChartClick = (leadIds?: string[]) => {
     if (leadIds && leadIds.length > 0) {
@@ -99,6 +103,7 @@ export function TrackingDashboard({
     tagIds,
     dateRange,
     settings,
+    selectedModules,
     setTrackingId,
     toggleOrganizationId,
     setDateRange,
@@ -106,6 +111,7 @@ export function TrackingDashboard({
     toggleSection,
     setChartType,
     resetSettings,
+    setSelectedModules,
   } = useDashboardStore();
 
   // Usando Tanstack Query para fetch dos dados
@@ -123,15 +129,24 @@ export function TrackingDashboard({
     startDate: dateRange.from?.toISOString(),
     endDate: dateRange.to?.toISOString(),
     trackingId: trackingId || undefined,
+    tagIds: tagIds.length ? tagIds : undefined,
   };
   const { appsInsights } = useQueryAppsInsights(appsInput);
 
-  // Meta Ads — only when integrations module is selected
+  // Meta Ads — only when integrations module is selected.
+  // dateRange global tem prioridade sobre o preset; quando vazio, fallback last_30d.
+  const metaInput = {
+    level: "account" as const,
+    ...(dateRange.from && dateRange.to
+      ? {
+          startDate: dateRange.from.toISOString(),
+          endDate: dateRange.to.toISOString(),
+        }
+      : { datePreset: "last_30d" as const }),
+  };
   const { data: metaInsights } = useQuery(
     selectedModules.includes("integrations")
-      ? orpc.channelInsights.meta.queryOptions({
-          input: { datePreset: "last_30d", level: "account" },
-        })
+      ? orpc.channelInsights.meta.queryOptions({ input: metaInput })
       : { queryKey: ["meta-disabled"], queryFn: () => null, enabled: false },
   );
 
@@ -391,6 +406,31 @@ export function TrackingDashboard({
                 )}
               {selectedModules.includes("integrations") && (
                 <IntegrationsSection metaAds={metaInsights ?? undefined} />
+              )}
+              {selectedModules.includes("workspace") &&
+                appsInsights?.workspace && (
+                  <WorkspaceSection data={appsInsights.workspace} />
+                )}
+              {selectedModules.includes("forms") && appsInsights?.forms && (
+                <FormsSection data={appsInsights.forms} />
+              )}
+              {selectedModules.includes("nbox") && appsInsights?.nbox && (
+                <NBoxSection data={appsInsights.nbox} />
+              )}
+              {selectedModules.includes("payment") &&
+                appsInsights?.payment && (
+                  <PaymentSection data={appsInsights.payment} />
+                )}
+              {selectedModules.includes("linnker") &&
+                appsInsights?.linnker && (
+                  <LinnkerSection data={appsInsights.linnker} />
+                )}
+              {selectedModules.includes("space-points") &&
+                appsInsights?.spacePoints && (
+                  <SpacePointsSection data={appsInsights.spacePoints} />
+                )}
+              {selectedModules.includes("stars") && appsInsights?.stars && (
+                <StarsSection data={appsInsights.stars} />
               )}
             </div>
 

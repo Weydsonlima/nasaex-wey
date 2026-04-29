@@ -37,19 +37,20 @@ export interface AvatarConfig {
   lpcSpritesheetUrl?: string;
   /** Nome/rótulo do personagem LPC para exibição no painel */
   lpcCharacterName?: string;
-  /** Overlays opcionais (WorkAdventure-style) aplicados sobre o spritesheet base. */
+  /** Overlays LPC estilo WorkAdventure — aplicados sobre o spritesheet base.
+   *  Cada URL aponta para um PNG de overlay (64×64 por frame).
+   *  A composição visual ainda não está implementada; por enquanto os valores
+   *  são persistidos para que a UI lembre da última escolha do usuário. */
   wokaEyesUrl?:      string | null;
   wokaHairUrl?:      string | null;
   wokaClothesUrl?:   string | null;
   wokaHatUrl?:       string | null;
   wokaAccessoryUrl?: string | null;
-  /** Multiplicador de escala visual do avatar (0.5 – 2.5, default 1). */
-  avatarScale?: number;
+  /** Multiplicador do tamanho visual do personagem no mapa.
+   *  1.0 = tamanho padrão. Range válido: 0.5 (metade) a 2.5 (2.5×).
+   *  O body de colisão é escalado proporcionalmente. */
+  avatarScale?:      number;
 }
-
-export const AVATAR_SCALE_DEFAULT = 1;
-export const AVATAR_SCALE_MIN     = 0.5;
-export const AVATAR_SCALE_MAX     = 2.5;
 
 export interface MeetingPoint {
   x: number;
@@ -182,80 +183,75 @@ export interface SelectedWorldAssets {
   furniture?: string;
 }
 
-export interface WorldMapData {
-  scenario: "space" | "station" | "rocket" | "custom";
-  gameView: GameView;
-  elements: WorldElementsConfig;
-  rooms: RoomConfig[];
-  meetingRoomCount: number;
-  selectedAssets?: SelectedWorldAssets;
-  placedObjects?: PlacedMapObject[];
-  areas?: MapArea[];
-  roomConfig?: MapRoomConfig;
-  tileLayer?: TileLayer;
-}
+export type ScenarioType =
+  | "station"
+  | "space"
+  | "rocket"
+  | "lunar_base"
+  | "mission_control"
+  | "lab"
+  | "hangar"
+  | "mars"
+  | "observatory"
+  | "bridge"
+  | "tiled"
+  | "custom";
 
-/* ─── Map Editor (tiles + areas + objects) ─────────────────────── */
+/* ─── Tile Layer (Map Builder) ───────────────────────────────────────────── */
 
-export interface PlacedMapObject {
-  id:        string;
-  url:       string;
-  name:      string;
-  x:         number;
-  y:         number;
-  scale?:    number;
-  rotation?: number;
-  depth?:    number;
-  solid?:    boolean;
-}
-
-export type AreaType =
-  | "silent" | "exit" | "website" | "play-audio" | "meeting"
-  | "info" | "credits" | "focus" | "spawn";
-
-export interface MapArea {
-  id:    string;
-  name:  string;
-  type:  AreaType;
-  x:     number;
-  y:     number;
-  w:     number;
-  h:     number;
-  color?: string;
-  props?: {
-    targetNick?: string;
-    url?:        string;
-    audioUrl?:   string;
-    roomName?:   string;
-    message?:    string;
-  };
-}
-
-export const AREA_TYPE_META: Record<AreaType, { label: string; emoji: string; color: string; description: string }> = {
-  silent:       { label: "Silenciosa",  emoji: "🤫", color: "#64748b", description: "Áudio desabilitado" },
-  exit:         { label: "Saída",        emoji: "🚪", color: "#a855f7", description: "Teleporta para outra station" },
-  website:      { label: "Website",     emoji: "🌐", color: "#06b6d4", description: "Abre uma URL" },
-  "play-audio": { label: "Áudio",        emoji: "🔊", color: "#10b981", description: "Reproduz áudio ao entrar" },
-  meeting:      { label: "Reunião",     emoji: "📊", color: "#f59e0b", description: "Sala de reunião" },
-  info:         { label: "Info",         emoji: "ℹ️", color: "#3b82f6", description: "Exibe mensagem" },
-  credits:      { label: "Créditos",    emoji: "©️", color: "#f97316", description: "Créditos e atribuições" },
-  focus:        { label: "Foco",         emoji: "🎯", color: "#ef4444", description: "Área de destaque" },
-  spawn:        { label: "Spawn",        emoji: "✨", color: "#22c55e", description: "Ponto de início" },
-};
-
-export interface MapRoomConfig {
-  name?:        string;
-  description?: string;
-  floorColor?:  string;
-  showGrid?:    boolean;
-  gridSize?:    number;
-  bgMusicUrl?:  string;
-  locked?:      boolean;
-}
+export type TileTextureKey =
+  // Pisos
+  | "floor_wood"
+  | "floor_stone"
+  | "floor_carpet"
+  | "floor_concrete"
+  | "floor_metal"
+  | "floor_glass"
+  | "floor_tile_white"
+  | "floor_tile_dark"
+  | "floor_checker"
+  | "floor_parquet"
+  | "floor_marble"
+  | "floor_sand"
+  | "floor_dirt"
+  | "floor_brick"
+  | "floor_hex"
+  | "floor_lava"
+  | "floor_ice"
+  | "floor_tech"
+  | "floor_snow"
+  | "floor_grass"
+  | "floor_plank"
+  | "floor_cobble"
+  // Paredes
+  | "wall_brick"
+  | "wall_concrete"
+  | "wall_wood"
+  | "wall_stone"
+  | "wall_metal"
+  | "wall_glass"
+  | "wall_hedge"
+  | "wall_tech"
+  | "wall_cave"
+  | "wall_sandstone"
+  | "wall_ice"
+  // Decoração
+  | "deco_water"
+  | "deco_grass"
+  | "deco_flowers"
+  | "deco_sand"
+  | "deco_gravel"
+  | "deco_bushes"
+  | "deco_leaves"
+  | "deco_snow"
+  | "deco_rocks"
+  | "deco_puddle"
+  | "deco_lava"
+  | "deco_stars"
+  | "deco_cloud"
+  | "deco_fire";
 
 export type TileLayerName = "floor" | "wall" | "decoration";
-
-export type TileTextureKey = string;
 
 export interface TileCell {
   texture: TileTextureKey;
@@ -268,7 +264,125 @@ export interface TileLayer {
   gridH:    number;
   tileSize: number;
   cells:    Record<string, TileCell>;
+  bgColor?: string;
 }
+
+/**
+ * Tipos de área que podem ser desenhadas no mapa (estilo WorkAdventure).
+ */
+export type AreaType =
+  | "silent"        // zona silenciosa (sem proximity chat)
+  | "focus"         // reunião fechada, só quem estiver dentro se ouve
+  | "entry"         // ponto de entrada (spawn do jogador)
+  | "exit"          // portal de saída (teleporta para outra station)
+  | "meeting"       // sala de reunião (abre Jitsi / vídeo)
+  | "website"       // abre uma URL ao entrar
+  | "play-audio"    // toca áudio ao entrar
+  | "info"          // exibe mensagem informativa
+  | "credits"       // exibe créditos / atribuição de licença CC BY-SA 3.0
+  | "collision"     // bloqueia o movimento do jogador (paredes, mesas, etc.)
+  | "custom";       // genérica (apenas visual / tag)
+
+export interface MapArea {
+  id:   string;
+  name: string;
+  type: AreaType;
+  /** Retângulo no mundo Phaser (pixels) */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Cor do overlay (hex, ex: "#6366f1") — default depende do type */
+  color?: string;
+  /** Propriedades específicas por tipo */
+  props?: {
+    url?:        string;   // website / exit
+    targetNick?: string;   // exit: nick da outra station
+    audioUrl?:   string;   // play-audio
+    message?:    string;   // info / credits extra note
+    silent?:     boolean;  // silent area
+    roomName?:   string;   // meeting
+    showAssets?: boolean;  // credits: listar assets CC BY-SA
+  };
+}
+
+export interface MapRoomConfig {
+  /** Nome interno da sala */
+  name?:      string;
+  /** Cor base do piso (hex) */
+  floorColor?: string;
+  /** Mostrar grade no editor */
+  showGrid?:  boolean;
+  /** Snap-to-grid no editor (0 = off) */
+  gridSize?:  number;
+  /** Bloquear edição por outros colaboradores */
+  locked?:    boolean;
+  /** Música ambiente (URL) */
+  bgMusicUrl?: string;
+  /** Descrição exibida aos visitantes */
+  description?: string;
+}
+
+/**
+ * Objeto colocado no mapa através do Map Editor (estilo WorkAdventure).
+ * Cada objeto é renderizado como uma imagem livre sobre o cenário.
+ */
+export interface PlacedMapObject {
+  /** ID único (uuid ou timestamp+random) */
+  id: string;
+  /** URL da imagem (do /public ou /uploads) */
+  url: string;
+  /** Nome curto, exibido na UI de edição */
+  name: string;
+  /** Categoria (ex: "Generic", "Kitchen"…) */
+  category?: string;
+  /** Posição no mapa Phaser (pixels) */
+  x: number;
+  y: number;
+  /** Rotação em graus (0–360) */
+  rotation?: number;
+  /** Escala (1 = 100%) */
+  scale?: number;
+  /** Z-index (depth no Phaser). Se omitido: 5 */
+  depth?: number;
+  /** true = pode colidir com o player */
+  solid?: boolean;
+}
+
+export interface WorldMapData {
+  scenario: ScenarioType;
+  gameView: GameView;
+  elements: WorldElementsConfig;
+  rooms: RoomConfig[];
+  meetingRoomCount: number;
+  selectedAssets?: SelectedWorldAssets;
+  /** Objetos personalizados colocados via Map Editor */
+  placedObjects?: PlacedMapObject[];
+  /** Áreas desenhadas no mapa (triggers, zonas, portais) */
+  areas?: MapArea[];
+  /** Configuração da sala (nome, grade, música) */
+  roomConfig?: MapRoomConfig;
+  /** URL do arquivo .tmj exportado pelo Tiled (usado quando scenario === "tiled") */
+  tiledMapUrl?: string;
+  /** URL base para resolver tilesets com caminhos relativos no .tmj */
+  tiledBaseUrl?: string;
+  /** Camada de tiles pintados pelo usuário no Map Builder (scenario === "custom") */
+  tileLayer?: TileLayer;
+}
+
+export const AREA_TYPE_META: Record<AreaType, { label: string; emoji: string; color: string; description: string }> = {
+  silent:       { label: "Silenciosa",  emoji: "🤫", color: "#6366f1", description: "Sem chat de proximidade" },
+  focus:        { label: "Foco",        emoji: "🎯", color: "#c084fc", description: "Reunião fechada" },
+  entry:        { label: "Entrada",     emoji: "📍", color: "#10b981", description: "Ponto de spawn" },
+  exit:         { label: "Saída",       emoji: "🚪", color: "#f59e0b", description: "Teleporte para outra sala" },
+  meeting:      { label: "Reunião",     emoji: "📹", color: "#3b82f6", description: "Sala de reunião com vídeo" },
+  website:      { label: "Website",     emoji: "🔗", color: "#06b6d4", description: "Abre URL ao entrar" },
+  "play-audio": { label: "Áudio",       emoji: "🎵", color: "#ec4899", description: "Toca áudio ao entrar" },
+  info:         { label: "Info",        emoji: "ℹ️", color: "#8b5cf6", description: "Mensagem informativa" },
+  credits:      { label: "Créditos",   emoji: "©",  color: "#f97316", description: "Créditos e licenças CC BY-SA 3.0" },
+  collision:    { label: "Colisão",    emoji: "🚧", color: "#ef4444", description: "Bloqueia o jogador (paredes, mesas)" },
+  custom:       { label: "Personalizada", emoji: "🏷️", color: "#94a3b8", description: "Área genérica" },
+};
 
 export const DEFAULT_ELEMENTS: WorldElementsConfig = {
   deskType: "standard",
@@ -299,18 +413,23 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   hairColor: "#2d1a0e",
   beardStyle: "none",
   faceAccessory: "none",
+  avatarScale: 1,
 };
+
+export const AVATAR_SCALE_MIN = 0.5;
+export const AVATAR_SCALE_MAX = 2.5;
+export const AVATAR_SCALE_DEFAULT = 1;
 
 export type WorldAssetType = "furniture" | "chair" | "desk" | "computer" | "game_view";
 
 export interface WorldGameAsset {
   id: string;
-  type: string;
+  type: WorldAssetType;
   name: string;
   imageUrl: string;
   previewUrl: string | null;
-  config: unknown;
+  config: Record<string, unknown> | null;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }

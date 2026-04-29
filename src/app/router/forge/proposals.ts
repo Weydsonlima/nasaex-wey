@@ -51,6 +51,7 @@ const proposalShape = z.object({
       name: z.string(),
       email: z.string().nullable(),
       phone: z.string().nullable(),
+      document: z.string().nullable(),
     })
     .nullable(),
   responsible: z.object({
@@ -84,7 +85,7 @@ export const listForgeProposals = base
         },
         include: {
           client: {
-            select: { id: true, name: true, email: true, phone: true },
+            select: { id: true, name: true, email: true, phone: true, document: true },
           },
           responsible: { select: { id: true, name: true, email: true } },
           products: {
@@ -127,7 +128,7 @@ export const getForgeProposal = base
         where: { id: input.id, organizationId: context.org.id },
         include: {
           client: {
-            select: { id: true, name: true, email: true, phone: true },
+            select: { id: true, name: true, email: true, phone: true, document: true },
           },
           responsible: { select: { id: true, name: true, email: true } },
           products: {
@@ -455,7 +456,7 @@ export const getForgeProposalPublic = base
         where: { publicToken: input.token },
         include: {
           client: {
-            select: { id: true, name: true, email: true, phone: true },
+            select: { id: true, name: true, email: true, phone: true, document: true },
           },
           organization: { select: { id: true, name: true, logo: true } },
           products: {

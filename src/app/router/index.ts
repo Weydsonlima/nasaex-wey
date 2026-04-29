@@ -5,7 +5,6 @@ import { tagsRouter } from "./tags";
 import { reasonsRouter } from "./reasons";
 import { orgRoutes } from "./org";
 import { workflowRoutes } from "./workflow";
-import { workspaceWorkflowRoutes } from "./workspace-workflow";
 import { messageRouter } from "./message";
 import { conversationRouter } from "./conversation";
 import { integrationsRouter } from "./integrations";
@@ -26,7 +25,6 @@ import { nboxRouter } from "./nbox";
 import { nasaPlannerRouter } from "./nasa-planner";
 import { nasaCommandRouter } from "./nasa-command";
 import { permissionsRouter } from "./permissions";
-import { inviteLinksRouter } from "./invite-links";
 import { activityRouter } from "./activity";
 import { formRouter } from "./form";
 import { adminRouter }              from "./admin";
@@ -43,7 +41,13 @@ import { supportRouter } from "./support";
 import { scriptsRouter } from "./scripts";
 import { linnkerRouter } from "./linnker";
 import { spaceStationRouter } from "./space-station";
+import { companySpaceRouter } from "./company-space";
+import { profileCardRouter } from "./profile-card";
+import { spaceHelpRouter } from "./space-help";
+import { nasaRouteRouter } from "./nasa-route";
 import { pagesRouter } from "./pages";
+import { inviteLinksRouter } from "./invite-links";
+import { workspaceWorkflowRoutes } from "./workspace-workflow";
 
 export const router = {
   tracking: trackingRoutes,
@@ -54,7 +58,6 @@ export const router = {
   reasons: reasonsRouter,
   orgs: orgRoutes,
   workflow: workflowRoutes,
-  workspaceWorkflow: workspaceWorkflowRoutes,
   message: messageRouter,
   conversation: conversationRouter,
   integrations: integrationsRouter,
@@ -73,7 +76,6 @@ export const router = {
   nasaPlanner: nasaPlannerRouter,
   nasaCommand: nasaCommandRouter,
   permissions: permissionsRouter,
-  inviteLinks: inviteLinksRouter,
   activity: activityRouter,
   form: formRouter,
   admin: adminRouter,
@@ -90,5 +92,11 @@ export const router = {
   scripts: scriptsRouter,
   linnker: linnkerRouter,
   spaceStation: spaceStationRouter,
+  companySpace: companySpaceRouter,
+  profileCard: profileCardRouter,
+  spaceHelp: spaceHelpRouter,
+  nasaRoute: nasaRouteRouter,
   pages: pagesRouter,
+  inviteLinks: inviteLinksRouter,
+  workspaceWorkflow: workspaceWorkflowRoutes,
 };

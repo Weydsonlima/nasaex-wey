@@ -426,6 +426,45 @@ export const useListRecentActions = (limit = 10) => {
   return useQuery(orpc.action.listRecent.queryOptions({ input: { limit } }));
 };
 
+export const useFavoritedActions = (workspaceId: string) => {
+  const { data, isLoading } = useQuery(
+    orpc.action.listByWorkspace.queryOptions({
+      input: {
+        workspaceId,
+        limit: 20,
+        page: 1,
+        isFavorited: true,
+        isArchived: false,
+      },
+      enabled: !!workspaceId,
+    }),
+  );
+
+  return {
+    actions: data?.actions ?? [],
+    isLoading,
+  };
+};
+
+export const useWorkspaceCalendar = ({
+  startDate,
+  endDate,
+}: {
+  startDate: string;
+  endDate: string;
+}) => {
+  const { data, isLoading } = useQuery(
+    orpc.action.getWorkspaceCalendar.queryOptions({
+      input: { startDate, endDate },
+    }),
+  );
+
+  return {
+    actions: data?.actions ?? [],
+    isLoading,
+  };
+};
+
 export const useAddSubActionResponsible = (actionId: string) => {
   const queryClient = useQueryClient();
   return useMutation(

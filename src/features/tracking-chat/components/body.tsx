@@ -39,10 +39,12 @@ import { useMutationEditMessage } from "../hooks/use-messages";
 interface BodyProps {
   messageSelected: MarkedMessage | undefined;
   onSelectMessage: (message: MarkedMessage) => void;
+  conversationId?: string;
 }
 
-export function Body({ messageSelected, onSelectMessage }: BodyProps) {
-  const { conversationId } = useParams<{ conversationId: string }>();
+export function Body({ messageSelected, onSelectMessage, conversationId: conversationIdProp }: BodyProps) {
+  const params = useParams<{ conversationId: string }>();
+  const conversationId = conversationIdProp ?? params.conversationId;
   const [saveToNBoxMessage, setSaveToNBoxMessage] = useState<Message | null>(null);
   const [hasInitialScrolled, setHasInitialScrolled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);

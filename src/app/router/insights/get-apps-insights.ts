@@ -13,6 +13,7 @@ export const getAppsInsights = base
       startDate: z.string().optional(),
       endDate: z.string().optional(),
       trackingId: z.string().optional(),
+      tagIds: z.array(z.string()).optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -27,12 +28,20 @@ export const getAppsInsights = base
           }
         : undefined;
 
+    const tagWhereLead =
+      input.tagIds && input.tagIds.length > 0
+        ? { leadTags: { some: { tagId: { in: input.tagIds } } } }
+        : undefined;
+
     // ── Forge: Proposals ─────────────────────────────────────────────────────
+    // tagIds filter: ForgeProposal vincula via clientId (Lead opcional). Quando
+    // há tagIds, propostas sem cliente são excluídas (não há tag para casar).
     const [proposals, contracts] = await Promise.all([
       prisma.forgeProposal.findMany({
         where: {
           organizationId: { in: orgIds },
           ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...(tagWhereLead ? { client: { is: tagWhereLead } } : {}),
         },
         include: {
           products: { select: { unitValue: true, quantity: true, discount: true } },
@@ -42,6 +51,7 @@ export const getAppsInsights = base
         where: {
           organizationId: { in: orgIds },
           ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...(tagWhereLead ? { proposal: { client: { is: tagWhereLead } } } : {}),
         },
         select: { id: true, status: true, value: true, createdAt: true },
       }),
@@ -74,11 +84,13 @@ export const getAppsInsights = base
     };
 
     // ── Spacetime: Appointments ──────────────────────────────────────────────
+    // tagIds: Appointment.lead é opcional → quando há tagIds, exige lead com tag.
     const appointments = await prisma.appointment.findMany({
       where: {
         agenda: { organizationId: { in: orgIds } },
         ...(dateFilter ? { startsAt: dateFilter } : {}),
         ...(input.trackingId ? { trackingId: input.trackingId } : {}),
+        ...(tagWhereLead ? { lead: { is: tagWhereLead } } : {}),
       },
       select: { id: true, status: true, startsAt: true, leadId: true },
     });
@@ -98,6 +110,7 @@ export const getAppsInsights = base
     };
 
     // ── NASA Planner ────────────────────────────────────────────────────────────
+    // tagIds: NasaPlannerPost não tem relação com Lead → filtro por tag não se aplica.
     const posts = await prisma.nasaPlannerPost.findMany({
       where: {
         organizationId: { in: orgIds },
@@ -120,12 +133,14 @@ export const getAppsInsights = base
     };
 
     // ── Chat: Conversations & Messages ───────────────────────────────────────
+    // tagIds: Conversation.lead é obrigatório → filtro funciona sem perda.
     const [conversations, totalMessages] = await Promise.all([
       prisma.conversation.findMany({
         where: {
           tracking: { organizationId: { in: orgIds } },
           ...(dateFilter ? { createdAt: dateFilter } : {}),
           ...(input.trackingId ? { trackingId: input.trackingId } : {}),
+          ...(tagWhereLead ? { lead: { is: tagWhereLead } } : {}),
         },
         select: { id: true, isActive: true },
       }),
@@ -134,6 +149,7 @@ export const getAppsInsights = base
           conversation: {
             tracking: { organizationId: { in: orgIds } },
             ...(input.trackingId ? { trackingId: input.trackingId } : {}),
+            ...(tagWhereLead ? { lead: { is: tagWhereLead } } : {}),
           },
           ...(dateFilter ? { createdAt: dateFilter } : {}),
         },
@@ -154,11 +170,302 @@ export const getAppsInsights = base
           : 0,
     };
 
+    // ── Workspace: Actions ───────────────────────────────────────────────────
+    // tagIds: Action.lead é opcional → quando há tagIds, exige lead com tag.
+    const now = new Date();
+    const actions = await prisma.action.findMany({
+      where: {
+        organizationId: { in: orgIds },
+        isArchived: false,
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+        ...(input.trackingId ? { trackingId: input.trackingId } : {}),
+        ...(tagWhereLead ? { lead: { is: tagWhereLead } } : {}),
+      },
+      select: {
+        id: true,
+        type: true,
+        isDone: true,
+        dueDate: true,
+        createdBy: true,
+      },
+    });
+
+    const actionCreatorCount = actions.reduce<Record<string, number>>((acc, a) => {
+      acc[a.createdBy] = (acc[a.createdBy] ?? 0) + 1;
+      return acc;
+    }, {});
+    const topCreatorIds = Object.entries(actionCreatorCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id]) => id);
+    const topCreators = topCreatorIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: topCreatorIds } },
+          select: { id: true, name: true, image: true },
+        })
+      : [];
+
+    const workspaceData = {
+      total: actions.length,
+      done: actions.filter((a) => a.isDone).length,
+      open: actions.filter((a) => !a.isDone).length,
+      overdue: actions.filter((a) => !a.isDone && a.dueDate && a.dueDate < now).length,
+      byType: actions.reduce<Record<string, number>>((acc, a) => {
+        acc[a.type] = (acc[a.type] ?? 0) + 1;
+        return acc;
+      }, {}),
+      topCreators: topCreators.map((u) => ({
+        id: u.id,
+        name: u.name,
+        image: u.image,
+        count: actionCreatorCount[u.id] ?? 0,
+      })),
+    };
+
+    // ── Forms ────────────────────────────────────────────────────────────────
+    // tagIds: filtro aplicado em FormResponses.lead. Form em si não tem lead.
+    const [forms, formResponses] = await Promise.all([
+      prisma.form.findMany({
+        where: {
+          organizationId: { in: orgIds },
+          ...(dateFilter ? { createdAt: dateFilter } : {}),
+        },
+        select: { id: true, name: true, published: true, views: true, responses: true },
+      }),
+      prisma.formResponses.findMany({
+        where: {
+          form: { organizationId: { in: orgIds } },
+          ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...(tagWhereLead ? { lead: { is: tagWhereLead } } : {}),
+        },
+        select: { id: true, formId: true, leadId: true },
+      }),
+    ]);
+
+    const responsesByForm = formResponses.reduce<Record<string, number>>((acc, r) => {
+      acc[r.formId] = (acc[r.formId] ?? 0) + 1;
+      return acc;
+    }, {});
+    const topForms = Object.entries(responsesByForm)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([formId, count]) => ({
+        id: formId,
+        name: forms.find((f) => f.id === formId)?.name ?? "Unknown",
+        responses: count,
+      }));
+
+    const formsData = {
+      totalForms: forms.length,
+      publishedForms: forms.filter((f) => f.published).length,
+      totalResponses: formResponses.length,
+      responsesWithLead: formResponses.filter((r) => r.leadId).length,
+      totalViews: forms.reduce((s, f) => s + f.views, 0),
+      topForms,
+    };
+
+    // ── N-Box ────────────────────────────────────────────────────────────────
+    // tagIds: NBoxItem não tem relação com Lead → filtro por tag não se aplica.
+    const nboxItems = await prisma.nBoxItem.findMany({
+      where: {
+        organizationId: { in: orgIds },
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
+      select: { id: true, type: true, size: true, isPublic: true },
+    });
+
+    const nboxData = {
+      totalItems: nboxItems.length,
+      publicItems: nboxItems.filter((i) => i.isPublic).length,
+      totalSize: nboxItems.reduce((s, i) => s + (i.size ?? 0), 0),
+      byType: nboxItems.reduce<Record<string, number>>((acc, i) => {
+        acc[i.type] = (acc[i.type] ?? 0) + 1;
+        return acc;
+      }, {}),
+    };
+
+    // ── Payment: PaymentEntry ────────────────────────────────────────────────
+    // tagIds: PaymentEntry não tem relação com Lead → filtro por tag não se aplica.
+    // Período: usa competenceDate quando preenchido, senão dueDate.
+    const paymentDateFilter = dateFilter
+      ? {
+          OR: [
+            { competenceDate: dateFilter },
+            { AND: [{ competenceDate: null }, { dueDate: dateFilter }] },
+          ],
+        }
+      : {};
+    const paymentEntries = await prisma.paymentEntry.findMany({
+      where: {
+        organizationId: { in: orgIds },
+        ...paymentDateFilter,
+      },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        amount: true,
+        paidAmount: true,
+        dueDate: true,
+      },
+    });
+
+    const paid = paymentEntries.filter((e) => e.status === "PAID");
+    const pending = paymentEntries.filter((e) => e.status === "PENDING");
+    const overdueEntries = paymentEntries.filter(
+      (e) => e.status === "PENDING" && e.dueDate < now,
+    );
+    const revenueEntries = paid.filter((e) => e.type === "RECEIVABLE");
+    const expenseEntries = paid.filter((e) => e.type === "PAYABLE");
+
+    const paymentData = {
+      totalEntries: paymentEntries.length,
+      revenue: revenueEntries.reduce((s, e) => s + e.paidAmount, 0) / 100,
+      expense: expenseEntries.reduce((s, e) => s + e.paidAmount, 0) / 100,
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((s, e) => s + e.amount, 0) / 100,
+      overdueCount: overdueEntries.length,
+      overdueAmount: overdueEntries.reduce((s, e) => s + e.amount, 0) / 100,
+      avgTicket:
+        paid.length > 0
+          ? paid.reduce((s, e) => s + e.paidAmount, 0) / paid.length / 100
+          : 0,
+    };
+
+    // ── Linnker ──────────────────────────────────────────────────────────────
+    // tagIds: aplicado via LinnkerScan.lead.
+    const [scans, linnkerLinks] = await Promise.all([
+      prisma.linnkerScan.findMany({
+        where: {
+          page: { organizationId: { in: orgIds } },
+          ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...(tagWhereLead ? { lead: { is: tagWhereLead } } : {}),
+        },
+        select: { id: true, leadId: true, pageId: true },
+      }),
+      prisma.linnkerLink.findMany({
+        where: {
+          page: { organizationId: { in: orgIds } },
+          isActive: true,
+        },
+        select: { id: true, title: true, clicks: true },
+        orderBy: { clicks: "desc" },
+        take: 5,
+      }),
+    ]);
+
+    const linnkerData = {
+      totalScans: scans.length,
+      scansWithLead: scans.filter((s) => s.leadId).length,
+      totalClicks: linnkerLinks.reduce((s, l) => s + l.clicks, 0),
+      topLinks: linnkerLinks.map((l) => ({
+        id: l.id,
+        title: l.title,
+        clicks: l.clicks,
+      })),
+    };
+
+    // ── Space Points ─────────────────────────────────────────────────────────
+    // tagIds: SpacePoint não tem relação com Lead → filtro por tag não se aplica.
+    const userSpacePoints = await prisma.userSpacePoint.findMany({
+      where: {
+        orgId: { in: orgIds },
+      },
+      select: {
+        id: true,
+        userId: true,
+        totalPoints: true,
+        weeklyPoints: true,
+      },
+    });
+    const userPointIds = userSpacePoints.map((u) => u.id);
+    const pointTransactions = userPointIds.length
+      ? await prisma.spacePointTransaction.findMany({
+          where: {
+            userPointId: { in: userPointIds },
+            ...(dateFilter ? { createdAt: dateFilter } : {}),
+          },
+          select: { points: true, userPointId: true },
+        })
+      : [];
+
+    const spacePointsData = {
+      totalBalance: userSpacePoints.reduce((s, u) => s + u.totalPoints, 0),
+      weeklyBalance: userSpacePoints.reduce((s, u) => s + u.weeklyPoints, 0),
+      granted: pointTransactions
+        .filter((t) => t.points > 0)
+        .reduce((s, t) => s + t.points, 0),
+      spent: Math.abs(
+        pointTransactions
+          .filter((t) => t.points < 0)
+          .reduce((s, t) => s + t.points, 0),
+      ),
+      activeUsers: new Set(pointTransactions.map((t) => t.userPointId)).size,
+      totalUsers: userSpacePoints.length,
+    };
+
+    // ── Stars ────────────────────────────────────────────────────────────────
+    // tagIds: StarTransaction não tem relação com Lead → filtro por tag não se aplica.
+    const starTransactions = await prisma.starTransaction.findMany({
+      where: {
+        organizationId: { in: orgIds },
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        balanceAfter: true,
+        appSlug: true,
+        organizationId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const lastBalanceByOrg = starTransactions.reduce<Record<string, number>>(
+      (acc, t) => {
+        if (acc[t.organizationId] === undefined) acc[t.organizationId] = t.balanceAfter;
+        return acc;
+      },
+      {},
+    );
+    const lastBalance = Object.values(lastBalanceByOrg).reduce((s, v) => s + v, 0);
+
+    const starsData = {
+      lastBalance,
+      topupTotal: starTransactions
+        .filter((t) => t.type === "TOPUP_PURCHASE")
+        .reduce((s, t) => s + t.amount, 0),
+      appCharges: Math.abs(
+        starTransactions
+          .filter((t) => t.type === "APP_CHARGE")
+          .reduce((s, t) => s + t.amount, 0),
+      ),
+      planCredit: starTransactions
+        .filter((t) => t.type === "PLAN_CREDIT")
+        .reduce((s, t) => s + t.amount, 0),
+      byApp: starTransactions
+        .filter((t) => t.type === "APP_CHARGE" && t.appSlug)
+        .reduce<Record<string, number>>((acc, t) => {
+          const k = t.appSlug as string;
+          acc[k] = (acc[k] ?? 0) + Math.abs(t.amount);
+          return acc;
+        }, {}),
+    };
+
     return {
-      forge:     forgeData,
-      spacetime: spacetimeData,
-      nasaPlanner: nasaPlannerData,
-      chat:      chatData,
-      period:    { startDate: input.startDate, endDate: input.endDate },
+      forge:        forgeData,
+      spacetime:    spacetimeData,
+      nasaPlanner:  nasaPlannerData,
+      chat:         chatData,
+      workspace:    workspaceData,
+      forms:        formsData,
+      nbox:         nboxData,
+      payment:      paymentData,
+      linnker:      linnkerData,
+      spacePoints:  spacePointsData,
+      stars:        starsData,
+      period:       { startDate: input.startDate, endDate: input.endDate },
     };
   });

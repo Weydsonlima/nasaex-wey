@@ -75,6 +75,8 @@ interface Props {
   avatarConfig?: AvatarConfig;
   onChange:      (partial: Partial<AvatarConfig>) => void;
   stationId:     string;
+  /** Se true, renderiza apenas o canvas de preview sem os controles */
+  previewOnly?:  boolean;
 }
 
 type UploadState = "idle" | "uploading" | "done" | "error";
@@ -133,7 +135,7 @@ function LpcPreviewCanvas({ url, scale = 4 }: { url: string; scale?: number }) {
 }
 
 /* ─── Componente principal ──────────────────────────────────────────────────── */
-export function LpcAvatarEditor({ avatarConfig, onChange, stationId }: Props) {
+export function LpcAvatarEditor({ avatarConfig, onChange, stationId, previewOnly }: Props) {
   // Determine current selection
   const currentUrl  = avatarConfig?.lpcSpritesheetUrl;
   const currentName = avatarConfig?.lpcCharacterName ?? "";
@@ -159,6 +161,20 @@ export function LpcAvatarEditor({ avatarConfig, onChange, stationId }: Props) {
     : PRESET_CHARACTERS.find(p => p.id === selectedPreset)?.url ?? null;
 
   const activePreset = PRESET_CHARACTERS.find(p => p.id === selectedPreset);
+
+  /* ── Preview only mode ─────────────────────────────────────────────────── */
+  if (previewOnly) {
+    const previewUrl = currentUrl
+      ? (PRESET_CHARACTERS.find(p => currentUrl.includes(p.url.replace("/","").replace(".png","")))?.url === "pixel_astronaut"
+          ? "/lpc_pixel_astronaut.png"
+          : currentUrl)
+      : "/lpc_astronaut.png";
+    return (
+      <div style={{ width: 64, height: 64, imageRendering: "pixelated" }}>
+        <LpcPreviewCanvas url={previewUrl} scale={1} />
+      </div>
+    );
+  }
 
   /* ── Selecionar preset ────────────────────────────────────────────────── */
   const selectPreset = (preset: typeof PRESET_CHARACTERS[number]) => {

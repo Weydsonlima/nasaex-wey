@@ -16,6 +16,7 @@ import {
   NBoxIcon,
   TrackingIcon,
   NasaPlannerIcon,
+  NasaRouteIcon,
 } from "./app-icons";
 
 export type AppStatus = "installed" | "development" | "available";
@@ -297,5 +298,22 @@ export const APPS: AppDef[] = [
     activeUsers: null,
     theme: "purple",
     sidebarKey: "tracking",
+  },
+  {
+    id: "nasa-route",
+    name: "NASA ROUTE",
+    byline: "by NASA®",
+    status: "installed",
+    icon: NasaRouteIcon,
+    shortDesc: "Cursos, treinamentos e mentorias pagos com STARs",
+    fullDesc:
+      "Área de membros estilo Hotmart dentro do NASA. Crie e venda cursos gravados, treinamentos e mentorias usando STARs como moeda. Cada aula concluída concede Space Points para o aluno e o criador recebe 90% do valor em STARs (10% taxa da plataforma). Suporta vídeos do YouTube e Vimeo.",
+    category: "Educação",
+    integration: "STARs · Space Points · YouTube · Vimeo",
+    action: "internal",
+    href: "/nasa-route",
+    activeUsers: null,
+    theme: "purple",
+    sidebarKey: "nasa-route",
   },
 ];

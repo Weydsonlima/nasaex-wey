@@ -17,8 +17,8 @@ export default async function AdminSpaceStationPage() {
     previewUrl: r.previewUrl,
     config: r.config as Record<string, unknown> | null,
     isActive: r.isActive,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
   }));
 
   return (

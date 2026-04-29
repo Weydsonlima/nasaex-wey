@@ -32,23 +32,37 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { FolderKanbanIcon } from "lucide-react";
+import { CalendarDaysIcon, FolderKanbanIcon } from "lucide-react";
 import { PatternsSection } from "@/features/admin/components/patterns-section";
 import { Button } from "@/components/ui/button";
+import { WorkspaceCalendarModal } from "./workspace-calendar-modal";
 
 export const WorkspaceHeader = () => {
   const [open, setOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   return (
     <>
-      <EntityHeader
-        title="Workspace"
-        description="Aqui está uma visão geral deste espaço de trabalho!"
-        newButtonLabel="Novo workspace"
-        onNew={() => setOpen(true)}
-      />
+      <div className="flex items-center justify-between">
+        <EntityHeader
+          title="Workspace"
+          description="Aqui está uma visão geral deste espaço de trabalho!"
+          newButtonLabel="Novo workspace"
+          onNew={() => setOpen(true)}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 shrink-0"
+          onClick={() => setCalendarOpen(true)}
+        >
+          <CalendarDaysIcon className="size-4" />
+          Calendário Workspace
+        </Button>
+      </div>
 
       <CreateWorkspaceModal open={open} onOpenChange={setOpen} />
+      <WorkspaceCalendarModal open={calendarOpen} onOpenChange={setCalendarOpen} />
     </>
   );
 };
@@ -156,8 +170,8 @@ export const Workspaces = () => {
 
         {workspaces.map((workspace) => {
           return (
-            <Item key={workspace.id} asChild>
-              <Link href={`/workspaces/${workspace.id}`}>
+            <Item key={workspace.id} className="bg-muted/30 hover:bg-muted/60 transition-colors">
+              <Link href={`/workspaces/${workspace.id}`} className="flex flex-1 items-center gap-3 min-w-0">
                 <ItemMedia>{workspace.icon}</ItemMedia>
                 <ItemContent>
                   <ItemTitle>{workspace.name}</ItemTitle>
@@ -182,6 +196,11 @@ export const Workspaces = () => {
                   </Tooltip>
                 </ItemContent>
               </Link>
+              <div className="shrink-0 pr-3">
+                <Button asChild size="sm" variant="secondary">
+                  <Link href={`/workspaces/${workspace.id}`}>Abrir</Link>
+                </Button>
+              </div>
             </Item>
           );
         })}

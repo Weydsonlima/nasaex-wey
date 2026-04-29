@@ -58,43 +58,35 @@ export const createPage = base
       starsSeed = { palette: tmpl.palette, fontFamily: tmpl.fontFamily };
     }
 
-    try {
-      const debit = await debitStars(
-        organizationId,
-        PAGES_STARS_COST,
-        StarTransactionType.APP_SETUP,
-        `NASA Pages — criação de site "${input.title}"`,
-        "pages",
-        context.user.id,
-      );
-      if (!debit.success) {
-        throw errors.BAD_REQUEST({ message: "Stars insuficientes" });
-      }
-
-      const page = await prisma.nasaPage.create({
-        data: {
-          organizationId,
-          userId: context.user.id,
-          title: input.title,
-          slug: input.slug,
-          description: input.description,
-          intent: input.intent,
-          layerCount: input.layerCount,
-          palette: (input.palette ?? starsSeed.palette ?? {}) as object,
-          fontFamily: input.fontFamily ?? starsSeed.fontFamily ?? null,
-          layout: layoutSeed as object,
-          starsSpent: PAGES_STARS_COST,
-        },
+    const debit = await debitStars(
+      organizationId,
+      PAGES_STARS_COST,
+      StarTransactionType.APP_SETUP,
+      `NASA Pages — criação de site "${input.title}"`,
+      "pages",
+      context.user.id,
+    );
+    if (!debit.success) {
+      throw errors.BAD_REQUEST({
+        message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
       });
-
-      return { page };
-    } catch (e) {
-      const msg = (e as Error).message ?? "";
-      if (msg.startsWith("INSUFFICIENT_STARS")) {
-        throw errors.BAD_REQUEST({
-          message: `Saldo de Stars insuficiente (necessário ${PAGES_STARS_COST} ★)`,
-        });
-      }
-      throw e;
     }
+
+    const page = await prisma.nasaPage.create({
+      data: {
+        organizationId,
+        userId: context.user.id,
+        title: input.title,
+        slug: input.slug,
+        description: input.description,
+        intent: input.intent,
+        layerCount: input.layerCount,
+        palette: (input.palette ?? starsSeed.palette ?? {}) as object,
+        fontFamily: input.fontFamily ?? starsSeed.fontFamily ?? null,
+        layout: layoutSeed as object,
+        starsSpent: PAGES_STARS_COST,
+      },
+    });
+
+    return { page };
   });

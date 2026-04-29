@@ -2,6 +2,7 @@ import { createAction } from "./create";
 import { getAction } from "./get";
 import { listActionByColumn } from "./list-action-by-column";
 import { listActionByWorkspace } from "./list-action-by-workspace";
+import { searchActions } from "./search-actions";
 import { reorderAction } from "./reorder";
 import { updateAction } from "./update";
 import { deleteAction } from "./delete";
@@ -18,6 +19,7 @@ import { getAnalytics } from "./get-analytics";
 import { listRecentActions } from "./list-recent";
 import { addParticipant } from "./add-participant";
 import { removeParticipant } from "./remove-participant";
+import { getWorkspaceCalendar } from "./get-workspace-calendar";
 
 export const actionRoutes = {
   getAnalytics,
@@ -25,6 +27,7 @@ export const actionRoutes = {
   create: createAction,
   listByColumn: listActionByColumn,
   listByWorkspace: listActionByWorkspace,
+  searchActions,
   reorder: reorderAction,
   get: getAction,
   update: updateAction,
@@ -39,4 +42,5 @@ export const actionRoutes = {
   promoteSubAction,
   addParticipant,
   removeParticipant,
+  getWorkspaceCalendar,
 };

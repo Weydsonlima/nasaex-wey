@@ -22,6 +22,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SignatureBlock } from "./signature-block";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -495,14 +496,16 @@ export function PublicContractView({ contract }: { contract: Contract }) {
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
               <FileText className="size-3.5" /> Termos do Contrato
             </h2>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap">
-              {contract.content}
-            </div>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: contract.content }}
+            />
+            <SignatureBlock signers={contract.signers} />
           </div>
         )}
 
         {/* ── Signers status ───────────────────────────────────────────────── */}
-        <div className="forge-avoid-break bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-border px-8 py-6">
+        <div className="forge-avoid-break forge-no-print bg-white dark:bg-neutral-900 rounded-2xl shadow-sm border border-border px-8 py-6">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
             <User className="size-3.5" /> Assinantes
           </h2>

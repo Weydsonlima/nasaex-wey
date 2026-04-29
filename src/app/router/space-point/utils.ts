@@ -103,7 +103,7 @@ export async function awardPoints(
   await ensureGlobalSpacePointRules();
   await ensureOrgStarRules(orgId);
 
-  const rule = await prisma.spacePointRule.findUnique({
+  const rule = await prisma.spacePointRule.findFirst({
     where: { action, isActive: true },
   });
   if (!rule || rule.points === 0)
@@ -150,7 +150,6 @@ export async function awardPoints(
     prisma.spacePointTransaction.create({
       data: {
         userPointId: userPoint.id,
-        orgId,
         ruleId: rule.id,
         points: rule.points,
         description: descriptionOverride ?? rule.label,

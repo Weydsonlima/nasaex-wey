@@ -437,6 +437,28 @@ export const DEFAULT_RULES = [
     cooldownHours: null,
     category: "system",
   },
+  // ── NASA ROUTE (Cursos) ───────────────────────────────────────────────────
+  {
+    action: "enroll_course",
+    label: "Inscrever-se em curso NASA Route",
+    points: 5,
+    cooldownHours: null,
+    category: "nasa-route",
+  },
+  {
+    action: "complete_lesson",
+    label: "Concluir aula NASA Route",
+    points: 10,
+    cooldownHours: null,
+    category: "nasa-route",
+  },
+  {
+    action: "complete_course",
+    label: "Concluir curso NASA Route",
+    points: 100,
+    cooldownHours: null,
+    category: "nasa-route",
+  },
   // ── DÉBITOS / PENALIDADES ─────────────────────────────────────────────────
   {
     action: "penalty_absent_day2",

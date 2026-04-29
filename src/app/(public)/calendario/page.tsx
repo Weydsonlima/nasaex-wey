@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
 import { CalendarShell } from "@/features/public-calendar/components/calendar-shell";
 import { CreateEventEntry } from "@/features/public-calendar/components/create-event-entry";
+import { ModeToggle } from "@/components/mode-toggle";
+import { NasaFooterPublic } from "@/components/nasa-footer-public";
 
 export const metadata: Metadata = {
   title: "Calendário Público · NASA",
@@ -72,13 +74,18 @@ export default async function CalendarPage() {
               Eventos da comunidade NASA em um só lugar.
             </p>
           </div>
-          <CreateEventEntry />
+          <div className="flex items-center gap-2">
+            <ModeToggle />
+            <CreateEventEntry />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-screen-2xl flex-1 overflow-hidden">
         <CalendarShell initialData={initialData} />
       </main>
+
+      <NasaFooterPublic />
     </div>
   );
 }

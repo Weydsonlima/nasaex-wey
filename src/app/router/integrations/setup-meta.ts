@@ -24,7 +24,7 @@ export const setupMetaIntegration = base
   )
   .handler(async ({ input, context }) => {
     const organizationId = context.session.activeOrganizationId
-    if (!organizationId) throw new Error("No active organization")
+    if (!organizationId) throw new Error("Organization not found")
 
     const prismaplatform =
       input.platform === "INSTAGRAM" ? IntegrationPlatform.INSTAGRAM : IntegrationPlatform.META
@@ -69,7 +69,7 @@ export const getMetaIntegration = base
   .input(z.object({}))
   .handler(async ({ context }) => {
     const organizationId = context.session.activeOrganizationId
-    if (!organizationId) throw new Error("No active organization")
+    if (!organizationId) throw new Error("Organization not found")
 
     const integrations = await prisma.platformIntegration.findMany({
       where: {

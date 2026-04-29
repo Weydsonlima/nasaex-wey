@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { AVAILABLE_VARIABLES } from "../../utils/render-template";
 
 const schema = z.object({
   name: z.string().min(1, "Nome obrigatório"),
@@ -41,11 +42,6 @@ interface TemplateModalProps {
   onClose: () => void;
   template?: Template | null;
 }
-
-const VARIABLES_HINT = [
-  "{{cliente_nome}}", "{{cliente_email}}", "{{empresa_nome}}",
-  "{{valor}}", "{{inicio}}", "{{termino}}", "{{proposta_numero}}",
-];
 
 export function TemplateModal({ open, onClose, template }: TemplateModalProps) {
   const create = useCreateForgeTemplate();
@@ -138,31 +134,32 @@ export function TemplateModal({ open, onClose, template }: TemplateModalProps) {
 
           {/* Content */}
           <div className="space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <Label>Texto do contrato *</Label>
-              <div className="text-[10px] text-muted-foreground text-right">
-                Variáveis disponíveis:
-                <div className="flex flex-wrap gap-1 mt-1 justify-end">
-                  {VARIABLES_HINT.map((v) => (
-                    <code
-                      key={v}
-                      className="bg-muted px-1 py-0.5 rounded cursor-pointer hover:bg-[#7C3AED]/10 hover:text-[#7C3AED] transition-colors"
-                      onClick={() => {
-                        const el = document.querySelector<HTMLTextAreaElement>('textarea[name="content"]');
-                        if (!el) return;
-                        const start = el.selectionStart ?? el.value.length;
-                        const end = el.selectionEnd ?? el.value.length;
-                        const current = form.getValues("content");
-                        form.setValue("content", current.slice(0, start) + v + current.slice(end));
-                        setTimeout(() => { el.focus(); el.setSelectionRange(start + v.length, start + v.length); }, 0);
-                      }}
-                    >
-                      {v}
-                    </code>
-                  ))}
-                </div>
+            <Label>Texto do contrato *</Label>
+            <details className="group rounded-md border border-border/60 bg-muted/30">
+              <summary className="cursor-pointer px-3 py-2 text-[11px] text-muted-foreground hover:text-foreground transition-colors select-none">
+                Variáveis disponíveis ({AVAILABLE_VARIABLES.length}) — clique para inserir
+              </summary>
+              <div className="px-3 pb-3 flex flex-wrap gap-1">
+                {AVAILABLE_VARIABLES.map((v) => (
+                  <code
+                    key={v.key}
+                    title={v.label}
+                    className="bg-background border border-border px-1.5 py-0.5 rounded text-[10px] cursor-pointer hover:bg-[#7C3AED]/10 hover:text-[#7C3AED] transition-colors"
+                    onClick={() => {
+                      const el = document.querySelector<HTMLTextAreaElement>('textarea[name="content"]');
+                      if (!el) return;
+                      const start = el.selectionStart ?? el.value.length;
+                      const end = el.selectionEnd ?? el.value.length;
+                      const current = form.getValues("content") ?? "";
+                      form.setValue("content", current.slice(0, start) + v.placeholder + current.slice(end));
+                      setTimeout(() => { el.focus(); el.setSelectionRange(start + v.placeholder.length, start + v.placeholder.length); }, 0);
+                    }}
+                  >
+                    {v.placeholder}
+                  </code>
+                ))}
               </div>
-            </div>
+            </details>
             <Textarea
               {...form.register("content")}
               placeholder={`CONTRATO DE PRESTAÇÃO DE SERVIÇOS\n\nPelo presente instrumento...\n\nContratante: {{cliente_nome}}\nValor: {{valor}}\nVigência: {{inicio}} a {{termino}}`}

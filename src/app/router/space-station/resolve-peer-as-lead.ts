@@ -96,7 +96,7 @@ export const resolvePeerAsLead = base
           trackingId,
           order: newOrder,
           responsibleId: myUserId,
-          source: "OTHER",
+          source: "WHATSAPP",
         },
         select: { id: true, name: true, phone: true },
       });

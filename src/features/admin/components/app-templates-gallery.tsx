@@ -52,15 +52,15 @@ export function AppTemplatesGallery({
   const toast = useAdminToast();
   const { data: session } = authClient.useSession();
 
-  const isSystemAdmin = (session?.user as any)?.isSystemAdmin;
+  const isSystemAdmin = (session?.user as { isSystemAdmin?: boolean })?.isSystemAdmin;
   const canManage = !!isSystemAdmin;
+
+  const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteAppTemplate();
 
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch(
-          `/api/admin/app-templates?appType=${appType}`,
-        );
+        const response = await fetch(`/api/admin/app-templates?appType=${appType}`);
         if (!response.ok) throw new Error("Erro ao buscar padrões");
 
         const data = await response.json();
@@ -74,7 +74,7 @@ export function AppTemplatesGallery({
           ] ?? [];
 
         setTemplates(typeData);
-      } catch (error) {
+      } catch {
         toast.error("Erro ao buscar padrões");
       } finally {
         setIsLoading(false);
@@ -82,27 +82,22 @@ export function AppTemplatesGallery({
     };
 
     fetchTemplates();
-  }, [appType]);
+  }, [appType, toast]);
 
   const handleDuplicate = async (templateId: string) => {
     setIsDuplicating(templateId);
     try {
-      // TODO: Implement duplication logic for each app type
       onDuplicate?.(templateId);
       toast.success("Padrão duplicado com sucesso!");
-    } catch (error) {
+    } catch {
       toast.error("Erro ao duplicar padrão");
     } finally {
       setIsDuplicating(null);
     }
   };
 
-  const { mutate: deleteTemplate, isPending: isDeleting } =
-    useDeleteAppTemplate();
-
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deleteId) return;
-
     deleteTemplate(
       { templateId: deleteId, appType },
       {
@@ -132,9 +127,7 @@ export function AppTemplatesGallery({
   if (templates.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-zinc-400">
-          Nenhum padrão disponível para este tipo de app
-        </p>
+        <p className="text-zinc-400">Nenhum padrão disponível para este tipo de app</p>
       </div>
     );
   }
@@ -157,9 +150,7 @@ export function AppTemplatesGallery({
               {template.name || template.title || "Sem nome"}
             </h3>
             {template.description && (
-              <p className="text-xs text-zinc-400 mb-2">
-                {template.description}
-              </p>
+              <p className="text-xs text-zinc-400 mb-2">{template.description}</p>
             )}
             <p className="text-xs text-zinc-500">
               {new Date(template.createdAt).toLocaleDateString("pt-BR")}
@@ -175,11 +166,10 @@ export function AppTemplatesGallery({
               <Copy className="w-3 h-3" />
               {isDuplicating === template.id ? "Duplicando..." : "Duplicar"}
             </button>
-
             {canManage && (
               <button
                 onClick={() => setDeleteId(template.id)}
-                className="px-3 flex items-center justify-center bg-red-600/20 hover:bg-red-600/30 text-red-500 text-xs font-semibold py-2 rounded-lg transition-colors"
+                className="px-3 flex items-center justify-center bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-semibold py-2 rounded-lg transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -201,9 +191,8 @@ export function AppTemplatesGallery({
           <DialogHeader>
             <DialogTitle>Deletar Padrão</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Esta ação removerá o item da galeria de padrões. O registro
-              original continuará existindo, mas não será mais exibido como
-              padrão para outros usuários.
+              Esta ação removerá o item da galeria de padrões. O registro original
+              continuará existindo, mas não será mais exibido como padrão para outros usuários.
             </DialogDescription>
           </DialogHeader>
 

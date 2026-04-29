@@ -46,6 +46,9 @@ import { profileCardRouter } from "./profile-card";
 import { spaceHelpRouter } from "./space-help";
 import { nasaRouteRouter } from "./nasa-route";
 import { pagesRouter } from "./pages";
+import { inviteLinksRouter } from "./invite-links";
+import { workspaceWorkflowRoutes } from "./workspace-workflow";
+import { reminderRouter } from "./reminder";
 
 export const router = {
   tracking: trackingRoutes,
@@ -95,4 +98,7 @@ export const router = {
   spaceHelp: spaceHelpRouter,
   nasaRoute: nasaRouteRouter,
   pages: pagesRouter,
+  inviteLinks: inviteLinksRouter,
+  workspaceWorkflow: workspaceWorkflowRoutes,
+  reminder: reminderRouter,
 };

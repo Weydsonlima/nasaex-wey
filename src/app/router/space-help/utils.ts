@@ -3,8 +3,6 @@ import { ORPCError } from "@orpc/server";
 import { StarTransactionType, WhatsAppInstanceStatus } from "@/generated/prisma/enums";
 import { pusherServer } from "@/lib/pusher";
 
-const MODERATOR_ROLES = ["owner", "moderador"];
-
 // ─── Setup Inicial NASA — recompensas ao chegar a 100% ─────────────────
 const SETUP_REWARD_STARS = 50;
 const SETUP_REWARD_SP = 100;
@@ -47,23 +45,30 @@ export function trackHasGatedLessons(trackSlug: string): boolean {
 const isFilled = (s: string | null | undefined): boolean =>
   typeof s === "string" && s.trim().length > 0;
 
-export async function requireModerator(userId: string, orgId: string) {
-  const member = await prisma.member.findFirst({
-    where: { organizationId: orgId, userId },
+/**
+ * Space Help é conteúdo global da plataforma NASA — apenas usuários com
+ * `User.isSystemAdmin = true` podem editar. Owner de empresa NÃO tem acesso.
+ * Sempre valida no banco, nunca confia em cache de sessão.
+ */
+export async function requireModerator(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isSystemAdmin: true },
   });
-  if (!member || !MODERATOR_ROLES.includes(member.role)) {
+  if (!user?.isSystemAdmin) {
     throw new ORPCError("FORBIDDEN", {
-      message: "Apenas moderadores podem editar conteúdo do Space Help",
+      message: "Apenas moderadores da plataforma NASA podem editar o Space Help",
     });
   }
-  return member;
+  return user;
 }
 
-export async function isModerator(userId: string, orgId: string) {
-  const member = await prisma.member.findFirst({
-    where: { organizationId: orgId, userId },
+export async function isModerator(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isSystemAdmin: true },
   });
-  return !!member && MODERATOR_ROLES.includes(member.role);
+  return !!user?.isSystemAdmin;
 }
 
 /**

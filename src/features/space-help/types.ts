@@ -1,8 +1,11 @@
+export type StepAnnotationMarker = "rocket-right" | "rocket-left" | "arrow";
+
 export interface StepAnnotation {
   x: number;
   y: number;
   angle: number;
   label: string;
+  marker?: StepAnnotationMarker;
 }
 
 export interface SpaceHelpCategoryLite {

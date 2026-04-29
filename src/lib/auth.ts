@@ -66,6 +66,21 @@ export const auth = betterAuth({
               where: { userId: session.userId },
               include: { user: true },
             });
+
+            // Auto-select active organization on first login if not set yet.
+            // Better-auth doesn't do this automatically — we pick the user's first
+            // org so they land inside an org context instead of "Nenhuma empresa".
+            if (!session.activeOrganizationId && memberships.length > 0) {
+              try {
+                await prisma.session.update({
+                  where: { id: session.id },
+                  data: { activeOrganizationId: memberships[0].organizationId },
+                });
+              } catch (e) {
+                console.error("[auth hook] auto-set activeOrganizationId failed:", e);
+              }
+            }
+
             for (const m of memberships) {
               await prisma.systemActivityLog.create({
                 data: {

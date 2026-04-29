@@ -1,20 +1,19 @@
 import { base } from "@/app/middlewares/base";
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
-import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { requireModerator } from "../utils";
 
 const annotationSchema = z.object({
-  x: z.number(),
-  y: z.number(),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
   angle: z.number().default(0),
   label: z.string().default(""),
+  marker: z.enum(["rocket-right", "rocket-left", "arrow"]).optional(),
 });
 
 export const upsertStep = base
   .use(requiredAuthMiddleware)
-  .use(requireOrgMiddleware)
   .input(
     z.object({
       id: z.string().optional(),
@@ -27,7 +26,7 @@ export const upsertStep = base
     }),
   )
   .handler(async ({ input, context }) => {
-    await requireModerator(context.user.id, context.org.id);
+    await requireModerator(context.user.id);
     const { id, annotations, ...rest } = input;
     const data = { ...rest, annotations: annotations as any };
     if (id) {

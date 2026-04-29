@@ -9,6 +9,8 @@
  * 100% idempotente — usa upsert por slug.
  */
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import { faker } from "@faker-js/faker";
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -60,7 +62,8 @@ const CATEGORIES = [
   {
     slug: "payment",
     name: "Payment — Hub Financeiro",
-    description: "Controle financeiro completo: contas, conciliação e relatórios.",
+    description:
+      "Controle financeiro completo: contas, conciliação e relatórios.",
     iconKey: "payment",
     appId: "payment",
     order: 5,
@@ -68,7 +71,8 @@ const CATEGORIES = [
   {
     slug: "workspace",
     name: "Workspace — Projetos & Clientes",
-    description: "Gerencie projetos, clientes, favoritos e calendário do seu workspace.",
+    description:
+      "Gerencie projetos, clientes, favoritos e calendário do seu workspace.",
     iconKey: "workspace",
     appId: "workspace",
     order: 6,
@@ -92,7 +96,8 @@ const CATEGORIES = [
   {
     slug: "integrations",
     name: "Integrações",
-    description: "Conecte WhatsApp, Instagram, Meta Ads, Google e outras ferramentas.",
+    description:
+      "Conecte WhatsApp, Instagram, Meta Ads, Google e outras ferramentas.",
     iconKey: "integrations",
     appId: "integrations",
     order: 9,
@@ -100,7 +105,8 @@ const CATEGORIES = [
   {
     slug: "nbox",
     name: "N-Box — Inbox Universal",
-    description: "Caixa unificada para leads, formulários e mensagens recebidas.",
+    description:
+      "Caixa unificada para leads, formulários e mensagens recebidas.",
     iconKey: "nbox",
     appId: "nbox",
     order: 10,
@@ -132,7 +138,8 @@ const CATEGORIES = [
   {
     slug: "apps",
     name: "Apps & Marketplace",
-    description: "Instale apps adicionais e descubra integrações no marketplace.",
+    description:
+      "Instale apps adicionais e descubra integrações no marketplace.",
     iconKey: "apps",
     appId: "apps",
     order: 14,
@@ -148,7 +155,8 @@ const CATEGORIES = [
   {
     slug: "notifications",
     name: "Notificações",
-    description: "Central de notificações: leads, mensagens, lembretes e eventos.",
+    description:
+      "Central de notificações: leads, mensagens, lembretes e eventos.",
     iconKey: "notifications",
     appId: "notifications",
     order: 16,
@@ -186,17 +194,22 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Abra o menu Tracking",
-        description: "Na sidebar esquerda, clique em 'Tracking' para acessar a lista de pipelines da sua organização.",
+        description:
+          "Na sidebar esquerda, clique em 'Tracking' para acessar a lista de pipelines da sua organização.",
         annotations: [{ x: 0.05, y: 0.3, angle: 0, label: "Clique aqui" }],
       },
       {
         title: "Clique em 'Novo Tracking'",
-        description: "No canto superior direito da tela, clique no botão '+ Novo Tracking' para abrir o modal de criação.",
-        annotations: [{ x: 0.92, y: 0.08, angle: 180, label: "Botão de criar" }],
+        description:
+          "No canto superior direito da tela, clique no botão '+ Novo Tracking' para abrir o modal de criação.",
+        annotations: [
+          { x: 0.92, y: 0.08, angle: 180, label: "Botão de criar" },
+        ],
       },
       {
         title: "Preencha nome e configurações",
-        description: "Dê um nome ao Tracking, escolha as colunas iniciais e os responsáveis. Você pode editar tudo depois.",
+        description:
+          "Dê um nome ao Tracking, escolha as colunas iniciais e os responsáveis. Você pode editar tudo depois.",
       },
     ],
   },
@@ -208,12 +221,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Localize o lead",
-        description: "No board do Tracking, encontre o card do lead que deseja mover.",
+        description:
+          "No board do Tracking, encontre o card do lead que deseja mover.",
         annotations: [{ x: 0.2, y: 0.5, angle: 270, label: "Card do lead" }],
       },
       {
         title: "Arraste para a nova coluna",
-        description: "Clique e segure no card, depois arraste até a coluna de destino e solte.",
+        description:
+          "Clique e segure no card, depois arraste até a coluna de destino e solte.",
       },
     ],
   },
@@ -225,12 +240,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Abra configurações do Tracking",
-        description: "Dentro do Tracking, clique no ícone de engrenagem no header.",
+        description:
+          "Dentro do Tracking, clique no ícone de engrenagem no header.",
         annotations: [{ x: 0.95, y: 0.1, angle: 180, label: "Engrenagem" }],
       },
       {
         title: "Adicione ou edite status",
-        description: "Na aba 'Status', clique em '+ Novo Status' ou edite os existentes alterando nome e cor.",
+        description:
+          "Na aba 'Status', clique em '+ Novo Status' ou edite os existentes alterando nome e cor.",
       },
     ],
   },
@@ -243,16 +260,19 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Acesse Forge no menu",
-        description: "Clique em 'Forge' na sidebar para abrir o módulo comercial.",
+        description:
+          "Clique em 'Forge' na sidebar para abrir o módulo comercial.",
         annotations: [{ x: 0.05, y: 0.4, angle: 0, label: "Forge" }],
       },
       {
         title: "Selecione 'Propostas'",
-        description: "Na aba superior, escolha 'Propostas' e clique em '+ Nova Proposta'.",
+        description:
+          "Na aba superior, escolha 'Propostas' e clique em '+ Nova Proposta'.",
       },
       {
         title: "Preencha dados do cliente e produtos",
-        description: "Adicione cliente, produtos e valores. O total é calculado automaticamente.",
+        description:
+          "Adicione cliente, produtos e valores. O total é calculado automaticamente.",
       },
     ],
   },
@@ -264,11 +284,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Vá em 'Templates'",
-        description: "Dentro do Forge, acesse a aba 'Templates' para ver os modelos cadastrados.",
+        description:
+          "Dentro do Forge, acesse a aba 'Templates' para ver os modelos cadastrados.",
       },
       {
         title: "Clique em 'Usar este template'",
-        description: "Em cima do template desejado, clique no botão para gerar um novo contrato preenchido.",
+        description:
+          "Em cima do template desejado, clique no botão para gerar um novo contrato preenchido.",
         annotations: [{ x: 0.7, y: 0.6, angle: 90, label: "Usar" }],
       },
     ],
@@ -287,11 +309,13 @@ const FEATURES: Array<{
       },
       {
         title: "Clique em '+ Novo Formulário'",
-        description: "No topo da tela, clique para criar um formulário do zero.",
+        description:
+          "No topo da tela, clique para criar um formulário do zero.",
       },
       {
         title: "Adicione campos via drag & drop",
-        description: "Arraste tipos de campos (texto, e-mail, telefone, etc.) da paleta lateral para o formulário.",
+        description:
+          "Arraste tipos de campos (texto, e-mail, telefone, etc.) da paleta lateral para o formulário.",
       },
     ],
   },
@@ -303,12 +327,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Abra 'Publicar'",
-        description: "Dentro do formulário, clique em 'Publicar' no canto superior direito.",
+        description:
+          "Dentro do formulário, clique em 'Publicar' no canto superior direito.",
         annotations: [{ x: 0.9, y: 0.08, angle: 180, label: "Publicar" }],
       },
       {
         title: "Copie o link ou snippet",
-        description: "Use o link público para compartilhar no WhatsApp/Instagram, ou copie o embed para colar no seu site.",
+        description:
+          "Use o link público para compartilhar no WhatsApp/Instagram, ou copie o embed para colar no seu site.",
       },
     ],
   },
@@ -321,11 +347,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Acesse 'Integrações'",
-        description: "No menu, vá em Integrações e selecione WhatsApp Business.",
+        description:
+          "No menu, vá em Integrações e selecione WhatsApp Business.",
       },
       {
         title: "Escaneie o QR Code",
-        description: "Abra o WhatsApp no celular > Aparelhos conectados > Conectar dispositivo > escaneie o QR.",
+        description:
+          "Abra o WhatsApp no celular > Aparelhos conectados > Conectar dispositivo > escaneie o QR.",
         annotations: [{ x: 0.5, y: 0.5, angle: 0, label: "QR Code" }],
       },
     ],
@@ -338,11 +366,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Selecione a conversa",
-        description: "Na lista lateral, clique em qualquer conversa para abri-la no painel principal.",
+        description:
+          "Na lista lateral, clique em qualquer conversa para abri-la no painel principal.",
       },
       {
         title: "Use respostas rápidas",
-        description: "Aperte '/' no campo de mensagem para abrir o menu de respostas pré-cadastradas.",
+        description:
+          "Aperte '/' no campo de mensagem para abrir o menu de respostas pré-cadastradas.",
         annotations: [{ x: 0.5, y: 0.85, angle: 270, label: "Comando /" }],
       },
     ],
@@ -355,11 +385,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Vá em 'Spacetime'",
-        description: "Clique em Spacetime na sidebar para abrir o gerenciador de agendas.",
+        description:
+          "Clique em Spacetime na sidebar para abrir o gerenciador de agendas.",
       },
       {
         title: "Defina horários e duração",
-        description: "Configure dias da semana, horário de início/fim e duração padrão de cada slot.",
+        description:
+          "Configure dias da semana, horário de início/fim e duração padrão de cada slot.",
       },
     ],
   },
@@ -371,7 +403,8 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Copie o link da agenda",
-        description: "Cada agenda tem um link único. Clique no ícone de copiar ao lado do nome.",
+        description:
+          "Cada agenda tem um link único. Clique no ícone de copiar ao lado do nome.",
         annotations: [{ x: 0.85, y: 0.3, angle: 180, label: "Copiar link" }],
       },
       {
@@ -389,7 +422,8 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Acesse Payment",
-        description: "Clique em Payment na sidebar para abrir o hub financeiro.",
+        description:
+          "Clique em Payment na sidebar para abrir o hub financeiro.",
       },
       {
         title: "Clique em '+ Nova entrada'",
@@ -406,11 +440,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Importe o arquivo OFX",
-        description: "Em Payment > Conciliação, clique em 'Importar OFX' e selecione o arquivo do seu banco.",
+        description:
+          "Em Payment > Conciliação, clique em 'Importar OFX' e selecione o arquivo do seu banco.",
       },
       {
         title: "Vincule lançamentos",
-        description: "Para cada linha do extrato, escolha o lançamento correspondente ou crie um novo.",
+        description:
+          "Para cada linha do extrato, escolha o lançamento correspondente ou crie um novo.",
       },
     ],
   },
@@ -420,29 +456,37 @@ const FEATURES: Array<{
     categorySlug: "tracking",
     slug: "criar-primeira-tag",
     title: "🎯 Criar sua primeira Tag",
-    summary: "Tags organizam leads por origem, interesse ou prioridade. Passo crítico do onboarding.",
+    summary:
+      "Tags organizam leads por origem, interesse ou prioridade. Passo crítico do onboarding.",
     steps: [
       {
         title: "Abra um Tracking existente",
-        description: "Selecione um Tracking na sidebar para abrir o board. Se ainda não tiver, crie um primeiro.",
-        screenshotUrl: "/space-help/screenshots/tracking-tag/01-abrir-tracking.png",
-        annotations: [{ x: 0.08, y: 0.35, angle: 0, label: "Sidebar Tracking" }],
+        description:
+          "Selecione um Tracking na sidebar para abrir o board. Se ainda não tiver, crie um primeiro.",
+        screenshotUrl:
+          "/space-help/screenshots/tracking-tag/01-abrir-tracking.png",
+        annotations: [
+          { x: 0.08, y: 0.35, angle: 0, label: "Sidebar Tracking" },
+        ],
       },
       {
         title: "Acesse 'Configurações' do Tracking",
-        description: "No header do board, clique no ícone de engrenagem para abrir as configurações.",
+        description:
+          "No header do board, clique no ícone de engrenagem para abrir as configurações.",
         screenshotUrl: "/space-help/screenshots/tracking-tag/02-engrenagem.png",
         annotations: [{ x: 0.95, y: 0.1, angle: 180, label: "Engrenagem" }],
       },
       {
         title: "Aba 'Tags' → '+ Nova Tag'",
-        description: "Clique na aba Tags e em '+ Nova Tag'. Defina nome (ex: 'Hot Lead'), cor e ícone opcional.",
+        description:
+          "Clique na aba Tags e em '+ Nova Tag'. Defina nome (ex: 'Hot Lead'), cor e ícone opcional.",
         screenshotUrl: "/space-help/screenshots/tracking-tag/03-nova-tag.png",
         annotations: [{ x: 0.85, y: 0.2, angle: 180, label: "+ Nova Tag" }],
       },
       {
         title: "Aplique a Tag em um lead",
-        description: "Volte ao board, abra um card de lead e selecione a tag recém-criada no campo 'Tags'.",
+        description:
+          "Volte ao board, abra um card de lead e selecione a tag recém-criada no campo 'Tags'.",
         screenshotUrl: "/space-help/screenshots/tracking-tag/04-aplicar.png",
       },
     ],
@@ -451,15 +495,18 @@ const FEATURES: Array<{
     categorySlug: "tracking",
     slug: "atribuir-responsaveis",
     title: "Atribuir responsáveis a um lead",
-    summary: "Designe um agente para cada lead e acompanhe a carteira individualmente.",
+    summary:
+      "Designe um agente para cada lead e acompanhe a carteira individualmente.",
     steps: [
       {
         title: "Abra o card do lead",
-        description: "No board, clique no card que deseja atribuir. O painel lateral abre com todos os campos.",
+        description:
+          "No board, clique no card que deseja atribuir. O painel lateral abre com todos os campos.",
       },
       {
         title: "Campo 'Responsável'",
-        description: "Selecione o membro da equipe. Ele recebe notificação automática.",
+        description:
+          "Selecione o membro da equipe. Ele recebe notificação automática.",
         annotations: [{ x: 0.7, y: 0.3, angle: 270, label: "Responsável" }],
       },
     ],
@@ -468,7 +515,8 @@ const FEATURES: Array<{
     categorySlug: "tracking",
     slug: "criar-status-personalizados",
     title: "Adicionar status (colunas) novos",
-    summary: "Personalize o pipeline com etapas que fazem sentido pro seu funil.",
+    summary:
+      "Personalize o pipeline com etapas que fazem sentido pro seu funil.",
     steps: [
       {
         title: "Abra Configurações do Tracking",
@@ -476,7 +524,8 @@ const FEATURES: Array<{
       },
       {
         title: "Aba 'Status' → '+ Novo Status'",
-        description: "Adicione nome (ex: 'Qualificação'), cor de identificação e posição no Kanban.",
+        description:
+          "Adicione nome (ex: 'Qualificação'), cor de identificação e posição no Kanban.",
         annotations: [{ x: 0.85, y: 0.25, angle: 180, label: "+ Novo Status" }],
       },
     ],
@@ -485,7 +534,8 @@ const FEATURES: Array<{
     categorySlug: "tracking",
     slug: "filtros-do-tracking",
     title: "Filtrar leads no board",
-    summary: "Combine filtros por tag, responsável, valor e data para encontrar rapidamente.",
+    summary:
+      "Combine filtros por tag, responsável, valor e data para encontrar rapidamente.",
     steps: [
       {
         title: "Botão 'Filtros' no topo",
@@ -494,7 +544,8 @@ const FEATURES: Array<{
       },
       {
         title: "Combine critérios",
-        description: "Adicione múltiplos filtros: tags, responsáveis, valor mínimo, criado nos últimos X dias.",
+        description:
+          "Adicione múltiplos filtros: tags, responsáveis, valor mínimo, criado nos últimos X dias.",
       },
     ],
   },
@@ -504,29 +555,38 @@ const FEATURES: Array<{
     categorySlug: "forge",
     slug: "cadastrar-primeiro-produto",
     title: "🛒 Cadastrar seu primeiro produto",
-    summary: "Produtos cadastrados aparecem ao montar propostas. Passo crítico do onboarding.",
+    summary:
+      "Produtos cadastrados aparecem ao montar propostas. Passo crítico do onboarding.",
     steps: [
       {
         title: "Acesse Forge → Produtos",
-        description: "No menu lateral do Forge, clique em 'Produtos & Serviços'.",
-        screenshotUrl: "/space-help/screenshots/forge-product/01-menu-produtos.png",
+        description:
+          "No menu lateral do Forge, clique em 'Produtos & Serviços'.",
+        screenshotUrl:
+          "/space-help/screenshots/forge-product/01-menu-produtos.png",
         annotations: [{ x: 0.1, y: 0.4, angle: 0, label: "Produtos" }],
       },
       {
         title: "Botão '+ Novo Produto'",
-        description: "Clique no canto superior direito para abrir o formulário.",
-        screenshotUrl: "/space-help/screenshots/forge-product/02-novo-produto.png",
+        description:
+          "Clique no canto superior direito para abrir o formulário.",
+        screenshotUrl:
+          "/space-help/screenshots/forge-product/02-novo-produto.png",
         annotations: [{ x: 0.92, y: 0.1, angle: 180, label: "+ Novo Produto" }],
       },
       {
         title: "Preencha nome, valor e descrição",
-        description: "Defina nome do item, valor unitário, descrição e categoria. Salve.",
-        screenshotUrl: "/space-help/screenshots/forge-product/03-formulario.png",
+        description:
+          "Defina nome do item, valor unitário, descrição e categoria. Salve.",
+        screenshotUrl:
+          "/space-help/screenshots/forge-product/03-formulario.png",
       },
       {
         title: "Use em uma proposta",
-        description: "Ao montar uma proposta, busque o produto cadastrado pelo nome — ele aparece no autocomplete.",
-        screenshotUrl: "/space-help/screenshots/forge-product/04-usar-proposta.png",
+        description:
+          "Ao montar uma proposta, busque o produto cadastrado pelo nome — ele aparece no autocomplete.",
+        screenshotUrl:
+          "/space-help/screenshots/forge-product/04-usar-proposta.png",
       },
     ],
   },
@@ -534,7 +594,8 @@ const FEATURES: Array<{
     categorySlug: "forge",
     slug: "assinatura-eletronica",
     title: "Assinatura eletrônica de contratos",
-    summary: "Envie contratos para assinatura digital e acompanhe status em tempo real.",
+    summary:
+      "Envie contratos para assinatura digital e acompanhe status em tempo real.",
     steps: [
       {
         title: "Abra um contrato finalizado",
@@ -542,7 +603,8 @@ const FEATURES: Array<{
       },
       {
         title: "Botão 'Enviar para assinatura'",
-        description: "Adicione e-mails dos signatários. Cada um recebe link único para assinar.",
+        description:
+          "Adicione e-mails dos signatários. Cada um recebe link único para assinar.",
         annotations: [{ x: 0.85, y: 0.15, angle: 180, label: "Enviar" }],
       },
     ],
@@ -553,30 +615,39 @@ const FEATURES: Array<{
     categorySlug: "workspace",
     slug: "configurar-workspace",
     title: "🚀 Configurar seu Workspace",
-    summary: "Workspace é onde você organiza projetos, clientes e o calendário do time. Passo crítico do onboarding.",
+    summary:
+      "Workspace é onde você organiza projetos, clientes e o calendário do time. Passo crítico do onboarding.",
     steps: [
       {
         title: "Acesse Workspace na sidebar",
-        description: "Clique em 'Workspace' no menu lateral. Você verá Projetos, Clientes, Favoritos e Calendário.",
+        description:
+          "Clique em 'Workspace' no menu lateral. Você verá Projetos, Clientes, Favoritos e Calendário.",
         screenshotUrl: "/space-help/screenshots/workspace-setup/01-menu.png",
         annotations: [{ x: 0.06, y: 0.5, angle: 0, label: "Workspace" }],
       },
       {
         title: "Crie seu primeiro Projeto",
-        description: "Em 'Projetos', clique em '+ Novo Projeto'. Defina nome, cliente vinculado e prazo.",
-        screenshotUrl: "/space-help/screenshots/workspace-setup/02-novo-projeto.png",
+        description:
+          "Em 'Projetos', clique em '+ Novo Projeto'. Defina nome, cliente vinculado e prazo.",
+        screenshotUrl:
+          "/space-help/screenshots/workspace-setup/02-novo-projeto.png",
         annotations: [{ x: 0.92, y: 0.1, angle: 180, label: "+ Novo Projeto" }],
       },
       {
         title: "Adicione um Cliente",
-        description: "Em 'Clientes', cadastre seus clientes principais. Eles ficam disponíveis para vincular em projetos e propostas.",
+        description:
+          "Em 'Clientes', cadastre seus clientes principais. Eles ficam disponíveis para vincular em projetos e propostas.",
         screenshotUrl: "/space-help/screenshots/workspace-setup/03-cliente.png",
       },
       {
         title: "Marque favoritos",
-        description: "Use a estrela em projetos e clientes recorrentes para ter acesso rápido em 'Favoritos'.",
-        screenshotUrl: "/space-help/screenshots/workspace-setup/04-favoritos.png",
-        annotations: [{ x: 0.5, y: 0.4, angle: 270, label: "Estrela = favorito" }],
+        description:
+          "Use a estrela em projetos e clientes recorrentes para ter acesso rápido em 'Favoritos'.",
+        screenshotUrl:
+          "/space-help/screenshots/workspace-setup/04-favoritos.png",
+        annotations: [
+          { x: 0.5, y: 0.4, angle: 270, label: "Estrela = favorito" },
+        ],
       },
     ],
   },
@@ -584,7 +655,8 @@ const FEATURES: Array<{
     categorySlug: "workspace",
     slug: "calendario-workspace",
     title: "Calendário do Workspace",
-    summary: "Visualize todos os eventos, prazos e agendamentos do time em um só lugar.",
+    summary:
+      "Visualize todos os eventos, prazos e agendamentos do time em um só lugar.",
     steps: [
       {
         title: "Aba 'Calendário'",
@@ -592,7 +664,8 @@ const FEATURES: Array<{
       },
       {
         title: "Crie um evento",
-        description: "Clique em qualquer slot do calendário ou no botão '+ Evento'. Vincule a um projeto/cliente se quiser.",
+        description:
+          "Clique em qualquer slot do calendário ou no botão '+ Evento'. Vincule a um projeto/cliente se quiser.",
         annotations: [{ x: 0.9, y: 0.12, angle: 180, label: "+ Evento" }],
       },
     ],
@@ -605,11 +678,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Marque com a estrela",
-        description: "Em qualquer card de projeto ou cliente, clique no ícone de estrela.",
+        description:
+          "Em qualquer card de projeto ou cliente, clique no ícone de estrela.",
       },
       {
         title: "Acesse pela aba Favoritos",
-        description: "A aba Favoritos lista todos os itens marcados, ordenados por uso recente.",
+        description:
+          "A aba Favoritos lista todos os itens marcados, ordenados por uso recente.",
       },
     ],
   },
@@ -628,7 +703,8 @@ const FEATURES: Array<{
       },
       {
         title: "Botão '+ Novo Contato'",
-        description: "Preencha nome, e-mail, WhatsApp e tipo (lead, cliente, parceiro).",
+        description:
+          "Preencha nome, e-mail, WhatsApp e tipo (lead, cliente, parceiro).",
         annotations: [{ x: 0.92, y: 0.1, angle: 180, label: "+ Novo" }],
       },
     ],
@@ -646,7 +722,8 @@ const FEATURES: Array<{
       },
       {
         title: "Mapeie colunas",
-        description: "Faça upload do CSV e mapeie colunas (nome, e-mail, telefone) para os campos do NASA.",
+        description:
+          "Faça upload do CSV e mapeie colunas (nome, e-mail, telefone) para os campos do NASA.",
       },
     ],
   },
@@ -654,15 +731,18 @@ const FEATURES: Array<{
     categorySlug: "contatos",
     slug: "segmentar-contatos",
     title: "Segmentar com tags",
-    summary: "Use tags para criar segmentos como 'Cliente VIP', 'Lead frio' ou 'Setor X'.",
+    summary:
+      "Use tags para criar segmentos como 'Cliente VIP', 'Lead frio' ou 'Setor X'.",
     steps: [
       {
         title: "Selecione contatos em massa",
-        description: "Use o checkbox no topo da lista para selecionar todos visíveis.",
+        description:
+          "Use o checkbox no topo da lista para selecionar todos visíveis.",
       },
       {
         title: "Aplique tag em massa",
-        description: "Clique em 'Aplicar tag' e escolha a tag desejada para todos os selecionados.",
+        description:
+          "Clique em 'Aplicar tag' e escolha a tag desejada para todos os selecionados.",
       },
     ],
   },
@@ -672,7 +752,8 @@ const FEATURES: Array<{
     categorySlug: "insights",
     slug: "dashboard-comercial",
     title: "Dashboard Comercial",
-    summary: "Visão geral de pipeline, conversão, ticket médio e ranking de vendedores.",
+    summary:
+      "Visão geral de pipeline, conversão, ticket médio e ranking de vendedores.",
     steps: [
       {
         title: "Acesse Insights na sidebar",
@@ -681,11 +762,13 @@ const FEATURES: Array<{
       },
       {
         title: "Aba 'Comercial'",
-        description: "Veja gráficos de leads por etapa, taxa de conversão e ticket médio do período.",
+        description:
+          "Veja gráficos de leads por etapa, taxa de conversão e ticket médio do período.",
       },
       {
         title: "Filtre por período",
-        description: "Use o seletor no topo direito para alternar entre 7d, 30d, 90d ou período customizado.",
+        description:
+          "Use o seletor no topo direito para alternar entre 7d, 30d, 90d ou período customizado.",
         annotations: [{ x: 0.9, y: 0.1, angle: 180, label: "Período" }],
       },
     ],
@@ -702,7 +785,8 @@ const FEATURES: Array<{
       },
       {
         title: "Compare agentes",
-        description: "Tabela ranqueia agentes por tempo médio de resposta, volume e satisfação.",
+        description:
+          "Tabela ranqueia agentes por tempo médio de resposta, volume e satisfação.",
       },
     ],
   },
@@ -714,12 +798,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Botão 'Exportar'",
-        description: "Em qualquer dashboard, clique em 'Exportar' no canto superior direito.",
+        description:
+          "Em qualquer dashboard, clique em 'Exportar' no canto superior direito.",
         annotations: [{ x: 0.92, y: 0.12, angle: 180, label: "Exportar" }],
       },
       {
         title: "Escolha formato",
-        description: "Selecione PDF para apresentação ou CSV para análise em Excel/Sheets.",
+        description:
+          "Selecione PDF para apresentação ou CSV para análise em Excel/Sheets.",
       },
     ],
   },
@@ -729,36 +815,43 @@ const FEATURES: Array<{
     categorySlug: "integrations",
     slug: "conectar-instancia-whatsapp",
     title: "📱 Conectar Instância WhatsApp",
-    summary: "PASSO 1 DO ONBOARDING. Conecte seu número WhatsApp para receber mensagens dentro do NASA.",
+    summary:
+      "PASSO 1 DO ONBOARDING. Conecte seu número WhatsApp para receber mensagens dentro do NASA.",
     youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     steps: [
       {
         title: "Acesse Integrações na sidebar",
         description: "Clique em 'Integrações' no menu lateral.",
-        screenshotUrl: "/space-help/screenshots/whatsapp/01-menu-integracoes.png",
+        screenshotUrl:
+          "/space-help/screenshots/whatsapp/01-menu-integracoes.png",
         annotations: [{ x: 0.06, y: 0.65, angle: 0, label: "Integrações" }],
       },
       {
         title: "Card 'WhatsApp Business'",
-        description: "Localize o card do WhatsApp Business e clique em 'Conectar'.",
+        description:
+          "Localize o card do WhatsApp Business e clique em 'Conectar'.",
         screenshotUrl: "/space-help/screenshots/whatsapp/02-card-whatsapp.png",
         annotations: [{ x: 0.4, y: 0.4, angle: 270, label: "Conectar" }],
       },
       {
         title: "Crie uma instância",
-        description: "Dê um nome à instância (ex: 'Vendas Principal') e clique em 'Gerar QR Code'.",
-        screenshotUrl: "/space-help/screenshots/whatsapp/03-criar-instancia.png",
+        description:
+          "Dê um nome à instância (ex: 'Vendas Principal') e clique em 'Gerar QR Code'.",
+        screenshotUrl:
+          "/space-help/screenshots/whatsapp/03-criar-instancia.png",
         annotations: [{ x: 0.5, y: 0.5, angle: 0, label: "Gerar QR" }],
       },
       {
         title: "Escaneie o QR Code",
-        description: "No celular: WhatsApp > Configurações > Aparelhos conectados > Conectar dispositivo > escaneie o QR exibido na tela.",
+        description:
+          "No celular: WhatsApp > Configurações > Aparelhos conectados > Conectar dispositivo > escaneie o QR exibido na tela.",
         screenshotUrl: "/space-help/screenshots/whatsapp/04-qr-code.png",
         annotations: [{ x: 0.5, y: 0.5, angle: 0, label: "QR Code" }],
       },
       {
         title: "Pronto! Mensagens chegam no NasaChat",
-        description: "Sua instância aparece como 'Conectada'. Todas as mensagens recebidas viram conversas no NasaChat.",
+        description:
+          "Sua instância aparece como 'Conectada'. Todas as mensagens recebidas viram conversas no NasaChat.",
         screenshotUrl: "/space-help/screenshots/whatsapp/05-conectado.png",
         annotations: [{ x: 0.4, y: 0.5, angle: 270, label: "Conectada" }],
       },
@@ -776,7 +869,8 @@ const FEATURES: Array<{
       },
       {
         title: "Autorize via Meta",
-        description: "Faça login na sua conta business do Meta e autorize o NASA.",
+        description:
+          "Faça login na sua conta business do Meta e autorize o NASA.",
       },
     ],
   },
@@ -792,7 +886,8 @@ const FEATURES: Array<{
       },
       {
         title: "Selecione Tracking de destino",
-        description: "Escolha em qual Tracking os leads chegam e o status inicial.",
+        description:
+          "Escolha em qual Tracking os leads chegam e o status inicial.",
       },
     ],
   },
@@ -808,7 +903,8 @@ const FEATURES: Array<{
       },
       {
         title: "Copie a URL única",
-        description: "Configure a URL gerada na ferramenta de origem (Zapier, Make, etc).",
+        description:
+          "Configure a URL gerada na ferramenta de origem (Zapier, Make, etc).",
       },
     ],
   },
@@ -818,7 +914,8 @@ const FEATURES: Array<{
     categorySlug: "nbox",
     slug: "como-funciona-nbox",
     title: "Como funciona o N-Box",
-    summary: "Inbox unificado para leads vindos de formulários, mensagens e integrações.",
+    summary:
+      "Inbox unificado para leads vindos de formulários, mensagens e integrações.",
     steps: [
       {
         title: "Acesse N-Box na sidebar",
@@ -827,11 +924,13 @@ const FEATURES: Array<{
       },
       {
         title: "Filtre por origem",
-        description: "Use os filtros laterais para ver leads por canal: WhatsApp, formulário, manual, Meta Ads.",
+        description:
+          "Use os filtros laterais para ver leads por canal: WhatsApp, formulário, manual, Meta Ads.",
       },
       {
         title: "Mova para Tracking",
-        description: "Em qualquer item, use 'Mover para Tracking' para enviar ao pipeline correto.",
+        description:
+          "Em qualquer item, use 'Mover para Tracking' para enviar ao pipeline correto.",
         annotations: [{ x: 0.85, y: 0.45, angle: 180, label: "Mover" }],
       },
     ],
@@ -844,7 +943,8 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Selecione um item",
-        description: "Clique em qualquer card de mensagem para abrir o painel de detalhes.",
+        description:
+          "Clique em qualquer card de mensagem para abrir o painel de detalhes.",
       },
       {
         title: "Resposta rápida",
@@ -867,16 +967,19 @@ const FEATURES: Array<{
       },
       {
         title: "Edite título, foto e bio",
-        description: "Personalize o cabeçalho com seu nome/empresa, foto e descrição curta.",
+        description:
+          "Personalize o cabeçalho com seu nome/empresa, foto e descrição curta.",
       },
       {
         title: "Adicione blocos (botões e links)",
-        description: "Clique em '+ Novo bloco' para adicionar links, botões de WhatsApp, formulários etc.",
+        description:
+          "Clique em '+ Novo bloco' para adicionar links, botões de WhatsApp, formulários etc.",
         annotations: [{ x: 0.5, y: 0.6, angle: 0, label: "+ Novo bloco" }],
       },
       {
         title: "Publique e copie o link",
-        description: "Use o link gerado na bio do Instagram, e-mail e onde quiser.",
+        description:
+          "Use o link gerado na bio do Instagram, e-mail e onde quiser.",
       },
     ],
   },
@@ -888,7 +991,8 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Aba 'Estatísticas'",
-        description: "Cada página Linker tem aba dedicada com cliques por bloco e visitantes únicos.",
+        description:
+          "Cada página Linker tem aba dedicada com cliques por bloco e visitantes únicos.",
       },
     ],
   },
@@ -898,20 +1002,24 @@ const FEATURES: Array<{
     categorySlug: "space-point",
     slug: "como-ganhar-pontos",
     title: "Como ganhar Space Points",
-    summary: "Cada ação na plataforma gera pontos. Conheça as principais regras.",
+    summary:
+      "Cada ação na plataforma gera pontos. Conheça as principais regras.",
     steps: [
       {
         title: "Acesse Space Point",
-        description: "Clique em 'Space Point' na sidebar para ver seu saldo e histórico.",
+        description:
+          "Clique em 'Space Point' na sidebar para ver seu saldo e histórico.",
         annotations: [{ x: 0.06, y: 0.8, angle: 0, label: "Space Point" }],
       },
       {
         title: "Aba 'Regras'",
-        description: "Veja todas as ações que dão pontos: criar lead, fechar venda, atender mensagem etc.",
+        description:
+          "Veja todas as ações que dão pontos: criar lead, fechar venda, atender mensagem etc.",
       },
       {
         title: "Missões diárias",
-        description: "Algumas ações dão pontos extras se feitas todos os dias. Acompanhe a missão diária no topo.",
+        description:
+          "Algumas ações dão pontos extras se feitas todos os dias. Acompanhe a missão diária no topo.",
         annotations: [{ x: 0.5, y: 0.15, angle: 270, label: "Missão diária" }],
       },
     ],
@@ -932,11 +1040,13 @@ const FEATURES: Array<{
     categorySlug: "space-point",
     slug: "selos-niveis",
     title: "Selos e Níveis",
-    summary: "Cada faixa de pontos desbloqueia um selo. Mostre seu progresso no perfil.",
+    summary:
+      "Cada faixa de pontos desbloqueia um selo. Mostre seu progresso no perfil.",
     steps: [
       {
         title: "Aba 'Selos'",
-        description: "Veja todos os selos disponíveis e quanto falta para o próximo.",
+        description:
+          "Veja todos os selos disponíveis e quanto falta para o próximo.",
       },
     ],
   },
@@ -950,12 +1060,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Saldo de STARs",
-        description: "Veja o saldo da organização no header do app, ao lado do contador de Space Points.",
+        description:
+          "Veja o saldo da organização no header do app, ao lado do contador de Space Points.",
         annotations: [{ x: 0.85, y: 0.05, angle: 270, label: "STARs" }],
       },
       {
         title: "Como ganhar",
-        description: "STARs são creditados ao concluir trilhas, missões especiais e via compra direta.",
+        description:
+          "STARs são creditados ao concluir trilhas, missões especiais e via compra direta.",
       },
     ],
   },
@@ -983,7 +1095,8 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Aba 'Transferir'",
-        description: "Em STARs, vá em Transferir, escolha membro, valor e motivo.",
+        description:
+          "Em STARs, vá em Transferir, escolha membro, valor e motivo.",
       },
     ],
   },
@@ -1002,11 +1115,13 @@ const FEATURES: Array<{
       },
       {
         title: "Escolha um app",
-        description: "Navegue por categoria. Cada app tem descrição, capturas e plano necessário.",
+        description:
+          "Navegue por categoria. Cada app tem descrição, capturas e plano necessário.",
       },
       {
         title: "Botão 'Instalar'",
-        description: "Clique em Instalar. O app aparece imediatamente na sidebar.",
+        description:
+          "Clique em Instalar. O app aparece imediatamente na sidebar.",
         annotations: [{ x: 0.85, y: 0.5, angle: 180, label: "Instalar" }],
       },
     ],
@@ -1023,7 +1138,8 @@ const FEATURES: Array<{
       },
       {
         title: "Desmarque apps",
-        description: "Use os toggles para esconder. Apps desativados continuam acessíveis em /apps.",
+        description:
+          "Use os toggles para esconder. Apps desativados continuam acessíveis em /apps.",
       },
     ],
   },
@@ -1033,37 +1149,45 @@ const FEATURES: Array<{
     categorySlug: "settings",
     slug: "configurar-empresa",
     title: "🏢 Configurar dados da empresa",
-    summary: "PASSO 2 DO ONBOARDING. Preencha razão social, CNPJ, logo, endereço e contatos.",
+    summary:
+      "PASSO 2 DO ONBOARDING. Preencha razão social, CNPJ, logo, endereço e contatos.",
     youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     steps: [
       {
         title: "Acesse Configurações",
-        description: "Clique no avatar no canto inferior esquerdo > 'Configurações da Organização'.",
+        description:
+          "Clique no avatar no canto inferior esquerdo > 'Configurações da Organização'.",
         screenshotUrl: "/space-help/screenshots/empresa/01-menu-config.png",
         annotations: [{ x: 0.05, y: 0.95, angle: 45, label: "Avatar" }],
       },
       {
         title: "Aba 'Empresa'",
-        description: "Na aba Empresa, preencha razão social, nome fantasia, CNPJ e segmento.",
+        description:
+          "Na aba Empresa, preencha razão social, nome fantasia, CNPJ e segmento.",
         screenshotUrl: "/space-help/screenshots/empresa/02-aba-empresa.png",
         annotations: [{ x: 0.2, y: 0.2, angle: 0, label: "Empresa" }],
       },
       {
         title: "Suba sua logo",
-        description: "Clique em 'Trocar logo' e faça upload do PNG/SVG (preferível 500x500px com fundo transparente).",
+        description:
+          "Clique em 'Trocar logo' e faça upload do PNG/SVG (preferível 500x500px com fundo transparente).",
         screenshotUrl: "/space-help/screenshots/empresa/03-logo.png",
         annotations: [{ x: 0.4, y: 0.4, angle: 0, label: "Trocar logo" }],
       },
       {
         title: "Endereço e contatos",
-        description: "Preencha CEP, endereço, telefone comercial e e-mail de suporte.",
+        description:
+          "Preencha CEP, endereço, telefone comercial e e-mail de suporte.",
         screenshotUrl: "/space-help/screenshots/empresa/04-endereco.png",
       },
       {
         title: "Salve e ganhe STARs",
-        description: "Ao completar 100% das informações, você ganha STARs como recompensa de configuração.",
+        description:
+          "Ao completar 100% das informações, você ganha STARs como recompensa de configuração.",
         screenshotUrl: "/space-help/screenshots/empresa/05-stars.png",
-        annotations: [{ x: 0.5, y: 0.5, angle: 0, label: "🎉 Stars liberadas" }],
+        annotations: [
+          { x: 0.5, y: 0.5, angle: 0, label: "🎉 Stars liberadas" },
+        ],
       },
     ],
   },
@@ -1075,12 +1199,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Aba 'Equipe'",
-        description: "Em Configurações > Equipe, clique em '+ Convidar membro'.",
+        description:
+          "Em Configurações > Equipe, clique em '+ Convidar membro'.",
         annotations: [{ x: 0.85, y: 0.15, angle: 180, label: "Convidar" }],
       },
       {
         title: "E-mail e papel",
-        description: "Informe e-mail, escolha papel (membro, moderador, owner). Convite vai por e-mail.",
+        description:
+          "Informe e-mail, escolha papel (membro, moderador, owner). Convite vai por e-mail.",
       },
     ],
   },
@@ -1092,7 +1218,8 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Aba 'Permissões'",
-        description: "Configure granularmente o acesso de cada papel a cada módulo.",
+        description:
+          "Configure granularmente o acesso de cada papel a cada módulo.",
       },
     ],
   },
@@ -1104,11 +1231,13 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Aba 'Plano'",
-        description: "Em Configurações > Plano, veja status, próxima cobrança e histórico.",
+        description:
+          "Em Configurações > Plano, veja status, próxima cobrança e histórico.",
       },
       {
         title: "Mudar plano",
-        description: "Clique em 'Comparar planos' para fazer upgrade/downgrade.",
+        description:
+          "Clique em 'Comparar planos' para fazer upgrade/downgrade.",
       },
     ],
   },
@@ -1122,12 +1251,14 @@ const FEATURES: Array<{
     steps: [
       {
         title: "Sino no canto superior",
-        description: "Clique no ícone de sino para abrir o painel de notificações.",
+        description:
+          "Clique no ícone de sino para abrir o painel de notificações.",
         annotations: [{ x: 0.93, y: 0.06, angle: 225, label: "Sino" }],
       },
       {
         title: "Filtros por tipo",
-        description: "Filtre por leads, mensagens, propostas, pagamentos ou eventos do sistema.",
+        description:
+          "Filtre por leads, mensagens, propostas, pagamentos ou eventos do sistema.",
       },
     ],
   },
@@ -1143,7 +1274,8 @@ const FEATURES: Array<{
       },
       {
         title: "Toggles por evento",
-        description: "Para cada tipo de evento, marque os canais (e-mail, push do navegador, WhatsApp).",
+        description:
+          "Para cada tipo de evento, marque os canais (e-mail, push do navegador, WhatsApp).",
       },
     ],
   },
@@ -1153,16 +1285,19 @@ const FEATURES: Array<{
     categorySlug: "shortcuts",
     slug: "lista-atalhos",
     title: "Lista completa de atalhos",
-    summary: "Use o teclado para acelerar tudo: navegação, busca, ações rápidas.",
+    summary:
+      "Use o teclado para acelerar tudo: navegação, busca, ações rápidas.",
     steps: [
       {
         title: "Pressione '?'",
-        description: "Em qualquer tela, aperte '?' para abrir a lista completa de atalhos.",
+        description:
+          "Em qualquer tela, aperte '?' para abrir a lista completa de atalhos.",
         annotations: [{ x: 0.5, y: 0.5, angle: 0, label: "?" }],
       },
       {
         title: "Atalhos essenciais",
-        description: "⌘K — busca global. G+T — ir para Tracking. G+W — Workspace. N — novo lead/projeto.",
+        description:
+          "⌘K — busca global. G+T — ir para Tracking. G+W — Workspace. N — novo lead/projeto.",
       },
     ],
   },
@@ -1190,35 +1325,40 @@ const BADGES = [
   {
     slug: "expert-nasa",
     name: "Expert NASA",
-    description: "Concluiu a trilha completa de capacitação NASA. Você domina a plataforma!",
+    description:
+      "Concluiu a trilha completa de capacitação NASA. Você domina a plataforma!",
     iconUrl: "/space-help/badges/expert-nasa.svg",
     color: "#7C3AED",
   },
   {
     slug: "comercial-master",
     name: "Comercial Master",
-    description: "Concluiu a trilha de Comercial. Pronto para escalar suas vendas.",
+    description:
+      "Concluiu a trilha de Comercial. Pronto para escalar suas vendas.",
     iconUrl: "/space-help/badges/comercial-master.svg",
     color: "#0EA5E9",
   },
   {
     slug: "atendimento-pro",
     name: "Atendimento Pro",
-    description: "Concluiu a trilha de Atendimento. Dominou o suporte ao cliente.",
+    description:
+      "Concluiu a trilha de Atendimento. Dominou o suporte ao cliente.",
     iconUrl: "/space-help/badges/atendimento-pro.svg",
     color: "#F59E0B",
   },
   {
     slug: "setup-master",
     name: "Setup Master",
-    description: "Concluiu o setup inicial completo: WhatsApp, empresa, primeiro Tracking, Workspace e Forge. Pronto pra decolar!",
+    description:
+      "Concluiu o setup inicial completo: WhatsApp, empresa, primeiro Tracking, Workspace e Forge. Pronto pra decolar!",
     iconUrl: "/space-help/badges/setup-master.svg",
     color: "#10B981",
   },
   {
     slug: "org-ready",
     name: "Organização Pronta",
-    description: "Sua organização atingiu 100% de configuração inicial — WhatsApp, empresa, Tracking, Workspace e Forge. STARs liberadas!",
+    description:
+      "Sua organização atingiu 100% de configuração inicial — WhatsApp, empresa, Tracking, Workspace e Forge. STARs liberadas!",
     iconUrl: "/space-help/badges/org-ready.svg",
     color: "#22C55E",
   },
@@ -1248,7 +1388,8 @@ const TRACKS: Array<{
     slug: "setup-inicial-nasa",
     title: "🚀 Setup Inicial NASA",
     subtitle: "Os 5 passos críticos pra decolar com a plataforma",
-    description: "Trilha guiada do que você precisa configurar antes de tudo: conectar WhatsApp, configurar empresa, criar primeiro Tracking + Tag, montar Workspace e cadastrar produtos no Forge. Conclua e ganhe o selo Setup Master + STARs.",
+    description:
+      "Trilha guiada do que você precisa configurar antes de tudo: conectar WhatsApp, configurar empresa, criar primeiro Tracking + Tag, montar Workspace e cadastrar produtos no Forge. Conclua e ganhe o selo Setup Master + STARs.",
     level: "beginner",
     durationMin: 30,
     rewardStars: 100,
@@ -1258,7 +1399,8 @@ const TRACKS: Array<{
     lessons: [
       {
         title: "1️⃣ Conectar instância WhatsApp",
-        summary: "Comece pelo essencial: ter mensagens chegando dentro do NASA.",
+        summary:
+          "Comece pelo essencial: ter mensagens chegando dentro do NASA.",
         contentMd:
           "## Por que isso primeiro?\n\nO WhatsApp é o canal #1 de relacionamento com clientes no Brasil. Conectar sua instância é o que liga sua operação ao NASA.\n\n## Como fazer\n\n1. Acesse **Integrações** na sidebar.\n2. No card **WhatsApp Business**, clique em **Conectar**.\n3. Crie uma instância (nome livre, ex: 'Vendas Principal').\n4. **Escaneie o QR Code** com o WhatsApp do seu celular: Configurações > Aparelhos conectados > Conectar dispositivo.\n5. Pronto — todas as conversas chegam no NasaChat.\n\n💡 **Dica**: você pode ter múltiplas instâncias (vendas, suporte, financeiro), cada uma com um número diferente.",
         youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -1266,7 +1408,8 @@ const TRACKS: Array<{
       },
       {
         title: "2️⃣ Configurar dados da empresa",
-        summary: "CNPJ, logo, endereço — informações que aparecem em propostas e contratos.",
+        summary:
+          "CNPJ, logo, endereço — informações que aparecem em propostas e contratos.",
         contentMd:
           "## Por que importa?\n\nDados da empresa aparecem automaticamente em propostas, contratos, e-mails e relatórios. Configurar uma vez economiza retrabalho infinito.\n\n## Como fazer\n\n1. Clique no **avatar** no canto inferior esquerdo > **Configurações da Organização**.\n2. Aba **Empresa**: preencha razão social, nome fantasia, CNPJ, segmento.\n3. Faça **upload da logo** (PNG/SVG, ideal 500x500 com fundo transparente).\n4. Endereço completo + telefone comercial + e-mail de suporte.\n5. Salve.\n\n🎁 **Recompensa**: ao chegar em 100% das informações preenchidas, você ganha **STARs** automaticamente.",
         durationMin: 5,
@@ -1300,7 +1443,8 @@ const TRACKS: Array<{
     slug: "comece-com-nasa",
     title: "Comece com NASA",
     subtitle: "Sua primeira hora dentro da plataforma",
-    description: "Trilha essencial para novos usuários. Aprenda os módulos principais e comece a operar com confiança.",
+    description:
+      "Trilha essencial para novos usuários. Aprenda os módulos principais e comece a operar com confiança.",
     level: "beginner",
     durationMin: 60,
     rewardStars: 50,
@@ -1319,26 +1463,30 @@ const TRACKS: Array<{
       {
         title: "Navegando a sidebar",
         summary: "Conheça cada item do menu e o que cada módulo faz.",
-        contentMd: "Cada item da sidebar representa um módulo. Você pode ocultar os que não usa em Configurações > Sidebar.",
+        contentMd:
+          "Cada item da sidebar representa um módulo. Você pode ocultar os que não usa em Configurações > Sidebar.",
         durationMin: 8,
       },
       {
         title: "Criando seu primeiro Tracking",
         summary: "Pipeline de vendas em 3 minutos.",
-        contentMd: "Acesse Tracking > + Novo Tracking. Preencha nome, escolha colunas iniciais (ex: Novo, Contato, Proposta, Fechado) e adicione responsáveis.",
+        contentMd:
+          "Acesse Tracking > + Novo Tracking. Preencha nome, escolha colunas iniciais (ex: Novo, Contato, Proposta, Fechado) e adicione responsáveis.",
         youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         durationMin: 10,
       },
       {
         title: "Conectando o WhatsApp",
         summary: "Atendimento integrado em poucos cliques.",
-        contentMd: "Em Integrações > WhatsApp Business > escaneie o QR Code com seu celular. Pronto, todas as conversas chegam no NasaChat.",
+        contentMd:
+          "Em Integrações > WhatsApp Business > escaneie o QR Code com seu celular. Pronto, todas as conversas chegam no NasaChat.",
         durationMin: 7,
       },
       {
         title: "Próximos passos",
         summary: "Onde aprofundar depois desta trilha.",
-        contentMd: "Após esta trilha você ganha o selo **Expert NASA** + 100 SP + 50 Stars. Próximas trilhas recomendadas: 'Escale seu Comercial' e 'Domine o Atendimento'.",
+        contentMd:
+          "Após esta trilha você ganha o selo **Expert NASA** + 100 SP + 50 Stars. Próximas trilhas recomendadas: 'Escale seu Comercial' e 'Domine o Atendimento'.",
         durationMin: 5,
       },
     ],
@@ -1347,7 +1495,8 @@ const TRACKS: Array<{
     slug: "escale-comercial",
     title: "Escale seu Comercial",
     subtitle: "Estrutura de vendas que cresce com seu time",
-    description: "Aprenda a estruturar pipeline, propostas e métricas comerciais para escalar vendas sem perder controle.",
+    description:
+      "Aprenda a estruturar pipeline, propostas e métricas comerciais para escalar vendas sem perder controle.",
     level: "intermediate",
     durationMin: 90,
     rewardStars: 80,
@@ -1358,26 +1507,30 @@ const TRACKS: Array<{
       {
         title: "Estruturando o pipeline ideal",
         summary: "Status, etapas e gatilhos de avanço.",
-        contentMd: "Um bom pipeline tem 4-6 etapas, cada uma com critério claro de avanço.",
+        contentMd:
+          "Um bom pipeline tem 4-6 etapas, cada uma com critério claro de avanço.",
         youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         durationMin: 15,
       },
       {
         title: "Forge: propostas que convertem",
         summary: "Templates, personalização e tracking de visualização.",
-        contentMd: "Use templates para padronizar e o tracking de abertura para timing perfeito de follow-up.",
+        contentMd:
+          "Use templates para padronizar e o tracking de abertura para timing perfeito de follow-up.",
         durationMin: 20,
       },
       {
         title: "Métricas que importam",
         summary: "Conversão por etapa, ciclo médio e ticket.",
-        contentMd: "Em Insights, acompanhe taxa de conversão por etapa e identifique gargalos.",
+        contentMd:
+          "Em Insights, acompanhe taxa de conversão por etapa e identifique gargalos.",
         durationMin: 15,
       },
       {
         title: "Automatizando follow-ups",
         summary: "Use Workflows para nunca perder lead.",
-        contentMd: "Configure workflows que disparam mensagens automáticas quando um lead fica X dias sem movimento.",
+        contentMd:
+          "Configure workflows que disparam mensagens automáticas quando um lead fica X dias sem movimento.",
         durationMin: 20,
       },
     ],
@@ -1386,7 +1539,8 @@ const TRACKS: Array<{
     slug: "domine-atendimento",
     title: "Domine o Atendimento",
     subtitle: "Suporte e SAC de alta performance",
-    description: "Como estruturar atendimento ágil e consistente usando NasaChat, respostas rápidas e roteamento inteligente.",
+    description:
+      "Como estruturar atendimento ágil e consistente usando NasaChat, respostas rápidas e roteamento inteligente.",
     level: "intermediate",
     durationMin: 75,
     rewardStars: 70,
@@ -1397,26 +1551,30 @@ const TRACKS: Array<{
       {
         title: "Configurando NasaChat",
         summary: "Conectar canais e organizar inbox.",
-        contentMd: "Conecte WhatsApp, Instagram e configure rótulos para organizar conversas por tema.",
+        contentMd:
+          "Conecte WhatsApp, Instagram e configure rótulos para organizar conversas por tema.",
         youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         durationMin: 15,
       },
       {
         title: "Respostas rápidas e templates",
         summary: "Padronize respostas frequentes.",
-        contentMd: "Crie templates para perguntas comuns. Use '/' no chat para inserir.",
+        contentMd:
+          "Crie templates para perguntas comuns. Use '/' no chat para inserir.",
         durationMin: 15,
       },
       {
         title: "Roteamento por agentes",
         summary: "Cada agente recebe os atendimentos certos.",
-        contentMd: "Configure regras de distribuição (rodízio, capacidade, especialidade) em Configurações > Atendimento.",
+        contentMd:
+          "Configure regras de distribuição (rodízio, capacidade, especialidade) em Configurações > Atendimento.",
         durationMin: 20,
       },
       {
         title: "Métricas de SAC",
         summary: "Tempo de resposta, satisfação e volume.",
-        contentMd: "Acompanhe SLAs e identifique horários de pico para dimensionar equipe.",
+        contentMd:
+          "Acompanhe SLAs e identifique horários de pico para dimensionar equipe.",
         durationMin: 15,
       },
     ],
@@ -1424,126 +1582,43 @@ const TRACKS: Array<{
 ];
 
 async function main() {
-  console.log("🚀 Seed Space Help — iniciando…");
+  console.log("🌱 Iniciando seed de Space Point Rules...");
 
-  // 1) Badges
-  for (const b of BADGES) {
-    await prisma.spaceHelpBadge.upsert({
-      where: { slug: b.slug },
-      create: b,
-      update: { name: b.name, description: b.description, iconUrl: b.iconUrl, color: b.color },
+  let inserted = 0;
+  let updated = 0;
+
+  for (const rule of DEFAULT_RULES) {
+    const { category: _cat, ...data } = rule;
+
+    // Verifica se já existe para fins de log
+    const exists = await prisma.spacePointRule.findUnique({
+      where: { action: rule.action },
     });
-  }
-  console.log(`✓ ${BADGES.length} badges criados.`);
 
-  // 2) Categorias
-  for (const c of CATEGORIES) {
-    await prisma.spaceHelpCategory.upsert({
-      where: { slug: c.slug },
-      create: c,
-      update: { name: c.name, description: c.description, iconKey: c.iconKey, appId: c.appId, order: c.order },
+    await prisma.spacePointRule.upsert({
+      where: { action: rule.action },
+      create: data,
+      update: data, // Atualiza nome ou pontos se tiver sofrido mudanças no defaults
     });
-  }
-  console.log(`✓ ${CATEGORIES.length} categorias criadas.`);
 
-  // 3) Features + Steps
-  let totalFeatures = 0;
-  let totalSteps = 0;
-  for (const f of FEATURES) {
-    const cat = await prisma.spaceHelpCategory.findUnique({ where: { slug: f.categorySlug } });
-    if (!cat) continue;
-
-    const feature = await prisma.spaceHelpFeature.upsert({
-      where: { categoryId_slug: { categoryId: cat.id, slug: f.slug } },
-      create: {
-        categoryId: cat.id,
-        slug: f.slug,
-        title: f.title,
-        summary: f.summary,
-        youtubeUrl: f.youtubeUrl,
-        order: totalFeatures,
-      },
-      update: { title: f.title, summary: f.summary, youtubeUrl: f.youtubeUrl },
-    });
-    totalFeatures++;
-
-    // Limpa steps antigos para reseed limpo
-    await prisma.spaceHelpStep.deleteMany({ where: { featureId: feature.id } });
-    for (let i = 0; i < f.steps.length; i++) {
-      const s = f.steps[i]!;
-      await prisma.spaceHelpStep.create({
-        data: {
-          featureId: feature.id,
-          order: i,
-          title: s.title,
-          description: s.description,
-          screenshotUrl: s.screenshotUrl,
-          annotations: s.annotations ? (s.annotations as any) : undefined,
-        },
-      });
-      totalSteps++;
+    if (exists) {
+      updated++;
+    } else {
+      inserted++;
     }
   }
-  console.log(`✓ ${totalFeatures} features e ${totalSteps} steps criados.`);
 
-  // 4) Tracks + Lessons
-  let totalLessons = 0;
-  for (const t of TRACKS) {
-    const badge = await prisma.spaceHelpBadge.findUnique({ where: { slug: t.rewardBadgeSlug } });
-    const track = await prisma.spaceHelpTrack.upsert({
-      where: { slug: t.slug },
-      create: {
-        slug: t.slug,
-        title: t.title,
-        subtitle: t.subtitle,
-        description: t.description,
-        level: t.level,
-        durationMin: t.durationMin,
-        rewardStars: t.rewardStars,
-        rewardSpacePoints: t.rewardSpacePoints,
-        rewardBadgeId: badge?.id,
-        order: t.order,
-      },
-      update: {
-        title: t.title,
-        subtitle: t.subtitle,
-        description: t.description,
-        level: t.level,
-        durationMin: t.durationMin,
-        rewardStars: t.rewardStars,
-        rewardSpacePoints: t.rewardSpacePoints,
-        rewardBadgeId: badge?.id,
-        order: t.order,
-      },
-    });
-
-    await prisma.spaceHelpLesson.deleteMany({ where: { trackId: track.id } });
-    for (let i = 0; i < t.lessons.length; i++) {
-      const l = t.lessons[i]!;
-      await prisma.spaceHelpLesson.create({
-        data: {
-          trackId: track.id,
-          order: i,
-          title: l.title,
-          summary: l.summary,
-          contentMd: l.contentMd,
-          youtubeUrl: l.youtubeUrl,
-          durationMin: l.durationMin,
-        },
-      });
-      totalLessons++;
-    }
-  }
-  console.log(`✓ ${TRACKS.length} trilhas e ${totalLessons} aulas criadas.`);
-
-  console.log("\n🎉 Seed Space Help concluído.\n");
+  console.log(`✅ Seed concluído!`);
+  console.log(`   Inseridas: ${inserted}`);
+  console.log(`   Atualizadas: ${updated}`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Erro ao rodar o seed:", e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

@@ -1,4 +1,5 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useRef } from "react";
 import { useInfiniteActionsByStatus } from "../../hooks/use-tasks";
 import { useActionFilters } from "../../hooks/use-action-filters";
@@ -10,6 +11,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { EMPTY_ACTIONS, useActionKanbanStore } from "../../lib/kanban-store";
 import { StatusHeader } from "./status-header";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Props {
   id: string;
@@ -27,6 +29,7 @@ export function WorkspaceColumn({
   actionsCount,
 }: Props) {
   const registerColumn = useActionKanbanStore((s) => s.registerColumn);
+  const isMobile = useIsMobile(); // true quando < 640px
 
   const {
     attributes,
@@ -48,7 +51,7 @@ export function WorkspaceColumn({
     transform: CSS.Transform.toString(transform),
   };
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const { filters } = useActionFilters();
@@ -68,11 +71,19 @@ export function WorkspaceColumn({
     });
 
   useEffect(() => {
-    if (!scrollRef.current) return;
-
-    if (observerRef.current) {
-      observerRef.current.disconnect();
+    if (isMobile) {
+      observerRef.current?.disconnect();
+      return;
     }
+
+    const sentinel = sentinelRef.current;
+    const scrollContainer = sentinel?.closest(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+
+    if (!sentinel || !scrollContainer) return;
+
+    observerRef.current?.disconnect();
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -81,17 +92,19 @@ export function WorkspaceColumn({
           fetchNextPage();
         }
       },
-      { threshold: 0.1 },
+      {
+        root: scrollContainer,
+        threshold: 0.1,
+        rootMargin: "0px 0px 50px 0px",
+      },
     );
 
-    observerRef.current.observe(scrollRef.current);
+    observerRef.current.observe(sentinel);
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
+      observerRef.current?.disconnect();
     };
-  }, [hasNextPage, fetchNextPage, isFetchingNextPage]);
+  }, [isMobile, hasNextPage, fetchNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     registerColumn(id, data);
@@ -135,14 +148,33 @@ export function WorkspaceColumn({
                 ))}
             </SortableContext>
 
-            {/* Sentinel */}
             {hasNextPage && (
-              <div
-                ref={scrollRef}
-                className="h-10 flex items-center justify-center"
-              >
-                {isFetchingNextPage && <Spinner className="size-4" />}
-              </div>
+              <li className="list-none">
+                {isMobile ? (
+                  // Mobile: botão explícito dentro do scroll, abaixo do último card
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-1"
+                    disabled={isFetchingNextPage}
+                    onClick={() => fetchNextPage()}
+                  >
+                    {isFetchingNextPage ? (
+                      <Spinner className="size-4" />
+                    ) : (
+                      "Buscar mais"
+                    )}
+                  </Button>
+                ) : (
+                  // Desktop: sentinel invisível para o IntersectionObserver
+                  <div
+                    ref={sentinelRef}
+                    className="h-10 flex items-center justify-center"
+                  >
+                    {isFetchingNextPage && <Spinner className="size-4" />}
+                  </div>
+                )}
+              </li>
             )}
           </ol>
         </ScrollArea>

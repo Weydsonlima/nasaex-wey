@@ -50,13 +50,17 @@ export function HeaderTracking({ title }: HeaderTrackingProps) {
           orientation="vertical"
           className="ml-1 data-[orientation=vertical]:h-4 opacity-50"
         />
-        <LinkSpacehomeButton />
+        {/* <LinkSpacehomeButton /> */}
       </div>
 
       {/* ── Right: space point + stars widget ── */}
       <div className="flex items-center gap-2 px-4 shrink-0">
-        <div data-tour="space-points"><SpacePointWidget /></div>
-        <div data-tour="stars"><StarsWidget /></div>
+        <div data-tour="space-points">
+          <SpacePointWidget />
+        </div>
+        <div data-tour="stars">
+          <StarsWidget />
+        </div>
       </div>
     </header>
   );

@@ -58,7 +58,7 @@ importers:
         version: 1.7.0(onnxruntime-web@1.21.0)
       '@inngest/realtime':
         specifier: ^0.4.6
-        version: 0.4.6(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(zod@4.3.6)
+        version: 0.4.7(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(zod@4.3.6)
       '@internationalized/date':
         specifier: ^3.12.0
         version: 3.12.0
@@ -270,8 +270,8 @@ importers:
         specifier: ^1.4.1
         version: 1.4.1
       inngest:
-        specifier: ^3.52.4
-        version: 3.52.4(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(zod@4.3.6)
+        specifier: ^3.54.0
+        version: 3.54.0(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(zod@4.3.6)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -491,7 +491,7 @@ importers:
         version: 16.2.4(@typescript-eslint/parser@8.55.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       inngest-cli:
         specifier: ^1.17.1
-        version: 1.17.1
+        version: 1.18.0
       mprocs:
         specifier: ^0.8.3
         version: 0.8.3
@@ -1828,8 +1828,9 @@ packages:
   '@inngest/ai@0.1.7':
     resolution: {integrity: sha512-5xWatW441jacGf9czKEZdgAmkvoy7GS2tp7X8GSbdGeRXzjisHR6vM+q8DQbv6rqRsmQoCQ5iShh34MguELvUQ==}
 
-  '@inngest/realtime@0.4.6':
-    resolution: {integrity: sha512-26LjTev/So/xaAfYL3XjDNHfIkLcJ6RlcjLv+z3nCZ46j1f4/nzUCkIJNwC1/YthpMKuJ8wmieuUb6E/N8ou3A==}
+  '@inngest/realtime@0.4.7':
+    resolution: {integrity: sha512-CtmQFXlhtR0DHOJ5KngTSsk5lJXgr+Ro25HaAtdZjvDJjzo9tS0ut5e5SpGClUZkSBqdvpIKw8VBLonJ5j1JqQ==}
+    deprecated: This package is deprecated. Realtime functionality is now built into the inngest package.
     peerDependencies:
       react: '>=18.0.0'
       zod: ^3.25.0 || ^4.0.0
@@ -6801,12 +6802,12 @@ packages:
   inline-style-parser@0.2.7:
     resolution: {integrity: sha512-Nb2ctOyNR8DqQoR0OwRG95uNWIC0C1lCgf5Naz5H6Ji72KZ8OcFZLz2P5sNgwlyoJ8Yif11oMuYs5pBQa86csA==}
 
-  inngest-cli@1.17.1:
-    resolution: {integrity: sha512-SEDpcLFGgPyElX7DBAOLO/W3r1kPgfkPcMHUfDHgdx1qMWGErJxN2CcChnREjaDGZYp7bD6uPU2gQLdxstlKhA==}
+  inngest-cli@1.18.0:
+    resolution: {integrity: sha512-M2jvsS/owmUvMTHCfVAE1xRYbwv4TW7oiZM2ipG7HOZNfKbDanUqgVZ9AHh7PpAeeYVWf0plpj/6y5bqivE9oQ==}
     hasBin: true
 
-  inngest@3.52.4:
-    resolution: {integrity: sha512-wqDWtzbu5+SiUcUJ2qTiJOMg7dL14i8CE5NfKQIW6Izp7vOWC/SE83azwuzUznjnW9DnKBMIpoldj+VhTeDE5Q==}
+  inngest@3.54.0:
+    resolution: {integrity: sha512-EBMgyRZt9rWUmc9GUdxznbO1CmyXKZi2CZPNxNTyZJyjZMXFhPiftq/lTKjhYXD9/WlqaVFVB2K7o8vDAkGs6w==}
     engines: {node: '>=20'}
     peerDependencies:
       '@sveltejs/kit': '>=1.27.3'
@@ -8796,6 +8797,7 @@ packages:
   tar@7.5.7:
     resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   temporal-polyfill@0.2.5:
     resolution: {integrity: sha512-ye47xp8Cb0nDguAhrrDS1JT1SzwEV9e26sSsrWzVu+yPZ7LzceEcH0i2gci9jWfOfSCCgM3Qv5nOYShVUUFUXA==}
@@ -10695,11 +10697,11 @@ snapshots:
       '@types/node': 22.19.13
       typescript: 5.9.3
 
-  '@inngest/realtime@0.4.6(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(zod@4.3.6)':
+  '@inngest/realtime@0.4.7(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(zod@4.3.6)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       debug: 4.4.3
-      inngest: 3.52.4(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(zod@4.3.6)
+      inngest: 3.54.0(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(zod@4.3.6)
       react: 19.2.4
       zod: 4.3.6
     transitivePeerDependencies:
@@ -14839,7 +14841,7 @@ snapshots:
   '@types/pg@8.15.6':
     dependencies:
       '@types/node': 20.19.35
-      pg-protocol: 1.11.0
+      pg-protocol: 1.12.0
       pg-types: 2.2.0
 
   '@types/pg@8.16.0':
@@ -16970,7 +16972,7 @@ snapshots:
 
   inline-style-parser@0.2.7: {}
 
-  inngest-cli@1.17.1:
+  inngest-cli@1.18.0:
     dependencies:
       adm-zip: 0.5.16
       debug: 4.4.3
@@ -16980,7 +16982,7 @@ snapshots:
       - encoding
       - supports-color
 
-  inngest@3.52.4(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(zod@4.3.6):
+  inngest@3.54.0(@opentelemetry/core@2.5.0(@opentelemetry/api@1.9.0))(hono@4.12.12)(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(typescript@5.9.3)(zod@4.3.6):
     dependencies:
       '@bufbuild/protobuf': 2.11.0
       '@inngest/ai': 0.1.7

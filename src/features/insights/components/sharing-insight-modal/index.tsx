@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Dialog,
   DialogClose,
@@ -10,36 +12,17 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  useDeleteInsightShares,
   useMutationShareInsights,
   useQueryListInsightShares,
 } from "../../hooks/use-dashboard";
 import { Input } from "@/components/ui/input";
 import React, { useState } from "react";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { toast } from "sonner";
-import {
-  LinkIcon,
-  ExternalLinkIcon,
-  ClockIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { LinkIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { ShareListItem } from "./share-list-item";
 
 interface SharingInsightsProps {
@@ -61,6 +44,23 @@ export function SharingInsights({
   const [hasError, setHasError] = useState(false);
   const [tab, setTab] = useState("create");
 
+  const getISOString = (date?: string | Date | null) => {
+    if (!date) return null;
+    return typeof date === "string" ? date : new Date(date).toISOString();
+  };
+
+  const currentStartDate = getISOString(filters?.dateRange?.from);
+  const currentEndDate = getISOString(filters?.dateRange?.to);
+
+  const buildShareUrl = (organizationId: string, token: string) => {
+    const base = `${process.env.NEXT_PUBLIC_APP_URL}/insights/${organizationId}/${token}`;
+    const params = new URLSearchParams();
+    if (currentStartDate) params.set("startDate", currentStartDate);
+    if (currentEndDate) params.set("endDate", currentEndDate);
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+  };
+
   const handleShareInsights = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -81,7 +81,7 @@ export function SharingInsights({
             "Link de compartilhamento copiado para área de trabalho",
           );
           navigator.clipboard.writeText(
-            `${process.env.NEXT_PUBLIC_APP_URL}/insights/${data.organizationId}/${data.token}`,
+            buildShareUrl(data.organizationId, data.token),
           );
           setNameSharing("");
         },
@@ -158,7 +158,12 @@ export function SharingInsights({
               ) : (
                 <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                   {shares.map((share) => (
-                    <ShareListItem key={share.id} share={share} />
+                    <ShareListItem
+                      key={share.id}
+                      share={share}
+                      startDate={currentStartDate}
+                      endDate={currentEndDate}
+                    />
                   ))}
                 </div>
               )}

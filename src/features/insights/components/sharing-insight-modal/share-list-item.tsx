@@ -18,6 +18,8 @@ import {
 
 export function ShareListItem({
   share,
+  startDate,
+  endDate,
 }: {
   share: {
     id: string;
@@ -27,8 +29,15 @@ export function ShareListItem({
     organizationId: string;
     createdBy: { name: string; image: string | null };
   };
+  startDate?: string | null;
+  endDate?: string | null;
 }) {
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/insights/${share.organizationId}/${share.token}`;
+  const base = `${process.env.NEXT_PUBLIC_APP_URL}/insights/${share.organizationId}/${share.token}`;
+  const params = new URLSearchParams();
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+  const qs = params.toString();
+  const shareUrl = qs ? `${base}?${qs}` : base;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);

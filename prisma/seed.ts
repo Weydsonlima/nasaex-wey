@@ -13,6 +13,7 @@ import { Pool } from "pg";
 import { faker } from "@faker-js/faker";
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { DEFAULT_RULES } from "@/app/router/space-point/defaults";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter } as any);
@@ -1620,5 +1621,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-    await pool.end();
   });

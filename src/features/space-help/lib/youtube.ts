@@ -16,7 +16,27 @@ export function parseYoutubeId(url: string | null | undefined): string | null {
   return null;
 }
 
+export function parseVimeoId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes("vimeo.com")) return null;
+    const parts = u.pathname.split("/").filter(Boolean);
+    const id = parts.find((p) => /^\d+$/.test(p));
+    return id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function videoEmbedUrl(url: string | null | undefined): string | null {
+  const ytId = parseYoutubeId(url);
+  if (ytId) return `https://www.youtube.com/embed/${ytId}`;
+  const vmId = parseVimeoId(url);
+  if (vmId) return `https://player.vimeo.com/video/${vmId}`;
+  return null;
+}
+
 export function youtubeEmbedUrl(url: string | null | undefined): string | null {
-  const id = parseYoutubeId(url);
-  return id ? `https://www.youtube.com/embed/${id}` : null;
+  return videoEmbedUrl(url);
 }

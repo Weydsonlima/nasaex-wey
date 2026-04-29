@@ -365,6 +365,7 @@ model Tracking {
   trackingConsultants TrackingConsultant[]
   workspaces          Workspace[]
   scripts             Script[]
+  reminders           Reminder[]
 
   @@map("tracking")
 }
@@ -546,6 +547,7 @@ model Lead {
   orgProject  OrgProject? @relation(fields: [orgProjectId], references: [id], onDelete: SetNull)
 
   conversation Conversation?
+  reminders    Reminder[]
 
   leadTags                  LeadTag[]
   history                   LeadHistory[]
@@ -1183,7 +1185,8 @@ model Conversation {
   lastMessageId String?  @unique @map("last_message_id")
   lastMessage   Message? @relation(fields: [lastMessageId], references: [id])
 
-  messages Message[] @relation("Messages")
+  messages  Message[]  @relation("Messages")
+  reminders Reminder[]
 
   @@unique([leadId, trackingId])
   @@unique([remoteJid, trackingId])

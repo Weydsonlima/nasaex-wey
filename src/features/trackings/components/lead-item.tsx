@@ -186,7 +186,7 @@ export const LeadItem = memo(({ data }: { data: Lead }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-full"
             onClick={(e) => {
               router.push(`/contatos/${data.id}`);
             }}

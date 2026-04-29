@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { X, Loader2, AlertTriangle } from "lucide-react";
 import { Body } from "@/features/tracking-chat/components/body";
-import { Footer } from "@/features/tracking-chat/components/footer";
+import { Footer } from "@/features/tracking-chat/components/footer-chat";
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
 import type { MarkedMessage } from "@/features/tracking-chat/types";
@@ -18,25 +18,36 @@ import type { MarkedMessage } from "@/features/tracking-chat/types";
 interface Props {
   open: boolean;
   peerUserId: string | null;
-  peerName:   string | null;
-  onClose:    () => void;
+  peerName: string | null;
+  onClose: () => void;
 }
 
-export function BubbleChatPanel({ open, peerUserId, peerName, onClose }: Props) {
-  const [messageSelected, setMessageSelected] = useState<MarkedMessage | undefined>(undefined);
+export function BubbleChatPanel({
+  open,
+  peerUserId,
+  peerName,
+  onClose,
+}: Props) {
+  const [messageSelected, setMessageSelected] = useState<
+    MarkedMessage | undefined
+  >(undefined);
   const [resolved, setResolved] = useState<{
-    leadId:         string;
+    leadId: string;
     conversationId: string;
-    trackingId:     string;
-    leadName:       string;
-    leadPhone:      string;
+    trackingId: string;
+    leadName: string;
+    leadPhone: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
     ...orpc.spaceStation.resolvePeerAsLead.mutationOptions(),
-    onSuccess: (data) => { setResolved(data); setError(null); },
-    onError:   (e)    => setError(e instanceof Error ? e.message : "Erro ao abrir chat"),
+    onSuccess: (data) => {
+      setResolved(data);
+      setError(null);
+    },
+    onError: (e) =>
+      setError(e instanceof Error ? e.message : "Erro ao abrir chat"),
   });
 
   useEffect(() => {
@@ -55,7 +66,9 @@ export function BubbleChatPanel({ open, peerUserId, peerName, onClose }: Props) 
         onClick={onClose}
         className={cn(
           "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
         )}
       />
 
@@ -76,7 +89,9 @@ export function BubbleChatPanel({ open, peerUserId, peerName, onClose }: Props) 
               {resolved?.leadName ?? peerName ?? "Carregando..."}
             </p>
             <p className="text-[10px] text-slate-400 truncate">
-              {resolved?.leadPhone ? `+${resolved.leadPhone}` : "Chat via Space Station"}
+              {resolved?.leadPhone
+                ? `+${resolved.leadPhone}`
+                : "Chat via Space Station"}
             </p>
           </div>
           <button
@@ -119,8 +134,8 @@ export function BubbleChatPanel({ open, peerUserId, peerName, onClose }: Props) 
               trackingId={resolved.trackingId}
               conversationId={resolved.conversationId}
               lead={{
-                id:    resolved.leadId,
-                name:  resolved.leadName,
+                id: resolved.leadId,
+                name: resolved.leadName,
                 phone: resolved.leadPhone,
               }}
             />

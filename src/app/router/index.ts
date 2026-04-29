@@ -27,16 +27,16 @@ import { nasaCommandRouter } from "./nasa-command";
 import { permissionsRouter } from "./permissions";
 import { activityRouter } from "./activity";
 import { formRouter } from "./form";
-import { adminRouter }              from "./admin";
-import { userNotificationsRouter }  from "./user-notifications";
-import { sidebarPrefsRouter }       from "./sidebar-prefs";
-import { spacePointRouter }          from "./space-point";
-import { userRouter }                from "./user";
-import { publicRouter }              from "./public";
-import { plansRouter }               from "./plans";
-import { paymentRouter }             from "./payment";
-import { orgProjectsRouter }         from "./org-projects";
-import { clientPortalRouter }        from "./client-portal";
+import { adminRouter } from "./admin";
+import { userNotificationsRouter } from "./user-notifications";
+import { sidebarPrefsRouter } from "./sidebar-prefs";
+import { spacePointRouter } from "./space-point";
+import { userRouter } from "./user";
+import { publicRouter } from "./public";
+import { plansRouter } from "./plans";
+import { paymentRouter } from "./payment";
+import { orgProjectsRouter } from "./org-projects";
+import { clientPortalRouter } from "./client-portal";
 import { supportRouter } from "./support";
 import { scriptsRouter } from "./scripts";
 import { linnkerRouter } from "./linnker";
@@ -46,8 +46,6 @@ import { profileCardRouter } from "./profile-card";
 import { spaceHelpRouter } from "./space-help";
 import { nasaRouteRouter } from "./nasa-route";
 import { pagesRouter } from "./pages";
-import { inviteLinksRouter } from "./invite-links";
-import { workspaceWorkflowRoutes } from "./workspace-workflow";
 
 export const router = {
   tracking: trackingRoutes,
@@ -82,10 +80,10 @@ export const router = {
   userNotifications: userNotificationsRouter,
   sidebarPrefs: sidebarPrefsRouter,
   spacePoint: spacePointRouter,
-  user:       userRouter,
-  public:     publicRouter,
-  plans:      plansRouter,
-  payment:    paymentRouter,
+  user: userRouter,
+  public: publicRouter,
+  plans: plansRouter,
+  payment: paymentRouter,
   orgProjects: orgProjectsRouter,
   clientPortal: clientPortalRouter,
   support: supportRouter,
@@ -97,6 +95,4 @@ export const router = {
   spaceHelp: spaceHelpRouter,
   nasaRoute: nasaRouteRouter,
   pages: pagesRouter,
-  inviteLinks: inviteLinksRouter,
-  workspaceWorkflow: workspaceWorkflowRoutes,
 };

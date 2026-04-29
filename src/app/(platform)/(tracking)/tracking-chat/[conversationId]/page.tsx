@@ -2,7 +2,7 @@
 
 import { Spinner } from "@/components/ui/spinner";
 import { Body } from "@/features/tracking-chat/components/body";
-import { Footer } from "@/features/tracking-chat/components/footer";
+import { Footer } from "@/features/tracking-chat/components/footer-chat";
 import { Header } from "@/features/tracking-chat/components/header-tracking-chat";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";

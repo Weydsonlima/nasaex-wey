@@ -11,12 +11,14 @@ import { checkStreaks } from "@/inngest/functions/crons/check-streaks";
 import { checkMilestones } from "@/inngest/functions/crons/check-milestones";
 import { onProposalPaid } from "@/inngest/functions/on-proposal-paid";
 import { onOnboardingFormsCompleted } from "@/inngest/functions/on-onboarding-forms-completed";
+import { processReminder } from "@/inngest/functions/crons/check-reminders";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
     executeWorkflow,
     executeWorkspaceWorkflow,
+    processReminder,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,

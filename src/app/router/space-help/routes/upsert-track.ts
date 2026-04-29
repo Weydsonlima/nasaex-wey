@@ -1,13 +1,11 @@
 import { base } from "@/app/middlewares/base";
 import { requiredAuthMiddleware } from "@/app/middlewares/auth";
-import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { requireModerator } from "../utils";
 
 export const upsertTrack = base
   .use(requiredAuthMiddleware)
-  .use(requireOrgMiddleware)
   .input(
     z.object({
       id: z.string().optional(),
@@ -27,7 +25,7 @@ export const upsertTrack = base
     }),
   )
   .handler(async ({ input, context }) => {
-    await requireModerator(context.user.id, context.org.id);
+    await requireModerator(context.user.id);
     const { id, ...data } = input;
     if (id) {
       return await prisma.spaceHelpTrack.update({ where: { id }, data });

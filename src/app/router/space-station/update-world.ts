@@ -14,8 +14,22 @@ const avatarConfigSchema = z.object({
   hairColor: z.string().optional(),
   beardStyle: z.enum(["none", "stubble", "short", "full"]).optional(),
   faceAccessory: z.enum(["none", "glasses", "sunglasses"]).optional(),
-  lpcSpritesheetUrl: z.union([z.string().url(), z.literal("pixel_astronaut")]).optional().nullable(),
+  lpcSpritesheetUrl: z.union([
+    z.string().url(),                      // URLs absolutas (ex: CDN externo)
+    z.literal("pixel_astronaut"),          // legado
+    z.string().startsWith("/woka/"),       // spritesheets Pipoya locais
+    z.string().startsWith("/uploads/"),    // sprites customizados enviados via upload
+  ]).optional().nullable(),
   lpcCharacterName: z.string().max(60).optional().nullable(),
+  // WokaCustomizer overlay URLs (LPC assets). Accept any http(s) URL so we
+  // can reference WorkAdventure's CDN, the LimeZu mirror, or self-hosted files.
+  wokaEyesUrl:      z.string().url().optional().nullable(),
+  wokaHairUrl:      z.string().url().optional().nullable(),
+  wokaClothesUrl:   z.string().url().optional().nullable(),
+  wokaHatUrl:       z.string().url().optional().nullable(),
+  wokaAccessoryUrl: z.string().url().optional().nullable(),
+  // Multiplicador do tamanho visual do avatar no mapa
+  avatarScale:      z.number().min(0.5).max(2.5).optional().nullable(),
 });
 
 export const updateWorld = base
@@ -50,38 +64,19 @@ export const updateWorld = base
 
     if (!isOwner) throw errors.FORBIDDEN({ message: "Sem permissão para configurar esta station" });
 
-    const updateData: Prisma.SpaceStationWorldUpdateInput = {};
-    const createData: Prisma.SpaceStationWorldUncheckedCreateInput = { stationId };
-    if (planetColor !== undefined) {
-      updateData.planetColor = planetColor;
-      createData.planetColor = planetColor;
-    }
-    if (ambientTheme !== undefined) {
-      updateData.ambientTheme = ambientTheme;
-      createData.ambientTheme = ambientTheme;
-    }
-    if (avatarConfig !== undefined) {
-      updateData.avatarConfig = avatarConfig as Prisma.InputJsonValue;
-      createData.avatarConfig = avatarConfig as Prisma.InputJsonValue;
-    }
-    if (meetingPoints !== undefined) {
-      updateData.meetingPoints = meetingPoints as Prisma.InputJsonValue;
-      createData.meetingPoints = meetingPoints as Prisma.InputJsonValue;
-    }
-    if (npcConfig !== undefined) {
-      updateData.npcConfig = npcConfig as Prisma.InputJsonValue;
-      createData.npcConfig = npcConfig as Prisma.InputJsonValue;
-    }
-    if (mapData !== undefined) {
-      updateData.mapData = mapData as Prisma.InputJsonValue;
-      createData.mapData = mapData as Prisma.InputJsonValue;
-    }
+    const data: Prisma.SpaceStationWorldUpdateInput = {};
+    if (planetColor !== undefined) data.planetColor = planetColor;
+    if (ambientTheme !== undefined) data.ambientTheme = ambientTheme;
+    if (avatarConfig !== undefined) data.avatarConfig = avatarConfig as Prisma.InputJsonValue;
+    if (meetingPoints !== undefined) data.meetingPoints = meetingPoints as Prisma.InputJsonValue;
+    if (npcConfig !== undefined) data.npcConfig = npcConfig as Prisma.InputJsonValue;
+    if (mapData !== undefined) data.mapData = mapData as Prisma.InputJsonValue;
 
     try {
       const world = await prisma.spaceStationWorld.upsert({
         where: { stationId },
-        create: createData,
-        update: updateData,
+        create: { stationId, ...data } as Prisma.SpaceStationWorldUncheckedCreateInput,
+        update: data,
       });
       return { world };
     } catch (err) {

@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  experimental: {},
   async rewrites() {
     return [
       {
@@ -34,6 +35,9 @@ const nextConfig: NextConfig = {
       },
       {
         hostname: "lh3.googleusercontent.com",
+      },
+      {
+        hostname: "api.dicebear.com",
       },
     ],
   },

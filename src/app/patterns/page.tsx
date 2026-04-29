@@ -6,12 +6,20 @@ import { AppTemplatesGallery } from "@/features/admin/components/app-templates-g
 import { ToastProvider } from "@/contexts/toast-context";
 
 export default async function PatternsPage() {
-  const organization = await auth.api.getFullOrganization({
-    headers: await headers(),
-  });
+  // `getFullOrganization` lança APIError UNAUTHORIZED quando não há sessão
+  // ativa — em vez de retornar null. Sem o try/catch o erro borbulha como
+  // 500 e o redirect abaixo nunca é chamado.
+  let organization: Awaited<ReturnType<typeof auth.api.getFullOrganization>> | null = null;
+  try {
+    organization = await auth.api.getFullOrganization({
+      headers: await headers(),
+    });
+  } catch {
+    organization = null;
+  }
 
   if (!organization?.id) {
-    redirect("/auth/login");
+    redirect("/sign-in?callbackUrl=/patterns");
   }
 
   const organizationId = organization.id;

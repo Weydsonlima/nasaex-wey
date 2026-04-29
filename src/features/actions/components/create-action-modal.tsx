@@ -39,6 +39,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
   defaultColumnId?: string;
+  presetPublic?: boolean;
 }
 
 const formSchema = z.object({
@@ -50,6 +51,7 @@ const formSchema = z.object({
   workspaceId: z.string().min(1, "Workspace é obrigatório"),
   columnId: z.string().min(1, "Coluna é obrigatória"),
   orgProjectId: z.string().optional(),
+  isPublic: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -59,6 +61,7 @@ export const CreateActionModal = ({
   onOpenChange,
   workspaceId,
   defaultColumnId,
+  presetPublic,
 }: Props) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,6 +73,7 @@ export const CreateActionModal = ({
       startDate: dayjs().startOf("day").toDate(),
       dueDate: dayjs().add(1, "day").startOf("day").toDate(),
       columnId: defaultColumnId ?? "",
+      isPublic: presetPublic ?? false,
     },
   });
 
@@ -121,9 +125,13 @@ export const CreateActionModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle>Criar uma nova ação</DialogTitle>
+          <DialogTitle>
+            {presetPublic ? "Criar evento público 🚀" : "Criar uma nova ação"}
+          </DialogTitle>
           <DialogDescription>
-            Preencha os campos abaixo para criar uma nova ação no seu workspace.
+            {presetPublic
+              ? "Este evento será exibido no Calendário Público da NASA. Depois de criar, você pode adicionar cidade, categoria e link de inscrição no painel lateral."
+              : "Preencha os campos abaixo para criar uma nova ação no seu workspace."}
           </DialogDescription>
         </DialogHeader>
 

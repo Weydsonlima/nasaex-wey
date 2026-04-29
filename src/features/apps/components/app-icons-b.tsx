@@ -1,6 +1,6 @@
 "use client";
 
-// Icons B: DemandIcon, AstroIcon, TaskIcon, NBoxIcon, TrackingIcon, NasaPlannerIcon
+// Icons B: DemandIcon, AstroIcon, TaskIcon, NBoxIcon, TrackingIcon, NasaPlannerIcon, NasaRouteIcon
 
 const S = "w-full h-full";
 
@@ -77,5 +77,24 @@ export const NasaPlannerIcon = () => (
     <rect x="22" y="24" width="18" height="14" rx="2" fill="white" fillOpacity="0.2" stroke="white" strokeWidth="1.2" />
     <circle cx="26" cy="29" r="2" fill="white" fillOpacity="0.8" />
     <path d="M22 34L27 30L31 33L34 30L40 34" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const NasaRouteIcon = () => (
+  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={S}>
+    <defs>
+      <linearGradient id="nrGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#8B5CF6" />
+        <stop offset="100%" stopColor="#6366F1" />
+      </linearGradient>
+    </defs>
+    <rect width="48" height="48" rx="12" fill="url(#nrGrad)" />
+    {/* Foguete trilhando rota → vídeo/play */}
+    <path d="M10 36C14 28 22 18 30 14L34 18C30 26 22 34 14 38L10 36Z" fill="white" fillOpacity="0.95" />
+    <circle cx="29" cy="19" r="2.4" fill="#6366F1" />
+    <path d="M22 30L19 33L17 31L20 28L22 30Z" fill="white" fillOpacity="0.7" />
+    {/* Botão play sobreposto */}
+    <circle cx="34" cy="34" r="7" fill="#0F172A" stroke="white" strokeWidth="1.5" />
+    <path d="M32 30.5L37 34L32 37.5V30.5Z" fill="white" />
   </svg>
 );

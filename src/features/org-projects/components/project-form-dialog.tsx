@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateOrgProject, useUpdateOrgProject } from "../hooks/use-org-projects";
 
@@ -23,7 +25,14 @@ const COLORS = ["#7c3aed","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#06
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editing?: { id: string; name: string; type: string; description?: string | null; color?: string | null } | null;
+  editing?: {
+    id:               string;
+    name:             string;
+    type:             string;
+    description?:     string | null;
+    color?:           string | null;
+    isPublicOnSpace?: boolean | null;
+  } | null;
 }
 
 export function ProjectFormDialog({ open, onOpenChange, editing }: Props) {
@@ -34,6 +43,7 @@ export function ProjectFormDialog({ open, onOpenChange, editing }: Props) {
   const [type, setType] = useState("client");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#7c3aed");
+  const [isPublicOnSpace, setIsPublicOnSpace] = useState(false);
 
   useEffect(() => {
     if (editing) {
@@ -41,15 +51,20 @@ export function ProjectFormDialog({ open, onOpenChange, editing }: Props) {
       setType(editing.type);
       setDescription(editing.description ?? "");
       setColor(editing.color ?? "#7c3aed");
+      setIsPublicOnSpace(editing.isPublicOnSpace ?? false);
     } else {
       setName(""); setType("client"); setDescription(""); setColor("#7c3aed");
+      setIsPublicOnSpace(false);
     }
   }, [editing, open]);
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
     if (editing) {
-      await update.mutateAsync({ projectId: editing.id, name, type, description: description || null, color });
+      await update.mutateAsync({
+        projectId: editing.id, name, type,
+        description: description || null, color, isPublicOnSpace,
+      });
     } else {
       await create.mutateAsync({ name, type, description: description || undefined, color });
     }
@@ -97,6 +112,30 @@ export function ProjectFormDialog({ open, onOpenChange, editing }: Props) {
               <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-7 w-7 rounded-full cursor-pointer border" title="Cor personalizada" />
             </div>
           </div>
+
+          {/* Visibilidade Spacehome — só faz sentido ao editar (criação não tem ID ainda) */}
+          {editing && (
+            <div className="space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="public-on-space" className="cursor-pointer text-sm font-medium">
+                    Exibir na Spacehome pública
+                  </Label>
+                </div>
+                <Switch
+                  id="public-on-space"
+                  checked={isPublicOnSpace}
+                  onCheckedChange={setIsPublicOnSpace}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {isPublicOnSpace
+                  ? "Este projeto aparece em /space/[nick] para qualquer visitante."
+                  : "Este projeto fica oculto na Spacehome. Só membros da empresa enxergam."}
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

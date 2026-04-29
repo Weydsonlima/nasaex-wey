@@ -96,3 +96,35 @@ export interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
 }
+
+// ── App modules ───────────────────────────────────────────────────────────
+export type AppModule =
+  | "tracking"
+  | "chat"
+  | "forge"
+  | "spacetime"
+  | "nasa-planner"
+  | "integrations"
+  | "workspace"
+  | "forms"
+  | "nbox"
+  | "payment"
+  | "linnker"
+  | "space-points"
+  | "stars";
+
+export const ALL_MODULES: AppModule[] = [
+  "tracking",
+  "chat",
+  "forge",
+  "spacetime",
+  "nasa-planner",
+  "integrations",
+  "workspace",
+  "forms",
+  "nbox",
+  "payment",
+  "linnker",
+  "space-points",
+  "stars",
+];

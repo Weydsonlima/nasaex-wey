@@ -4,6 +4,7 @@ import { StationProfileHeader } from "./station-profile-header";
 import { StationOrgChart } from "./station-org-chart";
 import { StationModulesGrid } from "./station-modules-grid";
 import { StationExplorer } from "./station-explorer";
+import { NasaFooterPublic } from "@/components/nasa-footer-public";
 import type { PublicStation } from "../types";
 
 interface Props {
@@ -59,13 +60,7 @@ export function StationPublicPage({ station }: Props) {
         </section>
       </div>
 
-      {/* Footer */}
-      <footer className="text-center text-slate-600 text-xs py-8 border-t border-white/5">
-        Powered by{" "}
-        <a href="https://nasaagents.com" className="text-indigo-400 hover:underline">
-          NASA Agents
-        </a>
-      </footer>
+      <NasaFooterPublic />
     </div>
   );
 }

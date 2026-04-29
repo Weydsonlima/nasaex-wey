@@ -8,6 +8,7 @@ import { submitResponse } from "./public/submut-response";
 import { PublishForm } from "./publish";
 import { insightForm } from "./status";
 import { deleteForm } from "./delete";
+import { togglePublicOnSpace } from "./toggle-public-on-space";
 
 export const formRouter = {
   get: fetchFormById,
@@ -19,5 +20,6 @@ export const formRouter = {
   getPublic,
   submitResponse,
   PublishForm,
+  togglePublicOnSpace,
   insightForm,
 };

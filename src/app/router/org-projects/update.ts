@@ -16,6 +16,7 @@ export const updateOrgProject = base
       avatar: z.string().nullable().optional(),
       color: z.string().optional(),
       isActive: z.boolean().optional(),
+      isPublicOnSpace: z.boolean().optional(),   // toggle "exibir na Spacehome"
     }),
   )
   .handler(async ({ input, context }) => {

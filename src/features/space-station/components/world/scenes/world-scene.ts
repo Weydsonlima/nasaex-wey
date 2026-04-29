@@ -1,7 +1,9 @@
-import * as Phaser from "phaser";
-import type { AvatarConfig, StationWorldConfig, WorldMapData, WorldElementsConfig, RoomConfig, RoomType } from "../../../types";
-import { DEFAULT_ELEMENTS, DEFAULT_ROOMS, ROOM_META } from "../../../types";
+import type Phaser from "phaser";
+import type { AvatarConfig, StationWorldConfig, WorldMapData, WorldElementsConfig, RoomConfig, RoomType, PlacedMapObject, MapArea, AreaType, TileLayer, TileCell, TileTextureKey } from "../../../types";
+import { DEFAULT_ELEMENTS, DEFAULT_ROOMS, ROOM_META, AREA_TYPE_META } from "../../../types";
 import { buildVisorSpritesheet } from "../../../utils/composite-visor";
+import { getDefaultSpriteForUser, resolveSpriteUrl, resolveRemoteSpriteUrl } from "../../../utils/sprite-defaults";
+import { buildCompositeSpritesheet } from "../../../utils/composite-spritesheet";
 
 const T = 32;
 const MW = 80;
@@ -87,7 +89,27 @@ const ROOM_FLOOR_COLOR: Record<RoomType, number> = {
   recepcao:    C.ROOM_RECEPCAO,
 };
 
-interface RemotePlayer { gfx: Phaser.GameObjects.Graphics; nameText: Phaser.GameObjects.Text }
+interface RemotePlayer {
+  gfx:              Phaser.GameObjects.Graphics;
+  nameText:         Phaser.GameObjects.Text;
+  sprite?:          Phaser.GameObjects.Sprite;
+  loadedSpriteUrl:  string | null;
+  /** URL que está sendo carregada agora (ainda não aplicada) */
+  pendingSpriteUrl: string | null;
+  /** Incrementado a cada nova carga — closures antigas verificam isso e se auto-cancelam */
+  loadGen:          number;
+  /** HTMLImageElement atual do load em curso — cancelado setando onload=null */
+  _imgEl?:          HTMLImageElement;
+}
+
+/** Hash 32-bit estável para gerar chaves de textura a partir de URLs (evita duplicar load). */
+function hashString(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
 
 /* ─── LPC spritesheet constants ────────────────────────────────────────── */
 // Standard Universal LPC format: 64×64 px per frame
@@ -107,11 +129,10 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   private playerLabel!: Phaser.GameObjects.Text;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
   private remotePlayers: Map<string, RemotePlayer> = new Map();
   private worldConfig?: StationWorldConfig;
   private avatarConfig?: AvatarConfig;
-  private pusherChannel?: { bind: (event: string, cb: (data: unknown) => void) => void };
+  private localUserId = "guest";
   private animFrame = 0;
   private animTimer = 0;
   private facingDir: "down" | "up" | "left" | "right" = "down";
@@ -119,6 +140,12 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   // ─── Proximity detection (for WebRTC) ────────────────────────
   private readonly PROXIMITY_RADIUS = T * 6;   // ~192px — ~6 tiles
   private nearbyPeers: Set<string> = new Set(); // currently in range
+
+  // ─── Proximity circle visual ──────────────────────────────────
+  private proximityCircle:      Phaser.GameObjects.Graphics | null = null;
+  private proximityPulse:       Phaser.GameObjects.Graphics | null = null;
+  private proximityPulseScale = 1;
+  private proximityPulseDir   = 1;
 
   // ─── Zoom ─────────────────────────────────────────────────────
   private currentZoom = 1.6;
@@ -128,20 +155,90 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   // Pinch-to-zoom
   private pinchDist: number | null = null;
 
+  // ─── Map Editor: placed objects ──────────────────────────────
+  private placedObjectSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  private placedObjectHighlights: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  /** Corpos de física para objetos com solid:true */
+  private placedObjectBodies: Map<string, Phaser.Physics.Arcade.Image> = new Map();
+  private editorActive = false;
+  private editorSelectedId: string | null = null;
+  private placedObjectsState: PlacedMapObject[] = [];
+
+  // ─── Map Editor: areas ───────────────────────────────────────
+  private areaGraphics: Map<string, Phaser.GameObjects.Graphics> = new Map();
+  private areaLabels:   Map<string, Phaser.GameObjects.Text>     = new Map();
+  private areaHitzones: Map<string, Phaser.GameObjects.Rectangle> = new Map();
+  /** Corpos de física para áreas type === "collision" */
+  private areaCollisionBodies: Map<string, Phaser.Physics.Arcade.Image> = new Map();
+  private areaSelectedId: string | null = null;
+  private areasState: MapArea[] = [];
+  private drawingAreaType: AreaType | null = null;
+  private drawStart: { x: number; y: number } | null = null;
+  private drawPreview: Phaser.GameObjects.Graphics | null = null;
+  private cameraViewTickAcc = 0;
+  /** Areas the player is currently inside (for enter/leave events) */
+  private insideAreaIds: Set<string> = new Set();
+
+  // ─── Tiled map (pré-renderizado como HTMLCanvasElement) ──────────
+  private tiledCanvas:  HTMLCanvasElement | null = null;
+  private tiledMapW  = WORLD_W;
+  private tiledMapH  = WORLD_H;
+  private tiledSpawnX = 0;
+  private tiledSpawnY = 0;
+
+  // ─── Tile Layer (Map Builder) ─────────────────────────────────
+  private tileFloorGfx:    Phaser.GameObjects.Graphics | null = null;
+  private tileWallGfx:     Phaser.GameObjects.Graphics | null = null;
+  private tileDecoGfx:     Phaser.GameObjects.Graphics | null = null;
+  private tileWallBodies   = new Map<string, Phaser.Physics.Arcade.Image>();
+  private tileLayerState:  TileLayer | null = null;
+  private tileGridGfx:     Phaser.GameObjects.Graphics | null = null;
+  private tileEditActive   = false;
+  private tilePainting     = false;
+  private tilePanning      = false;
+  private panLastX         = 0;
+  private panLastY         = 0;
+  private currentTileTool: "paint" | "erase" | "fill" | "rect" | "rect-erase" | "pan" = "paint";
+  private currentTileCell: TileCell = { texture: "floor_wood", layer: "floor", color: "#a0783c" };
+  private _tileSyncTimer:  ReturnType<typeof setTimeout> | null = null;
+  // Seleção retangular (tool "rect" / "rect-erase")
+  private rectStart:       { tx: number; ty: number } | null = null;
+  private rectPreviewGfx:  Phaser.GameObjects.Graphics | null = null;
+  private rectPreviewEnd:  { tx: number; ty: number } | null = null;
+  // ─── Resize handles ─────────────────────────────────────────────
+  private resizeHandles:   Phaser.GameObjects.Rectangle[] = [];
+  private resizeOrigScale  = 1;
+  private resizeOrigDist   = 0;
+
   constructor() { super({ key: "WorldScene" }); }
 
   init(this: Phaser.Scene & WorldScene, data: {
-    worldConfig: StationWorldConfig;
-    avatarConfig?: AvatarConfig;
-    channel?: WorldScene["pusherChannel"];
-    userImage?: string | null;
+    worldConfig:     StationWorldConfig;
+    avatarConfig?:   AvatarConfig;
+    channel?:        unknown;
+    userImage?:      string | null;
+    userId?:         string;
+    tiledCanvas?:    HTMLCanvasElement | null;
+    tiledWidthPx?:   number;
+    tiledHeightPx?:  number;
+    tiledSpawnX?:    number;
+    tiledSpawnY?:    number;
   }) {
     this.worldConfig = data.worldConfig;
-    // Store userImage in avatarConfig for texture generation
     this.avatarConfig = data.avatarConfig
       ? { ...data.avatarConfig, _photoUrl: data.userImage ?? undefined } as AvatarConfig
       : data.avatarConfig;
-    this.pusherChannel = data.channel;
+    if (data.userId) this.localUserId = data.userId;
+
+    this.tiledCanvas  = data.tiledCanvas  ?? null;
+    this.tiledMapW    = data.tiledWidthPx  || WORLD_W;
+    this.tiledMapH    = data.tiledHeightPx || WORLD_H;
+    this.tiledSpawnX  = data.tiledSpawnX   ?? 0;
+    this.tiledSpawnY  = data.tiledSpawnY   ?? 0;
+  }
+
+  preload(this: Phaser.Scene & WorldScene) {
+    // Canvas já pré-renderizado — nada a carregar aqui
   }
 
   create(this: Phaser.Scene & WorldScene) {
@@ -164,44 +261,142 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     const rooms: RoomConfig[] = raw?.rooms ?? DEFAULT_ROOMS;
     const meetingCount    = raw?.meetingRoomCount  ?? 2;
 
-    if (scenario === "station") this.drawStation(elements, rooms, meetingCount);
-    else if (scenario === "space")  this.drawSpace();
-    else if (scenario === "rocket") this.drawRocket();
+    if      (scenario === "tiled")            this.renderTiledMap();
+    else if (scenario === "station")         this.drawStation(elements, rooms, meetingCount);
+    else if (scenario === "space")           this.drawSpace();
+    else if (scenario === "rocket")          this.drawRocket();
+    else if (scenario === "lunar_base")      this.drawLunarBase();
+    else if (scenario === "mission_control") this.drawMissionControl();
+    else if (scenario === "lab")             this.drawLab();
+    else if (scenario === "hangar")          this.drawHangar();
+    else if (scenario === "mars")            this.drawMars();
+    else if (scenario === "observatory")     this.drawObservatory();
+    else if (scenario === "bridge")          this.drawBridge();
+    else if (scenario === "custom") {
+      const bgColor = raw?.tileLayer?.bgColor ?? "#1a1a2e";
+      const bgInt   = parseInt(bgColor.replace("#", ""), 16);
+      this.add.rectangle(0, 0, WORLD_W, WORLD_H, bgInt).setOrigin(0, 0).setDepth(0);
+    } else                                   this.drawStation(elements, rooms, meetingCount);
 
-    const lpcUrl = (this.avatarConfig as (AvatarConfig & { lpcSpritesheetUrl?: string }) | undefined)?.lpcSpritesheetUrl;
+    // Render tile layer on top of any scenario (applies to "custom" and overlays on others)
+    const tileLayer = raw?.tileLayer;
+    if (tileLayer) {
+      this.tileLayerState = tileLayer;
+      this.tileFloorGfx = this.add.graphics().setDepth(1);
+      this.tileWallGfx  = this.add.graphics().setDepth(3);
+      this.tileDecoGfx  = this.add.graphics().setDepth(15);
+      this.syncTileRendering();
+    }
+
+    const rawLpcUrl = (this.avatarConfig as (AvatarConfig & { lpcSpritesheetUrl?: string }) | undefined)?.lpcSpritesheetUrl;
+    const lpcUrl = resolveSpriteUrl(rawLpcUrl, this.localUserId);
 
     this.generatePlayerTextures();
 
-    const startX = WORLD_W / 4;
-    const startY = OFFICE_H / 2;
+    const isTiled = scenario === "tiled";
+    let startX  = isTiled
+      ? (this.tiledSpawnX || this.tiledMapW / 2)
+      : WORLD_W / 4;
+    let startY  = isTiled
+      ? (this.tiledSpawnY || this.tiledMapH / 2)
+      : OFFICE_H / 2;
 
-    if (lpcUrl) {
-      // ── LPC mode: animated sprite ──────────────────────────────
-      this.loadLpcSpritesheet(lpcUrl, startX, startY);
-    } else {
-      // ── SVG/Canvas mode: static image ─────────────────────────
-      this.player = this.physics.add.image(startX, startY, "__player_idle__");
-      this.player.setCollideWorldBounds(true).setDepth(20);
-      (this.player.body as Phaser.Physics.Arcade.Body).setSize(18, 30).setOffset(7, 22);
-      this.physics.add.collider(this.player, this.walls);
-    }
+    // Restore last position from localStorage (persisted by useWorldPresence)
+    try {
+      const saved = typeof localStorage !== "undefined"
+        ? localStorage.getItem(`ss:pos:${this.worldConfig?.stationId ?? ""}:${this.localUserId}`)
+        : null;
+      if (saved) {
+        const { x, y } = JSON.parse(saved) as { x: number; y: number };
+        if (Number.isFinite(x) && Number.isFinite(y) && x > 0 && y > 0) {
+          startX = x;
+          startY = y;
+        }
+      }
+    } catch { /* ignore */ }
+
+    // ── Pipoya/LPC mode: animated sprite (default) ────────────────
+    this.loadLpcSpritesheet(lpcUrl, startX, startY);
 
     this.playerLabel = this.add.text(startX, startY - 32, "Você", {
       fontSize: "10px", color: "#c4b5fd",
       backgroundColor: "#00000099", padding: { x: 3, y: 1 },
     }).setOrigin(0.5).setDepth(21);
 
-    this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
-    // Camera follows lpcSprite if available, otherwise the static image player
-    const cameraTarget = (this.lpcSprite ?? this.player) as Phaser.GameObjects.GameObject;
-    this.cameras.main.startFollow(cameraTarget as Phaser.GameObjects.Image, true, 0.1, 0.1);
+    const boundsW = isTiled ? this.tiledMapW : WORLD_W;
+    const boundsH = isTiled ? this.tiledMapH : WORLD_H;
+    this.cameras.main.setBounds(0, 0, boundsW, boundsH);
     this.cameras.main.setZoom(this.currentZoom);
+    // startFollow is called inside loadLpcSpritesheet → setupSprite once the sprite is created
 
-    // ── Mouse wheel zoom ──────────────────────────────────────────
-    this.input.on("wheel",
-      (_ptr: unknown, _gos: unknown, _dx: number, dy: number) => {
-        this.applyZoom(dy > 0 ? -this.ZOOM_STEP : this.ZOOM_STEP);
-      },
+    // ── Mouse wheel + trackpad zoom/pan ──────────────────────────────────
+    // Regras:
+    //   ctrlKey=true  → pinch (macOS) ou Ctrl+scroll → zoom (em qualquer lugar)
+    //   ctrlKey=false + editorActive → dois dedos trackpad → PAN X+Y
+    //     ↳ exceto se o cursor estiver dentro de um elemento scrollável do painel
+    //   ctrlKey=false + !editorActive → só sobre o canvas → zoom vertical
+    const canvasEl = this.game.canvas;
+
+    /** Verifica se um elemento é (ou está dentro de) um scroll container que
+     *  tem conteúdo a rolar — nesse caso deixamos o scroll nativo acontecer. */
+    const insideScrollable = (el: Element | null): boolean => {
+      let cur = el;
+      while (cur && cur !== document.documentElement) {
+        const s = window.getComputedStyle(cur);
+        const ovY = s.overflowY;
+        const ovX = s.overflowX;
+        if (
+          ((ovY === "auto" || ovY === "scroll") && cur.scrollHeight > cur.clientHeight + 2) ||
+          ((ovX === "auto" || ovX === "scroll") && cur.scrollWidth  > cur.clientWidth  + 2)
+        ) return true;
+        cur = cur.parentElement;
+      }
+      return false;
+    };
+
+    const onWheel = (ev: WheelEvent) => {
+      const target = ev.target as Element | null;
+      const overCanvas = target === canvasEl
+        || (canvasEl.parentElement?.contains(target) ?? false)
+        || (target instanceof Element && target.closest("#phaser-container") !== null);
+
+      // ── Editor aberto: intercepta gestos de QUALQUER lugar da tela ──
+      if (this.editorActive) {
+        // Pinça (macOS ctrlKey=true) → zoom sempre, sem importar onde o cursor está
+        if (ev.ctrlKey) {
+          ev.preventDefault();
+          this.applyZoom(-ev.deltaY * 0.015);
+          return;
+        }
+
+        // Dois dedos → PAN
+        // Mas se o cursor está dentro de um scroll container real (lista do painel)
+        // deixamos o scroll nativo acontecer
+        if (!overCanvas && insideScrollable(target)) return;
+
+        ev.preventDefault();
+        const cam = this.cameras.main;
+        cam.scrollX += ev.deltaX / cam.zoom;
+        cam.scrollY += ev.deltaY / cam.zoom;
+        return;
+      }
+
+      // ── Editor fechado: só age quando cursor está sobre o canvas ──
+      if (!overCanvas) return;
+      ev.preventDefault();
+
+      // Pinça (ctrlKey=true no macOS) → zoom
+      if (ev.ctrlKey) {
+        this.applyZoom(-ev.deltaY * 0.015);
+        return;
+      }
+
+      // Scroll normal → zoom vertical
+      this.applyZoom(-ev.deltaY * 0.0025);
+    };
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    this.events.once("shutdown", () =>
+      window.removeEventListener("wheel", onWheel, { capture: true }),
     );
 
     // ── Touch pinch-to-zoom ───────────────────────────────────────
@@ -209,7 +404,7 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
       if (this.input.pointer1.isDown && this.input.pointer2.isDown) {
         const p1 = this.input.pointer1;
         const p2 = this.input.pointer2;
-        const dist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
         if (this.pinchDist !== null) {
           const delta = dist - this.pinchDist;
           this.applyZoom(delta * 0.005);
@@ -227,34 +422,1726 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     this.input.keyboard!.on("keydown-NUMPAD_ADD",      () => this.applyZoom(this.ZOOM_STEP));
     this.input.keyboard!.on("keydown-NUMPAD_SUBTRACT", () => this.applyZoom(-this.ZOOM_STEP));
 
+    // ── Debug toggle: Ctrl+Shift+D mostra os bodies de colisão ────
+    // Útil pra diagnosticar paredes que "não colidem".
+    this.input.keyboard!.on("keydown-D", (ev: KeyboardEvent) => {
+      if (!ev.ctrlKey || !ev.shiftKey) return;
+      const world = this.physics.world;
+      world.drawDebug = !world.drawDebug;
+      if (world.drawDebug) {
+        if (!world.debugGraphic) world.createDebugGraphic();
+        world.debugGraphic.setDepth(999);
+      } else {
+        world.debugGraphic?.clear();
+      }
+      window.dispatchEvent(new CustomEvent("space-station:physics-debug", {
+        detail: { enabled: world.drawDebug },
+      }));
+    });
+
     // ── External events from React buttons ───────────────────────
     const onZoomIn  = () => this.applyZoom(this.ZOOM_STEP);
     const onZoomOut = () => this.applyZoom(-this.ZOOM_STEP);
     const onZoomReset = () => this.setZoom(1.6);
-    window.addEventListener("space-station:zoom-in",    onZoomIn);
-    window.addEventListener("space-station:zoom-out",   onZoomOut);
-    window.addEventListener("space-station:zoom-reset", onZoomReset);
+    /** Live preview do tamanho do avatar — disparado pelo WokaCustomizer. */
+    const onAvatarScale = (e: Event) => {
+      const { scale } = (e as CustomEvent).detail as { scale: number };
+      this.applyAvatarScale(scale);
+    };
+    window.addEventListener("space-station:zoom-in",      onZoomIn);
+    window.addEventListener("space-station:zoom-out",     onZoomOut);
+    window.addEventListener("space-station:zoom-reset",   onZoomReset);
+    window.addEventListener("space-station:avatar-scale", onAvatarScale);
     this.events.once("shutdown", () => {
-      window.removeEventListener("space-station:zoom-in",    onZoomIn);
-      window.removeEventListener("space-station:zoom-out",   onZoomOut);
-      window.removeEventListener("space-station:zoom-reset", onZoomReset);
+      window.removeEventListener("space-station:zoom-in",      onZoomIn);
+      window.removeEventListener("space-station:zoom-out",     onZoomOut);
+      window.removeEventListener("space-station:zoom-reset",   onZoomReset);
+      window.removeEventListener("space-station:avatar-scale", onAvatarScale);
+    });
+
+    // ── Snapshot do canvas via API nativa do Phaser (resolve bug WebGL/toDataURL) ──
+    // O canvas Phaser usa WebGL sem preserveDrawingBuffer:true → toDataURL() retorna preto.
+    // game.renderer.snapshot() faz a captura corretamente do framebuffer.
+    const onCaptureSnapshot = () => {
+      try {
+        this.game.renderer.snapshot((img) => {
+          if (!(img instanceof HTMLImageElement)) return;
+          // Downscale para 480×300 via canvas 2D
+          const out = document.createElement("canvas");
+          out.width = 480;
+          out.height = 300;
+          const ctx = out.getContext("2d");
+          if (!ctx) return;
+          // Aguarda o load da imagem (snapshot retorna image com src=dataURL)
+          if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, 0, 0, 480, 300);
+            window.dispatchEvent(new CustomEvent("space-station:snapshot-result", {
+              detail: { dataUrl: out.toDataURL("image/png") },
+            }));
+          } else {
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, 480, 300);
+              window.dispatchEvent(new CustomEvent("space-station:snapshot-result", {
+                detail: { dataUrl: out.toDataURL("image/png") },
+              }));
+            };
+          }
+        });
+      } catch (err) {
+        console.error("[WorldScene] snapshot error:", err);
+        window.dispatchEvent(new CustomEvent("space-station:snapshot-result", {
+          detail: { dataUrl: null },
+        }));
+      }
+    };
+    window.addEventListener("space-station:capture-snapshot", onCaptureSnapshot);
+    this.events.once("shutdown", () => {
+      window.removeEventListener("space-station:capture-snapshot", onCaptureSnapshot);
     });
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.wasd = {
-      up:    this.input.keyboard!.addKey("W"),
-      down:  this.input.keyboard!.addKey("S"),
-      left:  this.input.keyboard!.addKey("A"),
-      right: this.input.keyboard!.addKey("D"),
-    };
+    // createCursorKeys() captura SPACE internamente e chama preventDefault().
+    // disableGlobalCapture() garante que nenhum input HTML perca o espaço.
+    this.input.keyboard!.disableGlobalCapture();
 
     this.createGalaxyPortal();
 
-    if (this.pusherChannel) {
-      this.pusherChannel.bind("user:joined", (d) => this.onRemoteJoin(d as { userId: string; x: number; y: number; name: string }));
-      this.pusherChannel.bind("user:moved",  (d) => this.onRemoteMove(d as { userId: string; x: number; y: number }));
-      this.pusherChannel.bind("user:left",   (d) => this.onRemoteLeave(d as { userId: string }));
+    // ── Remote player events (dispatched by useWorldPresence hook) ──
+    const onJoin  = (e: Event) => this.onRemoteJoin((e as CustomEvent).detail  as { userId: string; x: number; y: number; name: string; spriteUrl?: string });
+    const onMove  = (e: Event) => this.onRemoteMove((e as CustomEvent).detail  as { userId: string; x: number; y: number });
+    const onLeave = (e: Event) => this.onRemoteLeave((e as CustomEvent).detail as { userId: string });
+    window.addEventListener("space-station:remote-join",  onJoin);
+    window.addEventListener("space-station:remote-move",  onMove);
+    window.addEventListener("space-station:remote-leave", onLeave);
+    this.events.once("shutdown", () => {
+      window.removeEventListener("space-station:remote-join",  onJoin);
+      window.removeEventListener("space-station:remote-move",  onMove);
+      window.removeEventListener("space-station:remote-leave", onLeave);
+    });
+
+    // ── Teleporte local (Conectar pessoas: follow-accept) ─────────────
+    const onTeleportTo = (e: Event) => {
+      const { x, y } = (e as CustomEvent).detail as { x: number; y: number };
+      const active = this.lpcSprite ?? this.player;
+      if (!active) return;
+      active.setPosition(x, y);
+      if (this.playerLabel) {
+        this.playerLabel.setPosition(x, y - (this.lpcSprite ? 44 : 36));
+      }
+      // Announce new position so peers and localStorage are updated
+      window.dispatchEvent(new CustomEvent("space-station:player-moved", {
+        detail: { x, y },
+      }));
+    };
+    window.addEventListener("space-station:teleport-to", onTeleportTo);
+    this.events.once("shutdown", () => {
+      window.removeEventListener("space-station:teleport-to", onTeleportTo);
+    });
+
+    // ── Initial render of placed objects from mapData ───────────
+    const rawMap = this.worldConfig?.mapData as WorldMapData | null;
+    const initialObjs = rawMap?.placedObjects ?? [];
+    if (initialObjs.length > 0) {
+      this.placedObjectsState = initialObjs;
+      initialObjs.forEach(o => this.renderPlacedObject(o));
     }
+
+    // ── Map Editor events ──────────────────────────────────────
+    const onObjectsChanged = (e: Event) => {
+      const { objects } = (e as CustomEvent).detail as { objects: PlacedMapObject[] };
+      this.syncPlacedObjects(objects);
+    };
+    const onEditorActive = (e: Event) => {
+      const { active } = (e as CustomEvent).detail as { active: boolean };
+      this.editorActive = active;
+      this.setupEditorDOMDrop(active);
+      if (active) {
+        // Para qualquer aba do editor: pausa o follow para pan manual funcionar
+        this.cameras.main.stopFollow();
+      } else {
+        this.editorSelectedId = null;
+        this.areaSelectedId   = null;
+        this.placedObjectHighlights.forEach(h => h.destroy());
+        this.placedObjectHighlights.clear();
+        // Retoma follow do player ao fechar o editor
+        if (this.lpcSprite) {
+          this.cameras.main.startFollow(this.lpcSprite, true, 0.1, 0.1);
+        }
+      }
+      // Re-render áreas para esconder/mostrar contorno conforme modo editor
+      this.refreshAreaSelection();
+    };
+    const onRequestCenter = () => {
+      const cam = this.cameras.main;
+      const x = cam.worldView.x + cam.worldView.width  / 2;
+      const y = cam.worldView.y + cam.worldView.height / 2;
+      window.dispatchEvent(new CustomEvent("space-station:center-response", {
+        detail: { x, y },
+      }));
+    };
+    const onFocusObject = (e: Event) => {
+      const { id } = (e as CustomEvent).detail as { id: string | null };
+      this.editorSelectedId = id;
+      this.refreshSelectionHighlights();
+      if (id) {
+        const spr = this.placedObjectSprites.get(id);
+        if (spr) this.cameras.main.pan(spr.x, spr.y, 350, "Sine.easeInOut", false);
+      }
+    };
+
+    window.addEventListener("space-station:placed-objects",     onObjectsChanged);
+    window.addEventListener("space-station:map-editor-active",  onEditorActive);
+    window.addEventListener("space-station:request-center",     onRequestCenter);
+    window.addEventListener("space-station:focus-object",       onFocusObject);
+
+    // ── Areas: initial render from mapData ──────────────────────
+    const initialAreas = rawMap?.areas ?? [];
+    if (initialAreas.length > 0) {
+      this.areasState = initialAreas;
+      initialAreas.forEach(a => {
+        this.renderArea(a);
+        this.syncAreaCollisionBody(a);
+      });
+    }
+
+    // ── Areas: events from React ────────────────────────────────
+    const onAreasChanged = (e: Event) => {
+      const { areas } = (e as CustomEvent).detail as { areas: MapArea[] };
+      this.syncAreas(areas);
+    };
+    const onAreaDrawMode = (e: Event) => {
+      const { type } = (e as CustomEvent).detail as { type: AreaType | null };
+      this.drawingAreaType = type;
+      this.drawStart = null;
+      if (this.drawPreview) { this.drawPreview.destroy(); this.drawPreview = null; }
+      const canvas = this.sys.game.canvas as HTMLCanvasElement;
+      if (canvas) canvas.style.cursor = type ? "crosshair" : "";
+    };
+    const onAreaFocus = (e: Event) => {
+      const { id } = (e as CustomEvent).detail as { id: string };
+      this.areaSelectedId = id;
+      this.refreshAreaSelection();
+      const area = this.areasState.find(a => a.id === id);
+      if (area) this.cameras.main.pan(area.x + area.w / 2, area.y + area.h / 2, 350, "Sine.easeInOut", false);
+    };
+    const onRoomCfg = (e: Event) => {
+      const { config } = (e as CustomEvent).detail as { config: { showGrid?: boolean; gridSize?: number } };
+      this.toggleEditorGrid(config.showGrid === true, config.gridSize ?? 32);
+    };
+    const onZoomFit = () => {
+      // Fit both dimensions of the world in the viewport
+      const cam = this.cameras.main;
+      const zx = cam.width  / WORLD_W;
+      const zy = cam.height / WORLD_H;
+      const z  = Math.min(zx, zy) * 0.95;
+      this.setZoom(Math.max(this.ZOOM_MIN, z));
+      cam.centerOn(WORLD_W / 2, WORLD_H / 2);
+    };
+    const onCamPan = (e: Event) => {
+      const { x, y } = (e as CustomEvent).detail as { x: number; y: number };
+      this.cameras.main.pan(x, y, 400, "Sine.easeInOut", false);
+    };
+    const onRequestCamView = () => this.emitCameraView();
+
+    window.addEventListener("space-station:areas",             onAreasChanged);
+    window.addEventListener("space-station:area-draw-mode",    onAreaDrawMode);
+    window.addEventListener("space-station:area-focus",        onAreaFocus);
+    window.addEventListener("space-station:room-config",       onRoomCfg);
+    window.addEventListener("space-station:zoom-fit",          onZoomFit);
+    window.addEventListener("space-station:camera-pan",        onCamPan);
+    window.addEventListener("space-station:request-camera-view", onRequestCamView);
+
+    // ── Pointer listeners for area-drawing rubber-band ──────────
+    this.input.on("pointerdown", (ptr: Phaser.Input.Pointer) => {
+      if (!this.editorActive || !this.drawingAreaType) return;
+      // Ignore if the click hit a game object (e.g. existing sprite / area hitzone)
+      const overObj = this.input.manager.hitTest(ptr, this.children.list as Phaser.GameObjects.GameObject[], this.cameras.main);
+      if (overObj.length > 0) return;
+      const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+      this.drawStart = { x: wp.x, y: wp.y };
+      if (this.drawPreview) this.drawPreview.destroy();
+      this.drawPreview = this.add.graphics().setDepth(500);
+    });
+    this.input.on("pointermove", (ptr: Phaser.Input.Pointer) => {
+      if (!this.drawStart || !this.drawPreview || !this.drawingAreaType) return;
+      const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+      const meta = AREA_TYPE_META[this.drawingAreaType];
+      const color = parseInt(meta.color.slice(1), 16);
+      const x = Math.min(this.drawStart.x, wp.x);
+      const y = Math.min(this.drawStart.y, wp.y);
+      const w = Math.abs(wp.x - this.drawStart.x);
+      const h = Math.abs(wp.y - this.drawStart.y);
+      this.drawPreview.clear();
+      this.drawPreview.fillStyle(color, 0.18);
+      this.drawPreview.fillRect(x, y, w, h);
+      this.drawPreview.lineStyle(2, color, 0.9);
+      this.drawPreview.strokeRect(x, y, w, h);
+    });
+    this.input.on("pointerup", (ptr: Phaser.Input.Pointer) => {
+      if (!this.drawStart || !this.drawingAreaType) return;
+      const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+      const x = Math.min(this.drawStart.x, wp.x);
+      const y = Math.min(this.drawStart.y, wp.y);
+      const w = Math.abs(wp.x - this.drawStart.x);
+      const h = Math.abs(wp.y - this.drawStart.y);
+      const type = this.drawingAreaType;
+      this.drawStart = null;
+      if (this.drawPreview) { this.drawPreview.destroy(); this.drawPreview = null; }
+      // Ignore tiny rectangles (miss-clicks)
+      if (w < 16 || h < 16) return;
+      window.dispatchEvent(new CustomEvent("space-station:area-drawn", {
+        detail: { type, x, y, w, h },
+      }));
+    });
+
+    // ── Tile Editor: events from React ─────────────────────────────
+    const onTileEditorActive = (e: Event) => {
+      const { active } = (e as CustomEvent).detail as { active: boolean };
+      this.tileEditActive = active;
+      const canvas = this.sys.game.canvas as HTMLCanvasElement;
+      if (active) {
+        this.showTileGrid();
+        if (canvas) canvas.style.cursor = this.currentTileTool === "pan" ? "grab" : "crosshair";
+      } else {
+        this.tileGridGfx?.destroy();
+        this.tileGridGfx = null;
+        this.tilePainting = false;
+        this.tilePanning  = false;
+        this.rectStart = null;
+        this.rectPreviewEnd = null;
+        this.clearRectPreview();
+        if (canvas) canvas.style.cursor = "";
+      }
+    };
+    const onTileTool = (e: Event) => {
+      const { tool, cell } = (e as CustomEvent).detail as {
+        tool: "paint" | "erase" | "fill" | "rect" | "rect-erase" | "pan";
+        cell: TileCell;
+      };
+      this.currentTileTool = tool;
+      this.currentTileCell = cell;
+      // Cancela preview retangular se o usuário mudou de ferramenta
+      this.clearRectPreview();
+      this.rectStart   = null;
+      this.tilePainting = false;
+      this.tilePanning  = false;
+      // Atualiza cursor do canvas
+      const canvas = this.sys.game.canvas as HTMLCanvasElement;
+      if (canvas) canvas.style.cursor = tool === "pan" ? "grab" : "crosshair";
+    };
+    const onTileLayerSet = (e: Event) => {
+      const { tileLayer } = (e as CustomEvent).detail as { tileLayer: TileLayer };
+      this.tileLayerState = tileLayer;
+      if (!this.tileFloorGfx) {
+        this.tileFloorGfx = this.add.graphics().setDepth(1);
+        this.tileWallGfx  = this.add.graphics().setDepth(3);
+        this.tileDecoGfx  = this.add.graphics().setDepth(15);
+      }
+      this.syncTileRendering();
+    };
+
+    // ── helper: atualiza cursor do canvas de acordo com o estado ──
+    const setTileCanvas = (cur: string) => {
+      const canvas = this.sys.game.canvas as HTMLCanvasElement;
+      if (canvas) canvas.style.cursor = cur;
+    };
+
+    // Tile painting + panning pointer events
+    this.input.on("pointerdown", (ptr: Phaser.Input.Pointer) => {
+      if (!this.tileEditActive) return;
+
+      // Botão do meio (scroll wheel) → pan sempre, independente de ferramenta
+      const isMid = ptr.middleButtonDown();
+      if (isMid || this.currentTileTool === "pan") {
+        this.tilePanning = true;
+        this.panLastX    = ptr.x;
+        this.panLastY    = ptr.y;
+        setTileCanvas("grabbing");
+        return;
+      }
+
+      const tc = this.worldToTile(ptr);
+      if (!tc) return;
+      if (this.currentTileTool === "rect" || this.currentTileTool === "rect-erase") {
+        this.rectStart = { tx: tc.tx, ty: tc.ty };
+        this.rectPreviewEnd = { tx: tc.tx, ty: tc.ty };
+        this.drawRectPreview();
+      } else {
+        this.tilePainting = true;
+        this.applyTilePaint(ptr);
+      }
+    });
+    this.input.on("pointermove", (ptr: Phaser.Input.Pointer) => {
+      if (!this.tileEditActive) return;
+
+      // Pan ativo — move câmera pelo delta de tela
+      if (this.tilePanning) {
+        const dx = ptr.x - this.panLastX;
+        const dy = ptr.y - this.panLastY;
+        const cam = this.cameras.main;
+        cam.scrollX -= dx / cam.zoom;
+        cam.scrollY -= dy / cam.zoom;
+        this.panLastX = ptr.x;
+        this.panLastY = ptr.y;
+        return;
+      }
+
+      if (this.rectStart) {
+        const tc = this.worldToTile(ptr);
+        if (!tc) return;
+        this.rectPreviewEnd = { tx: tc.tx, ty: tc.ty };
+        this.drawRectPreview();
+      } else if (this.tilePainting) {
+        this.applyTilePaint(ptr);
+      }
+    });
+    this.input.on("pointerup", (ptr: Phaser.Input.Pointer) => {
+      // Termina pan
+      if (this.tilePanning) {
+        this.tilePanning = false;
+        setTileCanvas(this.currentTileTool === "pan" ? "grab" : "crosshair");
+        return;
+      }
+
+      if (this.rectStart) {
+        const tc = this.worldToTile(ptr) ?? this.rectPreviewEnd;
+        if (tc) {
+          this.applyTileRect(
+            this.rectStart.tx, this.rectStart.ty, tc.tx, tc.ty,
+            this.currentTileTool === "rect-erase",
+          );
+        }
+        this.rectStart = null;
+        this.rectPreviewEnd = null;
+        this.clearRectPreview();
+      }
+      this.tilePainting = false;
+    });
+
+    window.addEventListener("space-station:tile-editor-active", onTileEditorActive);
+    window.addEventListener("space-station:tile-tool",          onTileTool);
+    window.addEventListener("space-station:tile-layer",         onTileLayerSet);
+
+    this.events.once("shutdown", () => {
+      window.removeEventListener("space-station:placed-objects",     onObjectsChanged);
+      window.removeEventListener("space-station:map-editor-active",  onEditorActive);
+      window.removeEventListener("space-station:request-center",     onRequestCenter);
+      window.removeEventListener("space-station:focus-object",       onFocusObject);
+      window.removeEventListener("space-station:areas",              onAreasChanged);
+      window.removeEventListener("space-station:area-draw-mode",     onAreaDrawMode);
+      window.removeEventListener("space-station:area-focus",         onAreaFocus);
+      window.removeEventListener("space-station:room-config",        onRoomCfg);
+      window.removeEventListener("space-station:zoom-fit",           onZoomFit);
+      window.removeEventListener("space-station:camera-pan",         onCamPan);
+      window.removeEventListener("space-station:request-camera-view",onRequestCamView);
+      window.removeEventListener("space-station:tile-editor-active", onTileEditorActive);
+      window.removeEventListener("space-station:tile-tool",          onTileTool);
+      window.removeEventListener("space-station:tile-layer",         onTileLayerSet);
+      if (this._tileSyncTimer) clearTimeout(this._tileSyncTimer);
+      this.setupEditorDOMDrop(false);
+    });
+  }
+
+  /* ─── Areas: render / sync / select ──────────────────────────── */
+  private renderArea(this: Phaser.Scene & WorldScene, area: MapArea) {
+    const meta = AREA_TYPE_META[area.type];
+    const color = parseInt((area.color ?? meta.color).slice(1), 16);
+
+    const g = this.add.graphics().setDepth(100);
+    this.redrawArea(g, area, color, this.areaSelectedId === area.id);
+    this.areaGraphics.set(area.id, g);
+
+    const label = this.add.text(area.x + 6, area.y + 4, `${meta.emoji} ${area.name}`, {
+      fontSize: "10px", color: "#ffffff",
+      backgroundColor: "#00000099", padding: { x: 4, y: 2 },
+    }).setDepth(101);
+    if (area.type === "collision") label.setVisible(false);
+    this.areaLabels.set(area.id, label);
+
+    this.renderAreaHitzone(area);
+  }
+
+  private renderAreaHitzone(this: Phaser.Scene & WorldScene, area: MapArea) {
+    const meta = AREA_TYPE_META[area.type];
+    const color = parseInt((area.color ?? meta.color).slice(1), 16);
+    const hit = this.add.rectangle(area.x + area.w / 2, area.y + area.h / 2, area.w, area.h, 0xffffff, 0)
+      .setDepth(99)
+      .setInteractive({ useHandCursor: true, draggable: true })
+      .setData("areaId", area.id);
+    hit.on("pointerdown", () => {
+      if (!this.editorActive || this.drawingAreaType) return;
+      this.areaSelectedId = area.id;
+      this.refreshAreaSelection();
+      window.dispatchEvent(new CustomEvent("space-station:area-selected", { detail: { id: area.id } }));
+    });
+    hit.on("drag", (_p: Phaser.Input.Pointer, dx: number, dy: number) => {
+      if (!this.editorActive) return;
+      hit.setPosition(dx, dy);
+      const a = this.areasState.find(x => x.id === area.id);
+      if (!a) return;
+      const newX = dx - a.w / 2;
+      const newY = dy - a.h / 2;
+      const grp = this.areaGraphics.get(area.id);
+      const lbl = this.areaLabels.get(area.id);
+      if (grp) this.redrawArea(grp, { ...a, x: newX, y: newY }, color, this.areaSelectedId === area.id);
+      if (lbl) lbl.setPosition(newX + 6, newY + 4);
+    });
+    hit.on("dragend", () => {
+      if (!this.editorActive) return;
+      const newX = hit.x - area.w / 2;
+      const newY = hit.y - area.h / 2;
+      window.dispatchEvent(new CustomEvent("space-station:area-moved", {
+        detail: { id: area.id, x: newX, y: newY },
+      }));
+    });
+    this.areaHitzones.set(area.id, hit);
+  }
+
+  private redrawArea(g: Phaser.GameObjects.Graphics, area: MapArea, color: number, selected: boolean) {
+    g.clear();
+    // Áreas só ficam visíveis quando explicitamente selecionadas na Ferramenta de Áreas.
+    // Mesmo dentro do editor permanecem invisíveis até o usuário escolher uma na lista.
+    if (!selected) return;
+    g.fillStyle(color, 0.16);
+    g.fillRect(area.x, area.y, area.w, area.h);
+    g.lineStyle(selected ? 3 : 2, color, selected ? 1 : 0.7);
+    g.strokeRect(area.x, area.y, area.w, area.h);
+    if (selected) {
+      g.lineStyle(1, 0xffffff, 0.6);
+      g.strokeRect(area.x + 4, area.y + 4, area.w - 8, area.h - 8);
+    }
+  }
+
+  private syncAreas(this: Phaser.Scene & WorldScene, next: MapArea[]) {
+    const nextIds = new Set(next.map(a => a.id));
+    // remove
+    this.areaGraphics.forEach((g, id) => {
+      if (!nextIds.has(id)) {
+        g.destroy();
+        this.areaLabels.get(id)?.destroy();
+        this.areaHitzones.get(id)?.destroy();
+        this.areaGraphics.delete(id);
+        this.areaLabels.delete(id);
+        this.areaHitzones.delete(id);
+      }
+    });
+    // remove orphan collision bodies
+    this.areaCollisionBodies.forEach((b, id) => {
+      if (!nextIds.has(id)) { b.destroy(); this.areaCollisionBodies.delete(id); }
+    });
+    // sync collision bodies (cria/atualiza/remove conforme type)
+    next.forEach(a => this.syncAreaCollisionBody(a));
+    // add / update
+    next.forEach(a => {
+      const meta = AREA_TYPE_META[a.type];
+      const color = parseInt((a.color ?? meta.color).slice(1), 16);
+      const existing = this.areaGraphics.get(a.id);
+      if (existing) {
+        this.redrawArea(existing, a, color, this.areaSelectedId === a.id);
+        const lbl = this.areaLabels.get(a.id);
+        if (lbl) { lbl.setText(`${meta.emoji} ${a.name}`); lbl.setPosition(a.x + 6, a.y + 4); }
+        const hit = this.areaHitzones.get(a.id);
+        // If dimensions changed, recreate the interactive hitzone (avoids reaching into Phaser internals)
+        if (hit) {
+          const sizeChanged = hit.width !== a.w || hit.height !== a.h;
+          if (sizeChanged) {
+            hit.destroy();
+            this.areaHitzones.delete(a.id);
+            this.renderAreaHitzone(a);
+          } else {
+            hit.setPosition(a.x + a.w / 2, a.y + a.h / 2);
+          }
+        }
+      } else {
+        this.renderArea(a);
+      }
+    });
+    this.areasState = next;
+  }
+
+  /**
+   * Cria/atualiza/remove o corpo estático de colisão de uma área conforme o tipo.
+   * Áreas com type === "collision" geram um body invisível no grupo this.walls.
+   */
+  private syncAreaCollisionBody(this: Phaser.Scene & WorldScene, area: MapArea) {
+    const existing = this.areaCollisionBodies.get(area.id);
+    if (area.type !== "collision") {
+      if (existing) {
+        existing.destroy();
+        this.areaCollisionBodies.delete(area.id);
+      }
+      return;
+    }
+    const cx = area.x + area.w / 2;
+    const cy = area.y + area.h / 2;
+    const w  = Math.max(area.w, 4);
+    const h  = Math.max(area.h, 4);
+    if (existing) {
+      existing.setPosition(cx, cy).setDisplaySize(w, h);
+      const eb = existing.body as Phaser.Physics.Arcade.StaticBody;
+      eb.setSize(w, h, true);
+      eb.updateFromGameObject();
+    } else {
+      const img = this.walls.create(cx, cy, "__blank__") as Phaser.Physics.Arcade.Image;
+      img.setDisplaySize(w, h).setVisible(false).setDepth(0);
+      const sBody = img.body as Phaser.Physics.Arcade.StaticBody;
+      sBody.setSize(w, h, true);
+      sBody.updateFromGameObject();
+      this.areaCollisionBodies.set(area.id, img);
+    }
+  }
+
+  private refreshAreaSelection(this: Phaser.Scene & WorldScene) {
+    this.areasState.forEach(a => {
+      const meta = AREA_TYPE_META[a.type];
+      const color = parseInt((a.color ?? meta.color).slice(1), 16);
+      const g = this.areaGraphics.get(a.id);
+      if (g) this.redrawArea(g, a, color, this.areaSelectedId === a.id);
+      const lbl = this.areaLabels.get(a.id);
+      if (lbl) lbl.setVisible(this.areaSelectedId === a.id);
+    });
+  }
+
+  private emitCameraView(this: Phaser.Scene & WorldScene) {
+    const cam = this.cameras.main;
+    window.dispatchEvent(new CustomEvent("space-station:camera-view", {
+      detail: {
+        x: cam.worldView.x, y: cam.worldView.y,
+        w: cam.worldView.width, h: cam.worldView.height,
+      },
+    }));
+  }
+
+  // Optional grid overlay used when room-config.showGrid is enabled
+  private editorGrid: Phaser.GameObjects.Graphics | null = null;
+  private toggleEditorGrid(this: Phaser.Scene & WorldScene, show: boolean, size: number) {
+    if (this.editorGrid) { this.editorGrid.destroy(); this.editorGrid = null; }
+    if (!show || size <= 0) return;
+    const g = this.add.graphics().setDepth(90);
+    g.lineStyle(1, 0xffffff, 0.06);
+    for (let x = 0; x <= WORLD_W; x += size) { g.moveTo(x, 0); g.lineTo(x, WORLD_H); }
+    for (let y = 0; y <= WORLD_H; y += size) { g.moveTo(0, y); g.lineTo(WORLD_W, y); }
+    g.strokePath();
+    this.editorGrid = g;
+  }
+
+  // ─── Map Editor: rendering & interaction ───────────────────────
+
+  private renderPlacedObject(this: Phaser.Scene & WorldScene, obj: PlacedMapObject) {
+    // Cada objeto usa uma key baseada na URL para evitar reload de imagens idênticas
+    const key = `pl-img-${hashString(obj.url)}`;
+
+    const finalize = () => {
+      // Evita duplicar quando a imagem termina de carregar
+      if (this.placedObjectSprites.has(obj.id)) return;
+      const img = this.add.image(obj.x, obj.y, key)
+        .setDepth(obj.depth ?? 5)
+        .setScale(obj.scale ?? 1)
+        .setRotation(((obj.rotation ?? 0) * Math.PI) / 180)
+        .setInteractive({ useHandCursor: true, draggable: true })
+        .setData("objId", obj.id);
+
+      img.on("pointerdown", () => {
+        if (!this.editorActive) return;
+        this.editorSelectedId = obj.id;
+        window.dispatchEvent(new CustomEvent("space-station:object-selected", {
+          detail: { id: obj.id },
+        }));
+        this.refreshSelectionHighlights();
+      });
+
+      img.on("drag", (_p: Phaser.Input.Pointer, dx: number, dy: number) => {
+        if (!this.editorActive) return;
+        img.setPosition(dx, dy);
+        const hl = this.placedObjectHighlights.get(obj.id);
+        if (hl) hl.setPosition(dx, dy);
+      });
+
+      img.on("dragend", () => {
+        if (!this.editorActive) return;
+        window.dispatchEvent(new CustomEvent("space-station:object-moved", {
+          detail: { id: obj.id, x: img.x, y: img.y },
+        }));
+      });
+
+      this.placedObjectSprites.set(obj.id, img);
+
+      // ── Colisão: se solid, cria corpo estático no grupo de paredes ──
+      if (obj.solid) {
+        this.addPlacedObjectBody(obj.id, img.x, img.y, img.displayWidth, img.displayHeight);
+      }
+
+      if (this.editorSelectedId === obj.id) this.refreshSelectionHighlights();
+    };
+
+    if (this.textures.exists(key)) {
+      finalize();
+    } else {
+      // Data URIs podem ser carregadas diretamente, HTTP/paths também
+      this.load.image(key, obj.url);
+      this.load.once(`filecomplete-image-${key}`, finalize);
+      this.load.once("loaderror", (file: Phaser.Loader.File) => {
+        if (file.key === key) console.warn("[WorldScene] failed to load placed object:", obj.url);
+      });
+      this.load.start();
+    }
+  }
+
+  private syncPlacedObjects(this: Phaser.Scene & WorldScene, next: PlacedMapObject[]) {
+    const nextIds = new Set(next.map(o => o.id));
+
+    // Remove objetos que não estão mais na lista
+    this.placedObjectSprites.forEach((spr, id) => {
+      if (!nextIds.has(id)) {
+        spr.destroy();
+        this.placedObjectSprites.delete(id);
+        const hl = this.placedObjectHighlights.get(id);
+        if (hl) { hl.destroy(); this.placedObjectHighlights.delete(id); }
+        // Remove corpo de física se existia
+        const body = this.placedObjectBodies.get(id);
+        if (body) { body.destroy(); this.placedObjectBodies.delete(id); }
+      }
+    });
+
+    // Atualiza ou cria
+    next.forEach(obj => {
+      const existing = this.placedObjectSprites.get(obj.id);
+      if (existing) {
+        existing.setPosition(obj.x, obj.y);
+        existing.setScale(obj.scale ?? 1);
+        existing.setRotation(((obj.rotation ?? 0) * Math.PI) / 180);
+        existing.setDepth(obj.depth ?? 5);
+        const hl = this.placedObjectHighlights.get(obj.id);
+        if (hl) hl.setPosition(obj.x, obj.y);
+
+        // ── Reconcilia corpo de física com flag solid ──────────────
+        const existingBody = this.placedObjectBodies.get(obj.id);
+        if (obj.solid) {
+          if (existingBody) {
+            // Atualiza posição/tamanho do corpo estático
+            const bw = Math.max(existing.displayWidth,  8);
+            const bh = Math.max(existing.displayHeight, 8);
+            existingBody.setPosition(obj.x, obj.y).setDisplaySize(bw, bh);
+            const sBody = existingBody.body as Phaser.Physics.Arcade.StaticBody;
+            sBody.setSize(bw, bh, true);
+            sBody.updateFromGameObject();
+          } else {
+            // Acabou de ser marcado como solid
+            this.addPlacedObjectBody(obj.id, obj.x, obj.y, existing.displayWidth, existing.displayHeight);
+          }
+        } else if (existingBody) {
+          // Foi desmarcado como solid
+          existingBody.destroy();
+          this.placedObjectBodies.delete(obj.id);
+        }
+      } else {
+        this.renderPlacedObject(obj);
+      }
+    });
+
+    this.placedObjectsState = next;
+    this.refreshSelectionHighlights();
+  }
+
+  /**
+   * Cria um corpo estático invisível no grupo this.walls para o objeto.
+   * O jogador colide com ele exatamente como colide com as paredes do mapa.
+   */
+  private addPlacedObjectBody(
+    this: Phaser.Scene & WorldScene,
+    id: string,
+    x: number, y: number,
+    w: number, h: number,
+  ) {
+    // Garante dimensões mínimas razoáveis
+    const bw = Math.max(w, 8);
+    const bh = Math.max(h, 8);
+    const img = this.walls.create(x, y, "__blank__") as Phaser.Physics.Arcade.Image;
+    img.setDisplaySize(bw, bh).setVisible(false).setDepth(0);
+    const sBody = img.body as Phaser.Physics.Arcade.StaticBody;
+    sBody.setSize(bw, bh, true);
+    sBody.updateFromGameObject();
+    this.placedObjectBodies.set(id, img);
+  }
+
+  private refreshSelectionHighlights(this: Phaser.Scene & WorldScene) {
+    this.placedObjectHighlights.forEach(h => h.destroy());
+    this.placedObjectHighlights.clear();
+    this.clearResizeHandles();
+    if (!this.editorSelectedId) return;
+    const spr = this.placedObjectSprites.get(this.editorSelectedId);
+    if (!spr) return;
+    const w = spr.displayWidth;
+    const h = spr.displayHeight;
+    const g = this.add.graphics().setDepth((spr.depth ?? 5) + 0.1);
+    g.lineStyle(2, 0x6366f1, 0.9);
+    g.strokeRect(-w/2 - 3, -h/2 - 3, w + 6, h + 6);
+    g.lineStyle(1, 0xa5b4fc, 0.5);
+    g.strokeRect(-w/2 - 6, -h/2 - 6, w + 12, h + 12);
+    g.setPosition(spr.x, spr.y);
+    this.placedObjectHighlights.set(this.editorSelectedId, g);
+    if (this.editorActive) this.showResizeHandles(spr);
+  }
+
+  // ─── Tile Layer: render ────────────────────────────────────────
+
+  /**
+   * Resolve a camada efetiva de um tile com base em sua textura.
+   * Texturas `wall_*` são SEMPRE sólidas (wall + colisão), mesmo que o
+   * dado persistido venha com layer inconsistente. Isso garante que tiles
+   * de parede dentro de ambientes prontos também bloqueiem o jogador.
+   */
+  private resolveTileLayer(
+    texture: string | undefined,
+    fallback: "floor" | "wall" | "decoration",
+  ): "floor" | "wall" | "decoration" {
+    if (typeof texture === "string") {
+      if (texture.startsWith("wall_"))  return "wall";
+      if (texture.startsWith("floor_")) return "floor";
+      if (texture.startsWith("deco_"))  return "decoration";
+    }
+    return fallback;
+  }
+
+  private syncTileRendering(this: Phaser.Scene & WorldScene) {
+    const tl = this.tileLayerState;
+    if (!this.tileFloorGfx || !this.tileWallGfx || !this.tileDecoGfx) return;
+
+    this.tileFloorGfx.clear();
+    this.tileWallGfx.clear();
+    this.tileDecoGfx.clear();
+
+    // Destroy old wall tile physics bodies
+    this.tileWallBodies.forEach(b => b.destroy());
+    this.tileWallBodies.clear();
+
+    if (!tl) return;
+
+    for (const [key, cell] of Object.entries(tl.cells)) {
+      const [tx, ty] = key.split(",").map(Number);
+      const px = tx * T;
+      const py = ty * T;
+
+      // Resolve pela textura — wall_* sempre vira wall com colisão,
+      // espelhando a regra para tiles vindos de ambientes prontos.
+      const effectiveLayer = this.resolveTileLayer(cell.texture, cell.layer);
+
+      if (effectiveLayer === "floor") {
+        this.drawTilePattern(this.tileFloorGfx, cell, px, py);
+      } else if (effectiveLayer === "wall") {
+        this.drawTilePattern(this.tileWallGfx, cell, px, py);
+        // ── Physics body for wall collision ─────────────────────
+        // Cria um StaticBody 32×32 centrado no tile.
+        // Usa setSize explícito no StaticBody em vez de só refreshBody()
+        // para garantir que o body fique 32×32 mesmo se a textura base
+        // (__blank__ 4×4) confundir o refreshBody.
+        const img = this.walls.create(px + T / 2, py + T / 2, "__blank__") as Phaser.Physics.Arcade.Image;
+        img.setDisplaySize(T, T).setVisible(false).setDepth(0);
+        const sBody = img.body as Phaser.Physics.Arcade.StaticBody;
+        sBody.setSize(T, T, true);   // true = re-center on gameObject
+        sBody.updateFromGameObject();
+        this.tileWallBodies.set(key, img);
+      } else {
+        this.drawTilePattern(this.tileDecoGfx, cell, px, py);
+      }
+    }
+  }
+
+  private drawTilePattern(
+    this: Phaser.Scene & WorldScene,
+    gfx: Phaser.GameObjects.Graphics,
+    cell: TileCell,
+    px: number,
+    py: number,
+  ) {
+    const color = cell.color ? parseInt(cell.color.slice(1), 16) : 0xa0783c;
+    const darken = (c: number, f: number) => {
+      const r = Math.floor(((c >> 16) & 0xff) * f);
+      const g = Math.floor(((c >> 8)  & 0xff) * f);
+      const b = Math.floor((c & 0xff) * f);
+      return (r << 16) | (g << 8) | b;
+    };
+    const lighten = (c: number, f: number) => {
+      const r = Math.min(255, Math.floor(((c >> 16) & 0xff) * f));
+      const g = Math.min(255, Math.floor(((c >> 8)  & 0xff) * f));
+      const b = Math.min(255, Math.floor((c & 0xff) * f));
+      return (r << 16) | (g << 8) | b;
+    };
+
+    gfx.fillStyle(color, 1);
+    gfx.fillRect(px, py, T, T);
+
+    switch (cell.texture as TileTextureKey) {
+      /* ─── PISOS ─────────────────────────────────────── */
+      case "floor_wood": {
+        gfx.fillStyle(darken(color, 0.82), 1);
+        for (let i = 1; i <= 3; i++) gfx.fillRect(px, py + i * 8, T, 1);
+        gfx.fillStyle(darken(color, 0.9), 1);
+        for (let i = 0; i < 4; i++) gfx.fillRect(px + i * 8 + 4, py + 2, 1, 4);
+        break;
+      }
+      case "floor_plank": {
+        gfx.fillStyle(darken(color, 0.75), 1);
+        gfx.fillRect(px, py + 10, T, 1);
+        gfx.fillRect(px, py + 21, T, 1);
+        gfx.fillStyle(darken(color, 0.88), 1);
+        gfx.fillRect(px + 15, py, 1, 10);
+        gfx.fillRect(px + 8,  py + 11, 1, 10);
+        gfx.fillRect(px + 23, py + 11, 1, 10);
+        gfx.fillRect(px + 16, py + 22, 1, 10);
+        break;
+      }
+      case "floor_parquet": {
+        gfx.fillStyle(darken(color, 0.75), 1);
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            if ((r + c) % 2 === 0) gfx.fillRect(px + c * 8, py + r * 8 + 7, 8, 1);
+            else                   gfx.fillRect(px + c * 8 + 7, py + r * 8, 1, 8);
+          }
+        }
+        break;
+      }
+      case "floor_stone": {
+        gfx.fillStyle(darken(color, 0.72), 1);
+        const seed = (px * 31 + py * 17) % 255;
+        const dots: [number, number][] = [
+          [seed % T, (seed * 3) % T],
+          [(seed * 7) % T, (seed * 11) % T],
+          [(seed * 13) % T, (seed * 5) % T],
+          [(seed * 19) % T, (seed * 23) % T],
+          [(seed * 29) % T, (seed * 31) % T],
+          [(seed * 37) % T, (seed * 41) % T],
+        ];
+        for (const [dx, dy] of dots) {
+          gfx.fillRect(px + (dx % (T - 2)), py + (dy % (T - 2)), 2, 2);
+        }
+        break;
+      }
+      case "floor_cobble": {
+        gfx.lineStyle(1, darken(color, 0.4), 1);
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            gfx.strokeRect(px + c * 8, py + r * 8, 8, 8);
+          }
+        }
+        gfx.fillStyle(lighten(color, 1.15), 1);
+        gfx.fillRect(px + 2, py + 2, 1, 1);
+        gfx.fillRect(px + 18, py + 10, 1, 1);
+        gfx.fillRect(px + 26, py + 26, 1, 1);
+        break;
+      }
+      case "floor_marble": {
+        gfx.lineStyle(1, darken(color, 0.65), 1);
+        gfx.beginPath();
+        gfx.moveTo(px + 2, py + 6);
+        gfx.lineTo(px + 10, py + 5);
+        gfx.lineTo(px + 20, py + 10);
+        gfx.lineTo(px + 30, py + 9);
+        gfx.strokePath();
+        gfx.beginPath();
+        gfx.moveTo(px + 4, py + 22);
+        gfx.lineTo(px + 14, py + 26);
+        gfx.lineTo(px + 22, py + 20);
+        gfx.lineTo(px + 30, py + 24);
+        gfx.strokePath();
+        break;
+      }
+      case "floor_carpet": {
+        gfx.fillStyle(darken(color, 0.78), 1);
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            if ((r + c) % 2 === 0) gfx.fillRect(px + c * 4, py + r * 4, 2, 2);
+          }
+        }
+        break;
+      }
+      case "floor_concrete": {
+        gfx.fillStyle(darken(color, 0.7), 1);
+        for (let i = 0; i < 8; i++) gfx.fillRect(px + 6 + i, py + 4 + i, 1, 1);
+        gfx.fillStyle(darken(color, 0.85), 1);
+        gfx.fillRect(px, py + 16, T, 1);
+        break;
+      }
+      case "floor_metal": {
+        gfx.fillStyle(lighten(color, 1.15), 1);
+        for (let i = 1; i < 4; i++) {
+          gfx.fillRect(px, py + i * 8, T, 1);
+          gfx.fillRect(px + i * 8, py, 1, T);
+        }
+        gfx.fillStyle(darken(color, 0.75), 1);
+        for (const [dx, dy] of [[2,2],[T-4,2],[2,T-4],[T-4,T-4]] as [number,number][]) {
+          gfx.fillRect(px + dx, py + dy, 2, 2);
+        }
+        break;
+      }
+      case "floor_tech": {
+        gfx.lineStyle(1, lighten(color, 2.5), 1);
+        gfx.strokeRect(px + 4, py + 4, 24, 24);
+        gfx.beginPath();
+        gfx.moveTo(px + 4, py + 16);  gfx.lineTo(px + 12, py + 16);
+        gfx.moveTo(px + 20, py + 16); gfx.lineTo(px + 28, py + 16);
+        gfx.moveTo(px + 16, py + 4);  gfx.lineTo(px + 16, py + 12);
+        gfx.moveTo(px + 16, py + 20); gfx.lineTo(px + 16, py + 28);
+        gfx.strokePath();
+        gfx.fillStyle(0x00ffd0, 1);
+        gfx.fillRect(px + 15, py + 15, 3, 3);
+        break;
+      }
+      case "floor_glass": {
+        gfx.fillStyle(lighten(color, 1.2), 0.4);
+        gfx.fillRect(px, py, T, T);
+        gfx.fillStyle(0xffffff, 0.35);
+        gfx.fillRect(px + 2, py + 2, 6, 3);
+        gfx.fillRect(px + 22, py + 20, 4, 2);
+        break;
+      }
+      case "floor_tile_white":
+      case "floor_tile_dark": {
+        gfx.fillStyle(darken(color, 0.55), 1);
+        gfx.fillRect(px, py + 15, T, 2);
+        gfx.fillRect(px + 15, py, 2, T);
+        break;
+      }
+      case "floor_checker": {
+        gfx.fillStyle(0x1a1a1a, 1);
+        gfx.fillRect(px, py, 16, 16);
+        gfx.fillRect(px + 16, py + 16, 16, 16);
+        break;
+      }
+      case "floor_brick": {
+        gfx.fillStyle(darken(color, 0.55), 1);
+        for (let row = 0; row < 4; row++) gfx.fillRect(px, py + row * 8 + 7, T, 1);
+        for (let row = 0; row < 4; row++) {
+          const off = row % 2 === 0 ? 0 : 16;
+          for (let c2 = 0; c2 <= 32; c2 += 16) gfx.fillRect(px + c2 + off, py + row * 8, 1, 7);
+        }
+        break;
+      }
+      case "floor_hex": {
+        gfx.lineStyle(1, darken(color, 0.55), 1);
+        const hexH = 10, hexW = 8;
+        for (let row = -1; row < 4; row++) {
+          for (let col = -1; col < 5; col++) {
+            const cx = col * hexW + (row % 2 ? hexW / 2 : 0);
+            const cy = row * (hexH - 2);
+            gfx.beginPath();
+            gfx.moveTo(px + cx,         py + cy + hexH / 2);
+            gfx.lineTo(px + cx + hexW/2, py + cy);
+            gfx.lineTo(px + cx + hexW,   py + cy + hexH / 2);
+            gfx.lineTo(px + cx + hexW,   py + cy + hexH);
+            gfx.lineTo(px + cx + hexW/2, py + cy + hexH + hexH / 2);
+            gfx.lineTo(px + cx,         py + cy + hexH);
+            gfx.closePath();
+            gfx.strokePath();
+          }
+        }
+        break;
+      }
+      case "floor_sand": {
+        gfx.fillStyle(darken(color, 0.85), 1);
+        for (let i = 0; i < 20; i++) {
+          const sx = ((px * 37 + py * 13 + i * 7) % T + T) % T;
+          const sy = ((px * 19 + py * 23 + i * 11) % T + T) % T;
+          gfx.fillRect(px + sx, py + sy, 1, 1);
+        }
+        gfx.lineStyle(1, darken(color, 0.78), 1);
+        gfx.beginPath();
+        gfx.moveTo(px, py + 10);
+        gfx.lineTo(px + 10, py + 8);
+        gfx.lineTo(px + 20, py + 12);
+        gfx.lineTo(px + T, py + 10);
+        gfx.strokePath();
+        break;
+      }
+      case "floor_dirt": {
+        gfx.fillStyle(darken(color, 0.7), 1);
+        const seed3 = ((px * 23 + py * 29) % 255 + 255) % 255;
+        for (let i = 0; i < 18; i++) {
+          const dx = (seed3 * (i + 3) * 7) % T;
+          const dy = (seed3 * (i + 5) * 11) % T;
+          gfx.fillRect(px + dx, py + dy, 1, 1);
+        }
+        gfx.fillStyle(lighten(color, 1.2), 1);
+        gfx.fillRect(px + 8, py + 20, 2, 1);
+        gfx.fillRect(px + 22, py + 6, 2, 1);
+        break;
+      }
+      case "floor_grass": {
+        gfx.fillStyle(darken(color, 0.7), 1);
+        const seed4 = ((px * 13 + py * 7) % 16 + 16) % 16;
+        for (let i = 0; i < 14; i++) {
+          const bx = (seed4 * (i + 3) * 7) % (T - 2);
+          const by = (seed4 * (i + 5) * 11) % (T - 3);
+          gfx.fillRect(px + bx, py + by, 1, 3);
+        }
+        gfx.fillStyle(lighten(color, 1.3), 1);
+        for (let i = 0; i < 6; i++) {
+          const bx = (seed4 * (i + 7) * 13) % (T - 1);
+          const by = (seed4 * (i + 9) * 17) % (T - 2);
+          gfx.fillRect(px + bx, py + by, 1, 2);
+        }
+        break;
+      }
+      case "floor_snow": {
+        gfx.fillStyle(0xb4c8e6, 0.45);
+        for (const [dx, dy] of [[4,4],[20,10],[12,22],[28,18],[6,26]] as [number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, 3);
+        }
+        break;
+      }
+      case "floor_ice": {
+        gfx.lineStyle(1, 0xffffff, 0.8);
+        gfx.beginPath();
+        gfx.moveTo(px + 4, py + 4);   gfx.lineTo(px + 14, py + 14);
+        gfx.moveTo(px + 20, py + 6);  gfx.lineTo(px + 28, py + 18);
+        gfx.moveTo(px + 8, py + 22);  gfx.lineTo(px + 22, py + 28);
+        gfx.strokePath();
+        gfx.fillStyle(0xffffff, 0.6);
+        gfx.fillRect(px + 3, py + 3, 2, 2);
+        gfx.fillRect(px + 26, py + 24, 2, 2);
+        break;
+      }
+      case "floor_lava": {
+        gfx.fillStyle(0xffb347, 1);
+        for (let wx = 0; wx < T; wx++) {
+          const wy = Math.round(Math.sin((wx / T) * Math.PI * 3) * 3 + 16);
+          gfx.fillRect(px + wx, py + wy, 1, 1);
+        }
+        gfx.fillStyle(0xffe664, 0.5);
+        for (const [dx, dy, r] of [[6,8,2],[22,20,3],[14,26,2]] as [number,number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, r);
+        }
+        break;
+      }
+
+      /* ─── PAREDES ───────────────────────────────────── */
+      case "wall_brick": {
+        gfx.fillStyle(darken(color, 0.6), 1);
+        for (let row = 0; row < 4; row++) gfx.fillRect(px, py + row * 8 + 7, T, 1);
+        for (let row = 0; row < 4; row++) {
+          const off = row % 2 === 0 ? 0 : 14;
+          gfx.fillRect(px + off, py + row * 8, 1, 7);
+          gfx.fillRect(px + off + 14, py + row * 8, 1, 7);
+          gfx.fillRect(px + off + 28, py + row * 8, 1, 7);
+        }
+        break;
+      }
+      case "wall_stone": {
+        gfx.lineStyle(1, darken(color, 0.5), 1);
+        gfx.strokeRect(px, py, 14, 11);
+        gfx.strokeRect(px + 15, py, 16, 8);
+        gfx.strokeRect(px + 15, py + 9, 10, 12);
+        gfx.strokeRect(px + 26, py + 9, 5, 15);
+        gfx.strokeRect(px, py + 12, 10, 11);
+        gfx.strokeRect(px + 11, py + 12, 14, 11);
+        gfx.strokeRect(px, py + 24, 15, 7);
+        gfx.strokeRect(px + 16, py + 24, 15, 7);
+        gfx.fillStyle(lighten(color, 1.15), 1);
+        gfx.fillRect(px + 3, py + 3, 1, 1);
+        gfx.fillRect(px + 20, py + 4, 1, 1);
+        gfx.fillRect(px + 25, py + 28, 1, 1);
+        break;
+      }
+      case "wall_concrete": {
+        gfx.fillStyle(darken(color, 0.7), 1);
+        for (let i = 0; i < 8; i++) gfx.fillRect(px + 6 + i, py + 4 + i, 1, 1);
+        gfx.fillStyle(darken(color, 0.85), 1);
+        gfx.fillRect(px, py + 16, T, 1);
+        break;
+      }
+      case "wall_wood": {
+        gfx.fillStyle(darken(color, 0.8), 1);
+        gfx.fillRect(px, py + 10, T, 2);
+        gfx.fillRect(px, py + 22, T, 2);
+        gfx.fillStyle(darken(color, 0.9), 1);
+        gfx.fillRect(px + 16, py, 1, 10);
+        gfx.fillRect(px + 16, py + 12, 1, 10);
+        gfx.fillRect(px + 16, py + 24, 1, 8);
+        break;
+      }
+      case "wall_metal": {
+        gfx.fillStyle(lighten(color, 1.25), 1);
+        gfx.fillRect(px, py + 15, T, 2);
+        gfx.fillStyle(darken(color, 0.65), 1);
+        gfx.fillRect(px, py + 14, T, 1);
+        gfx.fillRect(px, py + 17, T, 1);
+        gfx.fillStyle(darken(color, 0.5), 1);
+        for (const [dx, dy] of [[3,3],[T-5,3],[3,T-5],[T-5,T-5],[3,14],[T-5,14]] as [number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, 1.5);
+        }
+        break;
+      }
+      case "wall_glass": {
+        gfx.fillStyle(lighten(color, 1.25), 0.6);
+        gfx.fillRect(px, py, T, T);
+        gfx.fillStyle(darken(color, 0.55), 1);
+        gfx.fillRect(px, py, T, 2);
+        gfx.fillRect(px, py + T - 2, T, 2);
+        gfx.fillRect(px, py, 2, T);
+        gfx.fillRect(px + T - 2, py, 2, T);
+        gfx.fillRect(px, py + 15, T, 1);
+        gfx.fillRect(px + 15, py, 1, T);
+        gfx.fillStyle(0xffffff, 0.4);
+        gfx.fillRect(px + 4, py + 4, 3, 8);
+        gfx.fillRect(px + 20, py + 20, 3, 6);
+        break;
+      }
+      case "wall_tech": {
+        gfx.fillStyle(lighten(color, 2.8), 1);
+        gfx.fillRect(px + 3, py + 6, 10, 1);
+        gfx.fillRect(px + 12, py + 6, 1, 10);
+        gfx.fillRect(px + 12, py + 16, 8, 1);
+        gfx.fillRect(px + 20, py + 10, 1, 10);
+        gfx.fillRect(px + 20, py + 20, 9, 1);
+        gfx.fillStyle(0x00ffe0, 1);
+        gfx.fillRect(px + 12, py + 5, 2, 2);
+        gfx.fillRect(px + 19, py + 15, 2, 2);
+        gfx.fillRect(px + 28, py + 19, 2, 2);
+        break;
+      }
+      case "wall_sandstone": {
+        gfx.fillStyle(darken(color, 0.7), 1);
+        gfx.fillRect(px, py + 10, T, 1);
+        gfx.fillRect(px, py + 21, T, 1);
+        gfx.fillRect(px + 10, py, 1, 10);
+        gfx.fillRect(px + 22, py + 11, 1, 10);
+        gfx.fillRect(px + 10, py + 22, 1, 10);
+        gfx.fillStyle(darken(color, 0.85), 1);
+        for (let i = 0; i < 12; i++) {
+          const sx = ((px * 37 + i * 13) % T + T) % T;
+          const sy = ((py * 19 + i * 7) % T + T) % T;
+          gfx.fillRect(px + sx, py + sy, 1, 1);
+        }
+        break;
+      }
+      case "wall_hedge": {
+        gfx.fillStyle(darken(color, 0.7), 1);
+        for (let i = 0; i < 20; i++) {
+          const dx = ((px * 23 + i * 7) % T + T) % T;
+          const dy = ((py * 11 + i * 13) % T + T) % T;
+          gfx.fillRect(px + dx, py + dy, 2, 2);
+        }
+        gfx.fillStyle(lighten(color, 1.35), 1);
+        for (let i = 0; i < 10; i++) {
+          const dx = ((px * 29 + i * 11) % T + T) % T;
+          const dy = ((py * 17 + i * 19) % T + T) % T;
+          gfx.fillRect(px + dx, py + dy, 1, 2);
+        }
+        break;
+      }
+      case "wall_ice": {
+        gfx.fillStyle(0xffffff, 0.5);
+        gfx.fillTriangle(px, py, px + 12, py, px + 6, py + 10);
+        gfx.fillTriangle(px + T, py, px + T - 10, py, px + T - 4, py + 8);
+        gfx.lineStyle(1, 0xffffff, 0.7);
+        gfx.beginPath();
+        gfx.moveTo(px + 4, py + 15);  gfx.lineTo(px + 15, py + 22);
+        gfx.moveTo(px + 20, py + 18); gfx.lineTo(px + 28, py + 28);
+        gfx.strokePath();
+        break;
+      }
+      case "wall_cave": {
+        gfx.fillStyle(lighten(color, 1.6), 1);
+        const seed5 = ((px * 31 + py * 19) % 255 + 255) % 255;
+        for (let i = 0; i < 12; i++) {
+          const dx = (seed5 * (i + 3) * 7) % T;
+          const dy = (seed5 * (i + 5) * 11) % T;
+          gfx.fillRect(px + dx, py + dy, 2, 2);
+        }
+        gfx.fillStyle(darken(color, 0.5), 1);
+        for (let i = 0; i < 6; i++) {
+          const dx = (seed5 * (i + 13) * 17) % (T - 3);
+          const dy = (seed5 * (i + 7) * 23) % (T - 3);
+          gfx.fillRect(px + dx, py + dy, 3, 3);
+        }
+        break;
+      }
+
+      /* ─── DECORAÇÃO ─────────────────────────────────── */
+      case "deco_water": {
+        gfx.fillStyle(lighten(color, 1.18), 1);
+        for (let x = 0; x < T; x++) {
+          const y1 = Math.round(Math.sin((x / T) * Math.PI * 2) * 2 + 10);
+          const y2 = Math.round(Math.sin((x / T) * Math.PI * 2 + Math.PI) * 2 + 22);
+          gfx.fillRect(px + x, py + y1, 1, 2);
+          gfx.fillRect(px + x, py + y2, 1, 2);
+        }
+        break;
+      }
+      case "deco_puddle": {
+        gfx.fillStyle(lighten(color, 1.15), 0.9);
+        gfx.fillEllipse(px + 16, py + 18, 26, 16);
+        gfx.fillStyle(0xffffff, 0.45);
+        gfx.fillRect(px + 8, py + 14, 5, 1);
+        gfx.fillRect(px + 20, py + 22, 3, 1);
+        break;
+      }
+      case "deco_grass": {
+        gfx.fillStyle(darken(color, 0.75), 1);
+        const seed2 = (px * 13 + py * 7) % 16;
+        for (let i = 0; i < 10; i++) {
+          const bx = (seed2 * (i + 3) * 7) % (T - 2);
+          const by = (seed2 * (i + 5) * 11) % (T - 4);
+          gfx.fillRect(px + bx, py + by, 2, 4);
+        }
+        break;
+      }
+      case "deco_bushes": {
+        gfx.fillStyle(lighten(color, 1.3), 1);
+        for (const [dx, dy, r] of [[10,14,6],[22,10,5],[18,24,6]] as [number,number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, r);
+        }
+        gfx.fillStyle(darken(color, 0.7), 1);
+        for (const [dx, dy] of [[8,16],[14,8],[24,14],[16,28]] as [number,number][]) {
+          gfx.fillRect(px + dx, py + dy, 1, 1);
+        }
+        break;
+      }
+      case "deco_flowers": {
+        const petals: [number, number, number][] = [
+          [8, 10, 0xffc2d9], [22, 16, 0xffe081], [14, 24, 0xc3a5ff],
+        ];
+        for (const [px2, py2, petal] of petals) {
+          gfx.fillStyle(petal, 1);
+          for (const [dx, dy] of [[-3,0],[3,0],[0,-3],[0,3]] as [number,number][]) {
+            gfx.fillCircle(px + px2 + dx, py + py2 + dy, 2);
+          }
+          gfx.fillStyle(color, 1);
+          gfx.fillCircle(px + px2, py + py2, 1.5);
+        }
+        gfx.fillStyle(0x2f6d2c, 1);
+        gfx.fillRect(px + 8,  py + 13, 1, 4);
+        gfx.fillRect(px + 22, py + 19, 1, 4);
+        gfx.fillRect(px + 14, py + 27, 1, 3);
+        break;
+      }
+      case "deco_leaves": {
+        const colors = [darken(color, 0.8), lighten(color, 1.2), 0x4f6b2a];
+        for (let i = 0; i < 7; i++) {
+          const seed = (px * 23 + py * 17 + i * 37) % 255;
+          const lx = seed % (T - 4);
+          const ly = (seed * 3) % (T - 4);
+          gfx.fillStyle(colors[i % 3], 1);
+          gfx.fillEllipse(px + lx, py + ly, 6, 4);
+        }
+        break;
+      }
+      case "deco_sand": {
+        gfx.fillStyle(darken(color, 0.8), 1);
+        for (let i = 0; i < 30; i++) {
+          const sx = ((px * 37 + i * 7) % T + T) % T;
+          const sy = ((py * 19 + i * 11) % T + T) % T;
+          gfx.fillRect(px + sx, py + sy, 1, 1);
+        }
+        gfx.fillStyle(lighten(color, 1.2), 1);
+        for (let i = 0; i < 8; i++) {
+          const sx = ((px * 13 + i * 17) % T + T) % T;
+          const sy = ((py * 29 + i * 23) % T + T) % T;
+          gfx.fillRect(px + sx, py + sy, 1, 1);
+        }
+        break;
+      }
+      case "deco_gravel": {
+        for (let i = 0; i < 14; i++) {
+          const seed = (px * 31 + py * 17 + i * 41) % 255;
+          const gx = seed % (T - 3);
+          const gy = (seed * 3) % (T - 3);
+          gfx.fillStyle(i % 2 === 0 ? darken(color, 0.65) : lighten(color, 1.3), 1);
+          gfx.fillRect(px + gx, py + gy, 2, 2);
+        }
+        break;
+      }
+      case "deco_rocks": {
+        gfx.fillStyle(lighten(color, 1.2), 1);
+        for (const [dx, dy, w, h] of [[6,8,5,4],[20,12,6,5],[10,22,4,4],[24,24,5,3]] as [number,number,number,number][]) {
+          gfx.fillRect(px + dx, py + dy, w, h);
+        }
+        gfx.fillStyle(darken(color, 0.55), 1);
+        for (const [dx, dy] of [[11,11],[20,12],[14,25],[28,26]] as [number,number][]) {
+          gfx.fillRect(px + dx, py + dy, 1, 1);
+        }
+        break;
+      }
+      case "deco_snow": {
+        gfx.fillStyle(0xffffff, 1);
+        for (const [dx, dy] of [[6,8],[16,4],[24,12],[10,20],[22,26],[4,26]] as [number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, 1.5);
+          gfx.fillRect(px + dx - 2, py + dy, 4, 1);
+          gfx.fillRect(px + dx, py + dy - 2, 1, 4);
+        }
+        break;
+      }
+      case "deco_lava": {
+        for (const [dx, dy, r] of [[8,10,3],[22,14,4],[14,24,3]] as [number,number,number][]) {
+          gfx.fillStyle(0xffdd55, 1);
+          gfx.fillCircle(px + dx, py + dy, r);
+          gfx.fillStyle(0xffffff, 1);
+          gfx.fillCircle(px + dx - 1, py + dy - 1, 1);
+        }
+        break;
+      }
+      case "deco_fire": {
+        // Chama externa laranja
+        gfx.fillStyle(0xffbb33, 1);
+        gfx.fillTriangle(px + 16, py + 4, px + 22, py + 16, px + 16, py + 28);
+        gfx.fillTriangle(px + 16, py + 4, px + 10, py + 16, px + 16, py + 28);
+        // Chama média vermelha
+        gfx.fillStyle(0xff4400, 1);
+        gfx.fillTriangle(px + 16, py + 10, px + 19, py + 18, px + 16, py + 26);
+        gfx.fillTriangle(px + 16, py + 10, px + 13, py + 18, px + 16, py + 26);
+        // Núcleo amarelo
+        gfx.fillStyle(0xffff66, 1);
+        gfx.fillTriangle(px + 16, py + 16, px + 18, py + 22, px + 16, py + 26);
+        gfx.fillTriangle(px + 16, py + 16, px + 14, py + 22, px + 16, py + 26);
+        break;
+      }
+      case "deco_stars": {
+        gfx.fillStyle(0xffffff, 1);
+        for (const [dx, dy] of [[6,6],[24,10],[14,18],[28,22],[4,26],[18,28]] as [number,number][]) {
+          gfx.fillRect(px + dx, py + dy, 1, 1);
+          gfx.fillRect(px + dx - 1, py + dy, 3, 1);
+          gfx.fillRect(px + dx, py + dy - 1, 1, 3);
+        }
+        gfx.fillStyle(0xffe88a, 1);
+        gfx.fillRect(px + 20, py + 6, 1, 1);
+        gfx.fillRect(px + 10, py + 22, 1, 1);
+        break;
+      }
+      case "deco_cloud": {
+        gfx.fillStyle(0xffffff, 0.95);
+        for (const [dx, dy, r] of [[10,16,5],[16,12,6],[22,16,5],[16,18,7]] as [number,number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, r);
+        }
+        gfx.fillStyle(0xb4bed2, 0.6);
+        for (const [dx, dy, r] of [[10,20,3],[22,20,3]] as [number,number,number][]) {
+          gfx.fillCircle(px + dx, py + dy, r);
+        }
+        break;
+      }
+    }
+  }
+
+  private showTileGrid(this: Phaser.Scene & WorldScene) {
+    if (this.tileGridGfx) { this.tileGridGfx.destroy(); this.tileGridGfx = null; }
+    this.tileGridGfx = this.add.graphics().setDepth(50).setAlpha(0.18);
+    this.tileGridGfx.lineStyle(1, 0xffffff, 1);
+    for (let x = 0; x <= MW; x++) {
+      this.tileGridGfx.moveTo(x * T, 0);
+      this.tileGridGfx.lineTo(x * T, WORLD_H);
+    }
+    for (let y = 0; y <= MH; y++) {
+      this.tileGridGfx.moveTo(0, y * T);
+      this.tileGridGfx.lineTo(WORLD_W, y * T);
+    }
+    this.tileGridGfx.strokePath();
+  }
+
+  // ─── Tile Layer: painting ──────────────────────────────────────
+
+  private applyTilePaint(this: Phaser.Scene & WorldScene, ptr: Phaser.Input.Pointer) {
+    if (!this.tileLayerState) {
+      this.tileLayerState = { gridW: MW, gridH: MH, tileSize: T, cells: {} };
+      if (!this.tileFloorGfx) {
+        this.tileFloorGfx = this.add.graphics().setDepth(1);
+        this.tileWallGfx  = this.add.graphics().setDepth(3);
+        this.tileDecoGfx  = this.add.graphics().setDepth(15);
+      }
+    }
+    const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+    const tx = Math.floor(wp.x / T);
+    const ty = Math.floor(wp.y / T);
+    if (tx < 0 || tx >= MW || ty < 0 || ty >= MH) return;
+    const key = `${tx},${ty}`;
+    const cells = this.tileLayerState.cells;
+
+    if (this.currentTileTool === "paint") {
+      const c = { ...this.currentTileCell };
+      c.layer = this.resolveTileLayer(c.texture, c.layer);
+      cells[key] = c;
+    } else if (this.currentTileTool === "erase") {
+      delete cells[key];
+    } else if (this.currentTileTool === "fill") {
+      const target = cells[key];
+      this.floodFillTile(tx, ty, target ?? null);
+    }
+    this.scheduleSyncTiles();
+  }
+
+  /** Converte coordenadas do pointer em coordenadas de tile (clamp ao grid). */
+  private worldToTile(
+    this: Phaser.Scene & WorldScene,
+    ptr: Phaser.Input.Pointer,
+  ): { tx: number; ty: number } | null {
+    const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+    const tx = Math.floor(wp.x / T);
+    const ty = Math.floor(wp.y / T);
+    if (tx < -1 || tx > MW || ty < -1 || ty > MH) return null;
+    return {
+      tx: Math.max(0, Math.min(MW - 1, tx)),
+      ty: Math.max(0, Math.min(MH - 1, ty)),
+    };
+  }
+
+  /**
+   * Aplica a célula atual (ou apaga) em todo o retângulo de tiles
+   * entre (x1,y1) e (x2,y2) — inclusivo nas duas pontas.
+   */
+  private applyTileRect(
+    this: Phaser.Scene & WorldScene,
+    x1: number, y1: number, x2: number, y2: number,
+    erase: boolean,
+  ) {
+    if (!this.tileLayerState) {
+      this.tileLayerState = { gridW: MW, gridH: MH, tileSize: T, cells: {} };
+      if (!this.tileFloorGfx) {
+        this.tileFloorGfx = this.add.graphics().setDepth(1);
+        this.tileWallGfx  = this.add.graphics().setDepth(3);
+        this.tileDecoGfx  = this.add.graphics().setDepth(15);
+      }
+    }
+    const xMin = Math.max(0, Math.min(x1, x2));
+    const yMin = Math.max(0, Math.min(y1, y2));
+    const xMax = Math.min(MW - 1, Math.max(x1, x2));
+    const yMax = Math.min(MH - 1, Math.max(y1, y2));
+    const cells = this.tileLayerState.cells;
+
+    if (erase) {
+      for (let tx = xMin; tx <= xMax; tx++) {
+        for (let ty = yMin; ty <= yMax; ty++) {
+          delete cells[`${tx},${ty}`];
+        }
+      }
+    } else {
+      const base = { ...this.currentTileCell };
+      base.layer = this.resolveTileLayer(base.texture, base.layer);
+      for (let tx = xMin; tx <= xMax; tx++) {
+        for (let ty = yMin; ty <= yMax; ty++) {
+          cells[`${tx},${ty}`] = { ...base };
+        }
+      }
+    }
+    this.scheduleSyncTiles();
+  }
+
+  /** Desenha o retângulo-fantasma (feedback visual durante o drag). */
+  private drawRectPreview(this: Phaser.Scene & WorldScene) {
+    if (!this.rectStart || !this.rectPreviewEnd) return;
+    if (!this.rectPreviewGfx) {
+      this.rectPreviewGfx = this.add.graphics().setDepth(55);
+    }
+    const g = this.rectPreviewGfx;
+    const erase = this.currentTileTool === "rect-erase";
+    const fillColor  = erase ? 0xef4444 : 0x6366f1;
+    const strokeColor = erase ? 0xff6b6b : 0x818cf8;
+
+    const xMin = Math.min(this.rectStart.tx, this.rectPreviewEnd.tx);
+    const yMin = Math.min(this.rectStart.ty, this.rectPreviewEnd.ty);
+    const xMax = Math.max(this.rectStart.tx, this.rectPreviewEnd.tx);
+    const yMax = Math.max(this.rectStart.ty, this.rectPreviewEnd.ty);
+    const w = (xMax - xMin + 1) * T;
+    const h = (yMax - yMin + 1) * T;
+
+    g.clear();
+    g.fillStyle(fillColor, 0.25);
+    g.fillRect(xMin * T, yMin * T, w, h);
+    g.lineStyle(2, strokeColor, 0.9);
+    g.strokeRect(xMin * T, yMin * T, w, h);
+  }
+
+  private clearRectPreview(this: Phaser.Scene & WorldScene) {
+    if (this.rectPreviewGfx) {
+      this.rectPreviewGfx.destroy();
+      this.rectPreviewGfx = null;
+    }
+  }
+
+  private floodFillTile(
+    this: Phaser.Scene & WorldScene,
+    startX: number,
+    startY: number,
+    targetCell: TileCell | null,
+  ) {
+    const cells = this.tileLayerState!.cells;
+    const fill = { ...this.currentTileCell };
+    fill.layer = this.resolveTileLayer(fill.texture, fill.layer);
+    const targetKey = targetCell ? `${targetCell.texture}:${targetCell.layer}` : "__empty__";
+    const fillKey   = `${fill.texture}:${fill.layer}`;
+    if (targetKey === fillKey) return; // already same
+
+    const queue: [number, number][] = [[startX, startY]];
+    const visited = new Set<string>();
+    visited.add(`${startX},${startY}`);
+
+    while (queue.length > 0) {
+      const [x, y] = queue.shift()!;
+      const k = `${x},${y}`;
+      const existing = cells[k] ?? null;
+      const existingKey = existing ? `${existing.texture}:${existing.layer}` : "__empty__";
+      if (existingKey !== targetKey) continue;
+      if (targetCell === null) {
+        cells[k] = { ...fill };
+      } else {
+        cells[k] = { ...fill };
+      }
+      for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]] as [number,number][]) {
+        if (nx < 0 || nx >= MW || ny < 0 || ny >= MH) continue;
+        const nk = `${nx},${ny}`;
+        if (visited.has(nk)) continue;
+        visited.add(nk);
+        queue.push([nx, ny]);
+      }
+    }
+  }
+
+  private scheduleSyncTiles(this: Phaser.Scene & WorldScene) {
+    if (this._tileSyncTimer) clearTimeout(this._tileSyncTimer);
+    this._tileSyncTimer = setTimeout(() => {
+      this._tileSyncTimer = null;
+      this.syncTileRendering();
+      if (this.tileLayerState) {
+        // Cria uma nova referência para que o React detecte a mudança via Object.is.
+        const snapshot: TileLayer = {
+          ...this.tileLayerState,
+          cells: { ...this.tileLayerState.cells },
+        };
+        window.dispatchEvent(new CustomEvent("space-station:tile-layer-changed", {
+          detail: { tileLayer: snapshot },
+        }));
+      }
+    }, 80);
+  }
+
+  // ─── Resize handles for placed objects ────────────────────────
+
+  private showResizeHandles(this: Phaser.Scene & WorldScene, spr: Phaser.GameObjects.Image) {
+    this.clearResizeHandles();
+    const hw = spr.displayWidth  / 2;
+    const hh = spr.displayHeight / 2;
+
+    // Textura ainda não carregou → dimensões zeradas, impossível calcular escala
+    if (hw < 1 || hh < 1) return;
+
+    this.resizeOrigScale = spr.scale;
+    this.resizeOrigDist  = Math.hypot(hw, hh);
+
+    const corners: [number, number][] = [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]];
+    for (const [dx, dy] of corners) {
+      const h = this.add.rectangle(spr.x + dx, spr.y + dy, 14, 14, 0xffffff)
+        .setDepth(200)
+        .setStrokeStyle(2, 0x6366f1)
+        .setInteractive({ useHandCursor: true, draggable: true });
+
+      h.on("drag", (_p: unknown, wx: number, wy: number) => {
+        if (this.resizeOrigDist < 1) return; // guard contra divisão por zero
+        const dist = Math.hypot(wx - spr.x, wy - spr.y);
+        const newScale = Math.max(0.05, (dist / this.resizeOrigDist) * this.resizeOrigScale);
+        spr.setScale(newScale);
+        this.repositionResizeHandles(spr);
+        // Atualiza o highlight de seleção sem recriar as alças
+        const hl = this.placedObjectHighlights.get(this.editorSelectedId ?? "");
+        if (hl) {
+          const w2 = spr.displayWidth  / 2;
+          const h2 = spr.displayHeight / 2;
+          hl.clear();
+          hl.lineStyle(2, 0x6366f1, 0.9);
+          hl.strokeRect(-w2 - 3, -h2 - 3, w2 * 2 + 6, h2 * 2 + 6);
+          hl.lineStyle(1, 0xa5b4fc, 0.5);
+          hl.strokeRect(-w2 - 6, -h2 - 6, w2 * 2 + 12, h2 * 2 + 12);
+        }
+        window.dispatchEvent(new CustomEvent("space-station:object-resized", {
+          detail: { id: this.editorSelectedId, scale: newScale },
+        }));
+      });
+
+      // Ao soltar, atualiza os limites das alças com a nova escala final
+      h.on("dragend", () => {
+        this.resizeOrigScale = spr.scale;
+        this.resizeOrigDist  = Math.hypot(spr.displayWidth / 2, spr.displayHeight / 2);
+        this.repositionResizeHandles(spr);
+      });
+
+      this.resizeHandles.push(h);
+    }
+  }
+
+  private clearResizeHandles(this: Phaser.Scene & WorldScene) {
+    this.resizeHandles.forEach(h => h.destroy());
+    this.resizeHandles = [];
+  }
+
+  private repositionResizeHandles(this: Phaser.Scene & WorldScene, spr: Phaser.GameObjects.Image) {
+    const hw = spr.displayWidth  / 2;
+    const hh = spr.displayHeight / 2;
+    const corners: [number, number][] = [[-hw, -hh], [hw, -hh], [-hw, hh], [hw, hh]];
+    this.resizeHandles.forEach((h, i) => {
+      const [dx, dy] = corners[i];
+      h.setPosition(spr.x + dx, spr.y + dy);
+    });
+  }
+
+  /** Habilita/desabilita drop HTML → coordenadas do mundo Phaser. */
+  private setupEditorDOMDrop(active: boolean) {
+    const canvas = this.sys.game.canvas as HTMLCanvasElement;
+    if (!canvas) return;
+    // Remove listeners anteriores (armazenados em dataset para idempotência)
+    const existing = (canvas as unknown as { __editorDropCleanup?: () => void }).__editorDropCleanup;
+    if (existing) {
+      existing();
+      (canvas as unknown as { __editorDropCleanup?: () => void }).__editorDropCleanup = undefined;
+    }
+    if (!active) return;
+
+    const onDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes("application/x-map-object")) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    };
+    const onDrop = (e: DragEvent) => {
+      const raw = e.dataTransfer?.getData("application/x-map-object");
+      if (!raw) return;
+      e.preventDefault();
+      let item: unknown;
+      try { item = JSON.parse(raw); } catch { return; }
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      // Converte coords de tela → coords do mundo
+      const cam = this.cameras.main;
+      const worldX = cam.worldView.x + screenX / cam.zoom * (rect.width / cam.width);
+      const worldY = cam.worldView.y + screenY / cam.zoom * (rect.height / cam.height);
+      // Fallback mais robusto usando getWorldPoint
+      const wp = cam.getWorldPoint(screenX, screenY);
+      window.dispatchEvent(new CustomEvent("space-station:object-dropped", {
+        detail: { item, x: wp.x || worldX, y: wp.y || worldY },
+      }));
+    };
+
+    canvas.addEventListener("dragover", onDragOver);
+    canvas.addEventListener("drop",     onDrop);
+    (canvas as unknown as { __editorDropCleanup?: () => void }).__editorDropCleanup = () => {
+      canvas.removeEventListener("dragover", onDragOver);
+      canvas.removeEventListener("drop",     onDrop);
+    };
+  }
+
+  // ─── Tiled map scenario ────────────────────────────────────────
+
+  private renderTiledMap(this: Phaser.Scene & WorldScene) {
+    if (!this.tiledCanvas) return;
+
+    // Registra o canvas pré-renderizado como textura Phaser (sem toBlob, sem load)
+    if (this.textures.exists("__tiled_bg__")) {
+      this.textures.remove("__tiled_bg__");
+    }
+    this.textures.addCanvas("__tiled_bg__", this.tiledCanvas);
+
+    // Adiciona como imagem de fundo
+    this.add.image(0, 0, "__tiled_bg__")
+      .setOrigin(0, 0)
+      .setDepth(0);
+
+    // Ajusta bounds do mundo ao tamanho do mapa Tiled
+    this.physics.world.setBounds(0, 0, this.tiledMapW, this.tiledMapH);
   }
 
   // ─── Station scenario ─────────────────────────────────────────
@@ -659,6 +2546,522 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     });
   }
 
+  // ─── Lunar Base ──────────────────────────────────────────────
+  private drawLunarBase(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    // Moon surface background — grey regolith
+    this.fillRect(rg, 0x1a1a20, 0, 0, WORLD_W, WORLD_H);
+    // Sky with Earth visible
+    this.fillRect(rg, 0x060810, 0, 0, WORLD_W, T * 8);
+    // Stars
+    const sg = this.add.graphics().setDepth(0);
+    for (let i = 0; i < 200; i++)
+      this.circle(sg, 0xffffff, Math.random() * WORLD_W, Math.random() * T * 8, Math.random() * 1.2 + 0.3, Math.random() * 0.9 + 0.1);
+    // Earth
+    this.circle(rg, 0x1a5fb4, WORLD_W * 0.8, T * 4, 80, 0.9);
+    this.circle(rg, 0x2ea043, WORLD_W * 0.8 + 20, T * 4 - 15, 30, 0.85);
+    this.circle(rg, 0xffffff, WORLD_W * 0.8 - 30, T * 4 - 30, 18, 0.3);
+
+    // Moon ground — cratered
+    const groundY = T * 8;
+    this.fillRect(rg, 0x2e2e36, 0, groundY, WORLD_W, WORLD_H - groundY);
+    // Crater rings
+    const craters = [[T*6,groundY+T*3,60],[T*18,groundY+T*6,45],[T*40,groundY+T*2,90],[T*60,groundY+T*7,55],[T*72,groundY+T*4,35]];
+    craters.forEach(([cx,cy,r]) => {
+      rg.lineStyle(3, 0x4a4a52, 0.7); rg.strokeCircle(cx, cy, r);
+      this.circle(rg, 0x1e1e26, cx, cy, r - 4, 0.4);
+    });
+
+    // Base dome — central hub
+    const domeX = WORLD_W / 2, domeY = groundY + T * 5;
+    this.circle(rg, 0x1a2a3a, domeX, domeY, 120, 0.95);
+    rg.lineStyle(4, 0x00d4ff, 0.6); rg.strokeCircle(domeX, domeY, 120);
+    this.fillRect(rg, 0xd8d0c4, domeX - T * 3, domeY - T, T * 6, T * 3); // floor
+    this.addWall(domeX - T * 3, domeY - T, T * 6, T);
+
+    // Connecting tunnels
+    const tunnelColor = 0x1e3040;
+    this.fillRect(rg, tunnelColor, domeX - T * 8, domeY, T * 5, T * 2); // left tunnel
+    this.fillRect(rg, tunnelColor, domeX + T * 3, domeY, T * 5, T * 2); // right tunnel
+    rg.lineStyle(3, 0x00d4ff, 0.4);
+    rg.strokeRect(domeX - T * 8, domeY, T * 5, T * 2);
+    rg.strokeRect(domeX + T * 3, domeY, T * 5, T * 2);
+
+    // Left module
+    const lmodX = domeX - T * 16, lmodY = domeY - T;
+    this.fillRect(rg, 0x1a2030, lmodX, lmodY, T * 8, T * 4);
+    rg.lineStyle(3, 0x3a7abb, 0.8); rg.strokeRect(lmodX, lmodY, T * 8, T * 4);
+    this.addWall(lmodX, lmodY, T * 8, T);
+    this.addWall(lmodX, lmodY + T * 3, T * 8, T);
+    // Desks inside
+    for (let d = 0; d < 3; d++) this.fillRect(rg, C.DESK_SPACE, lmodX + T + d * T * 2.5, lmodY + T * 1.5, T * 1.8, T);
+
+    // Right module — lab
+    const rmodX = domeX + T * 8, rmodY = domeY - T;
+    this.fillRect(rg, 0x1a1a28, rmodX, rmodY, T * 9, T * 4);
+    rg.lineStyle(3, 0x9b30ff, 0.8); rg.strokeRect(rmodX, rmodY, T * 9, T * 4);
+    this.addWall(rmodX, rmodY, T * 9, T);
+    this.addWall(rmodX, rmodY + T * 3, T * 9, T);
+    for (let d = 0; d < 3; d++) this.circle(rg, 0x9b30ff, rmodX + T * 1.5 + d * T * 3, rmodY + T * 2, 18, 0.5);
+
+    // Lunar rovers
+    [[T*10,groundY+T*12],[T*66,groundY+T*11]].forEach(([rx,ry]) => {
+      this.fillRect(rg, 0x4a5060, rx, ry, T * 3, T); // body
+      this.circle(rg, 0x2a2a30, rx + T * 0.4, ry + T, 12); // wheel L
+      this.circle(rg, 0x2a2a30, rx + T * 2.6, ry + T, 12); // wheel R
+    });
+
+    // Solar panels
+    [[domeX - T * 20, groundY + T * 2],[domeX + T * 18, groundY + T * 2]].forEach(([px,py]) => {
+      this.fillRect(rg, 0x1a3a5a, px, py, T * 4, T * 1.5);
+      rg.lineStyle(1, 0x3a7aaa, 0.7);
+      for (let i = 1; i < 4; i++) { rg.moveTo(px + T * i, py); rg.lineTo(px + T * i, py + T * 1.5); }
+      rg.strokePath();
+    });
+
+    // Astronauts (decorative)
+    [[domeX - T * 5, domeY + T * 3],[domeX + T * 4, domeY + T * 2]].forEach(([ax,ay]) => {
+      this.circle(rg, 0xffffff, ax, ay - T * 0.8, 10, 0.9); // helmet
+      this.fillRect(rg, 0xdddddd, ax - 6, ay - T * 0.3, 12, T); // suit
+    });
+  }
+
+  // ─── Mission Control ─────────────────────────────────────────
+  private drawMissionControl(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    // Deep dark floor
+    this.fillRect(rg, 0x080c14, 0, 0, WORLD_W, WORLD_H);
+
+    // Tiled floor panels
+    for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
+      if ((r + c) % 2 === 0) this.fillRect(rg, 0x0d1220, c * T, r * T, T, T);
+    }
+    // Subtle grid lines
+    rg.lineStyle(1, 0x1a2a3a, 0.4);
+    for (let r = 0; r <= MH; r++) { rg.moveTo(0, r * T); rg.lineTo(WORLD_W, r * T); }
+    for (let c = 0; c <= MW; c++) { rg.moveTo(c * T, 0); rg.lineTo(c * T, WORLD_H); }
+    rg.strokePath();
+
+    // Giant main screen wall (top)
+    const scrY = T * 2, scrH = T * 12;
+    this.fillRect(rg, 0x020820, 0, scrY, WORLD_W, scrH);
+    rg.lineStyle(4, 0x00d4ff, 0.9); rg.strokeRect(T * 2, scrY + T, WORLD_W - T * 4, scrH - T * 2);
+    // Screen content — world map grid
+    rg.lineStyle(1, 0x003355, 0.6);
+    for (let i = 0; i < 20; i++) {
+      rg.moveTo(T * 2, scrY + T + i * T * 0.5); rg.lineTo(WORLD_W - T * 2, scrY + T + i * T * 0.5);
+      rg.moveTo(T * 2 + i * T * 3.8, scrY + T); rg.lineTo(T * 2 + i * T * 3.8, scrY + scrH - T);
+    }
+    rg.strokePath();
+    // Blips on screen
+    [[WORLD_W*0.25,scrY+scrH*0.4],[WORLD_W*0.5,scrY+scrH*0.6],[WORLD_W*0.7,scrY+scrH*0.3],[WORLD_W*0.85,scrY+scrH*0.5]].forEach(([bx,by]) => {
+      this.circle(rg, 0x00ff88, bx, by, 5, 0.9);
+      rg.lineStyle(1, 0x00ff88, 0.3); rg.strokeCircle(bx, by, 14);
+    });
+    // Screen labels
+    this.addWall(0, scrY, WORLD_W, T);
+    this.addWall(0, scrY + scrH, WORLD_W, T);
+
+    // Operator rows — tiered workstations
+    const rowStart = scrY + scrH + T * 2;
+    for (let row = 0; row < 4; row++) {
+      const ry = rowStart + row * T * 4;
+      this.fillRect(rg, 0x0a1428, T * 2, ry, WORLD_W - T * 4, T * 3);
+      rg.lineStyle(2, 0x1a3a5a, 0.8); rg.strokeRect(T * 2, ry, WORLD_W - T * 4, T * 3);
+      // Individual stations
+      for (let col = 0; col < 8; col++) {
+        const cx = T * 3 + col * T * 9.5;
+        // Desk surface
+        this.fillRect(rg, C.DESK_SPACE, cx, ry + T * 0.5, T * 7, T * 1.2);
+        // Monitor glow
+        this.fillRect(rg, 0x001a33, cx + T * 0.5, ry + T * 0.2, T * 2.5, T * 1.5);
+        this.fillRect(rg, 0x002244, cx + T * 3.5, ry + T * 0.2, T * 2.5, T * 1.5);
+        rg.lineStyle(1, C.DESK_SPACE_GL, 0.6);
+        rg.strokeRect(cx + T * 0.5, ry + T * 0.2, T * 2.5, T * 1.5);
+        rg.strokeRect(cx + T * 3.5, ry + T * 0.2, T * 2.5, T * 1.5);
+      }
+      this.addWall(T * 2, ry, WORLD_W - T * 4, T * 0.5);
+    }
+
+    // Side status panels
+    [[0,T*2],[WORLD_W-T*2,T*2]].forEach(([px,_py]) => {
+      for (let i = 0; i < 6; i++) {
+        const py2 = rowStart + i * T * 4;
+        this.fillRect(rg, 0x0a1428, px, py2, T * 2, T * 3);
+        this.circle(rg, i % 3 === 0 ? 0x00ff88 : i % 3 === 1 ? 0xff3344 : 0x0088ff, px + T, py2 + T * 1.5, 8, 0.9);
+      }
+    });
+  }
+
+  // ─── Space Lab ───────────────────────────────────────────────
+  private drawLab(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    this.fillRect(rg, 0x0c0c18, 0, 0, WORLD_W, WORLD_H);
+
+    // Tiled white lab floor
+    for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
+      const col = (r + c) % 2 === 0 ? 0x1a1a28 : 0x161620;
+      this.fillRect(rg, col, c * T, r * T, T, T);
+    }
+
+    // Outer walls
+    this.addWall(0, 0, WORLD_W, T);
+    this.addWall(0, WORLD_H - T, WORLD_W, T);
+    this.addWall(0, 0, T, WORLD_H);
+    this.addWall(WORLD_W - T, 0, T, WORLD_H);
+    this.fillRect(rg, 0x1e1e2e, 0, 0, T, WORLD_H);
+    this.fillRect(rg, 0x1e1e2e, WORLD_W - T, 0, T, WORLD_H);
+
+    // Lab benches — long horizontal
+    const bench = (bx: number, by: number, w: number) => {
+      this.fillRect(rg, 0x1a2a3a, bx, by, w, T * 1.5);
+      rg.lineStyle(2, 0x3a5a7a, 0.8); rg.strokeRect(bx, by, w, T * 1.5);
+      this.addWall(bx, by, w, T * 0.5);
+      // Equipment on bench
+      for (let e = 0; e < Math.floor(w / (T * 3)); e++) {
+        const ex = bx + T + e * T * 3;
+        this.circle(rg, 0x9b30ff, ex, by + T * 0.8, 10, 0.7);  // flask
+        this.fillRect(rg, 0x003355, ex + T * 1.3, by + T * 0.3, T * 1.2, T); // display
+        rg.lineStyle(1, 0x00d4ff, 0.5); rg.strokeRect(ex + T * 1.3, by + T * 0.3, T * 1.2, T);
+      }
+    };
+
+    for (let row = 0; row < 5; row++) bench(T * 2, T * (4 + row * 8), T * 50);
+    for (let row = 0; row < 5; row++) bench(T * 55, T * (4 + row * 8), T * 22);
+
+    // Centrifuge / reactor chamber
+    const cX = WORLD_W * 0.75, cY = WORLD_H * 0.5;
+    this.circle(rg, 0x0a0a18, cX, cY, T * 5, 0.95);
+    rg.lineStyle(6, 0x9b30ff, 0.8); rg.strokeCircle(cX, cY, T * 5);
+    rg.lineStyle(3, 0x9b30ff, 0.4); rg.strokeCircle(cX, cY, T * 4);
+    rg.lineStyle(2, 0x9b30ff, 0.2); rg.strokeCircle(cX, cY, T * 3);
+    this.circle(rg, 0x6600cc, cX, cY, T * 2, 0.7);
+    // Rotating spokes (static)
+    rg.lineStyle(3, 0xaa00ff, 0.6);
+    for (let a = 0; a < 6; a++) {
+      const angle = (a / 6) * Math.PI * 2;
+      rg.moveTo(cX, cY);
+      rg.lineTo(cX + Math.cos(angle) * T * 4.5, cY + Math.sin(angle) * T * 4.5);
+    }
+    rg.strokePath();
+
+    // Cryogenic pods along right wall
+    for (let i = 0; i < 6; i++) {
+      const px = WORLD_W - T * 5, py = T * (3 + i * 7);
+      this.fillRect(rg, 0x0a1a2a, px, py, T * 3, T * 5);
+      rg.lineStyle(3, 0x00d4ff, 0.8); rg.strokeRect(px, py, T * 3, T * 5);
+      this.circle(rg, 0x003355, px + T * 1.5, py + T * 2, T * 1.2, 0.6);
+      rg.lineStyle(2, 0x00d4ff, 0.3); rg.strokeCircle(px + T * 1.5, py + T * 2, T * 1.2);
+    }
+  }
+
+  // ─── Hangar ──────────────────────────────────────────────────
+  private drawHangar(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    // Concrete hangar floor
+    this.fillRect(rg, 0x1a1a1e, 0, 0, WORLD_W, WORLD_H);
+    for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
+      if ((r % 4 === 0) || (c % 4 === 0)) this.fillRect(rg, 0x222228, c * T, r * T, T, T);
+    }
+
+    // Floor markings — yellow lane lines
+    rg.lineStyle(4, 0xffd700, 0.7);
+    for (let i = 1; i < 5; i++) {
+      rg.moveTo(0, WORLD_H * (i / 5)); rg.lineTo(WORLD_W, WORLD_H * (i / 5));
+    }
+    rg.strokePath();
+    rg.lineStyle(4, 0xffd700, 0.7);
+    rg.moveTo(WORLD_W / 2, 0); rg.lineTo(WORLD_W / 2, WORLD_H);
+    rg.strokePath();
+
+    // Parked spaceships (3 big ones)
+    const ship = (sx: number, sy: number, scale: number = 1) => {
+      const w = T * 8 * scale, h = T * 4 * scale;
+      // Hull
+      this.fillRect(rg, 0x2a3a4a, sx - w / 2, sy - h / 2, w, h);
+      rg.lineStyle(3, 0x4a6a8a, 1); rg.strokeRect(sx - w / 2, sy - h / 2, w, h);
+      // Cockpit
+      this.circle(rg, 0x3a6a9a, sx - w * 0.35, sy, h * 0.4, 0.9);
+      rg.lineStyle(2, 0x70c0f0, 0.7); rg.strokeCircle(sx - w * 0.35, sy, h * 0.4);
+      // Engine pods
+      [[sx + w * 0.35, sy - h * 0.4],[sx + w * 0.35, sy + h * 0.4]].forEach(([ex,ey]) => {
+        this.circle(rg, 0xff6b35, ex, ey, h * 0.25, 0.8);
+        this.circle(rg, 0xff8c42, ex, ey, h * 0.15, 0.9);
+      });
+      // Landing struts
+      [[sx - w * 0.2, sy + h / 2],[sx + w * 0.2, sy + h / 2]].forEach(([lx,ly]) => {
+        rg.lineStyle(4, 0x3a3a4a, 1); rg.moveTo(lx, ly); rg.lineTo(lx, ly + T * 1.5 * scale); rg.strokePath();
+        this.circle(rg, 0x2a2a2a, lx, ly + T * 1.5 * scale, T * 0.6 * scale, 1);
+      });
+    };
+    ship(WORLD_W * 0.25, WORLD_H * 0.2);
+    ship(WORLD_W * 0.75, WORLD_H * 0.2);
+    ship(WORLD_W * 0.5,  WORLD_H * 0.55, 1.5);
+
+    // Tool racks and crates along walls
+    for (let i = 0; i < 10; i++) {
+      const cx = T * (3 + i * 7), cy = T * 2;
+      this.fillRect(rg, 0x3a3a42, cx, cy, T * 3, T * 2);
+      rg.lineStyle(2, 0xffd700, 0.5); rg.strokeRect(cx, cy, T * 3, T * 2);
+    }
+    for (let i = 0; i < 10; i++) {
+      const cx = T * (3 + i * 7), cy = WORLD_H - T * 3;
+      this.fillRect(rg, 0x3a3a42, cx, cy, T * 3, T * 2);
+      rg.lineStyle(2, 0xffd700, 0.5); rg.strokeRect(cx, cy, T * 3, T * 2);
+    }
+    this.addWall(0, 0, WORLD_W, T * 2);
+    this.addWall(0, WORLD_H - T * 2, WORLD_W, T * 2);
+
+    // Giant hangar doors (top)
+    const doorW = WORLD_W * 0.6, doorX = (WORLD_W - doorW) / 2;
+    rg.lineStyle(8, 0x4a5a6a, 1);
+    for (let seg = 0; seg < 8; seg++) {
+      const sx2 = doorX + seg * (doorW / 8);
+      rg.moveTo(sx2, 0); rg.lineTo(sx2, T * 2);
+    }
+    rg.strokePath();
+  }
+
+  // ─── Mars Colony ─────────────────────────────────────────────
+  private drawMars(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    // Rust-red Mars sky
+    this.fillRect(rg, 0x3a1005, 0, 0, WORLD_W, T * 10);
+    // Ground
+    this.fillRect(rg, 0x5a2010, 0, T * 10, WORLD_W, WORLD_H - T * 10);
+    // Ground texture — random darker patches
+    const gr = this.add.graphics().setDepth(1);
+    for (let i = 0; i < 120; i++) {
+      const rx = Math.random() * WORLD_W, ry = T * 10 + Math.random() * (WORLD_H - T * 10);
+      gr.fillStyle(0x4a1808, 0.5);
+      gr.fillEllipse(rx, ry, Math.random() * T * 4 + T, Math.random() * T + T * 0.5);
+    }
+    // Rocky outcrops
+    [[T*10,T*14,45],[T*30,T*28,60],[T*50,T*18,35],[T*65,T*32,50],[T*72,T*15,40]].forEach(([rx,ry,r]) => {
+      this.circle(rg, 0x6a2a10, rx, ry, r, 0.9);
+      this.circle(rg, 0x7a3a18, rx - r * 0.2, ry - r * 0.3, r * 0.5, 0.7);
+    });
+
+    // Dust storm on horizon
+    rg.fillStyle(0xc06030, 0.15);
+    rg.fillRect(0, T * 8, WORLD_W, T * 4);
+
+    // Colony domes
+    const dome = (dx: number, dy: number, r: number, col: number = 0x1a2a3a) => {
+      this.circle(rg, col, dx, dy, r, 0.92);
+      rg.lineStyle(4, 0x4a8abb, 0.7); rg.strokeCircle(dx, dy, r);
+      rg.lineStyle(2, 0x70c0f0, 0.3); rg.strokeCircle(dx, dy, r - 6);
+      this.fillRect(rg, 0x7a3020, dx - r, dy + 1, r * 2, T); // foundation
+    };
+    dome(WORLD_W * 0.3, T * 18, 100);
+    dome(WORLD_W * 0.5, T * 14, 70, 0x1a1a2a);
+    dome(WORLD_W * 0.7, T * 22, 85);
+    dome(WORLD_W * 0.15, T * 24, 55, 0x1a2010);
+
+    // Habitat tubes connecting domes
+    rg.fillStyle(0x1e2e3e, 0.9);
+    rg.fillRect(WORLD_W * 0.3 + 100, T * 17, WORLD_W * 0.2 - 100, T * 2);
+    rg.fillRect(WORLD_W * 0.5 + 70, T * 17, WORLD_W * 0.2 - 70, T * 2);
+    rg.lineStyle(2, 0x4a8abb, 0.5);
+    rg.strokeRect(WORLD_W * 0.3 + 100, T * 17, WORLD_W * 0.2 - 100, T * 2);
+
+    // Mars rover tracks
+    rg.lineStyle(3, 0x7a3a20, 0.6);
+    rg.moveTo(T * 5, T * 40); rg.lineTo(T * 40, T * 20); rg.lineTo(T * 60, T * 35);
+    rg.strokePath();
+
+    // Flags
+    [[WORLD_W * 0.3, T * 11],[WORLD_W * 0.5, T * 10],[WORLD_W * 0.7, T * 12]].forEach(([fx,fy]) => {
+      rg.lineStyle(3, 0xdddddd, 1); rg.moveTo(fx, fy); rg.lineTo(fx, fy + T * 3); rg.strokePath();
+      this.fillRect(rg, 0xff4444, fx, fy, T * 2, T);
+    });
+
+    // Solar arrays
+    for (let i = 0; i < 5; i++) {
+      const px = T * (5 + i * 15), py = T * 12;
+      this.fillRect(rg, 0x1a3a5a, px, py, T * 4, T * 1.5);
+      rg.lineStyle(1, 0x3a7aaa, 0.7);
+      for (let d = 1; d < 4; d++) { rg.moveTo(px + T * d, py); rg.lineTo(px + T * d, py + T * 1.5); }
+      rg.strokePath();
+    }
+
+    this.addWall(0, T * 10, WORLD_W, T);
+  }
+
+  // ─── Observatory ─────────────────────────────────────────────
+  private drawObservatory(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    // Night sky
+    this.fillRect(rg, 0x010108, 0, 0, WORLD_W, WORLD_H);
+    // Dense star field
+    const sg = this.add.graphics().setDepth(0);
+    for (let i = 0; i < 400; i++) {
+      const alpha = Math.random() * 0.8 + 0.2;
+      const size  = Math.random() * 1.5 + 0.3;
+      sg.fillStyle(0xffffff, alpha);
+      sg.fillCircle(Math.random() * WORLD_W, Math.random() * WORLD_H * 0.6, size);
+    }
+    // Milky Way band
+    for (let i = 0; i < 300; i++) {
+      const bx = Math.random() * WORLD_W;
+      const by = WORLD_H * 0.1 + Math.sin(bx / WORLD_W * Math.PI) * WORLD_H * 0.15 + Math.random() * T * 4 - T * 2;
+      sg.fillStyle(0xffffff, Math.random() * 0.3 + 0.05);
+      sg.fillCircle(bx, by, Math.random() * 1.2 + 0.2);
+    }
+    // Nebula
+    rg.fillStyle(0x3a0a60, 0.15); rg.fillCircle(WORLD_W * 0.3, WORLD_H * 0.2, 200);
+    rg.fillStyle(0x0a1a60, 0.15); rg.fillCircle(WORLD_W * 0.7, WORLD_H * 0.15, 150);
+
+    // Ground — hill silhouette
+    const hillY = WORLD_H * 0.6;
+    this.fillRect(rg, 0x0a0a10, 0, hillY, WORLD_W, WORLD_H - hillY);
+
+    // Main observatory dome
+    const obsX = WORLD_W / 2, obsY = hillY;
+    this.circle(rg, 0x1a1a28, obsX, obsY, 140, 0.97);
+    rg.lineStyle(5, 0xaaaacc, 0.8); rg.strokeCircle(obsX, obsY, 140);
+    // Dome slit
+    rg.lineStyle(8, 0x050510, 1);
+    rg.moveTo(obsX, obsY - 140); rg.lineTo(obsX, obsY + 10); rg.strokePath();
+    // Telescope barrel
+    this.fillRect(rg, 0x2a2a3e, obsX - T * 0.5, obsY - T * 5, T, T * 5);
+    this.circle(rg, 0x3a3a50, obsX, obsY - T * 4.5, T * 0.8, 1);
+    rg.lineStyle(3, 0xaaaacc, 0.5); rg.strokeCircle(obsX, obsY - T * 4.5, T * 0.8);
+
+    // Building base
+    this.fillRect(rg, 0x151520, obsX - T * 5, hillY, T * 10, T * 4);
+    rg.lineStyle(3, 0x3a3a50, 0.8); rg.strokeRect(obsX - T * 5, hillY, T * 10, T * 4);
+    this.addWall(obsX - T * 5, hillY + T * 3, T * 10, T);
+
+    // Side buildings — control room + housing
+    [[obsX - T * 14, hillY + T],[obsX + T * 7, hillY + T]].forEach(([bx,by]) => {
+      this.fillRect(rg, 0x111118, bx, by, T * 7, T * 5);
+      rg.lineStyle(2, 0x2a2a40, 0.8); rg.strokeRect(bx, by, T * 7, T * 5);
+      // Lit windows
+      for (let w = 0; w < 2; w++) {
+        this.fillRect(rg, 0x302820, bx + T + w * T * 3, by + T, T * 1.5, T * 1.2);
+        rg.lineStyle(1, 0xffa040, 0.7); rg.strokeRect(bx + T + w * T * 3, by + T, T * 1.5, T * 1.2);
+      }
+    });
+
+    // Satellite dishes
+    [[obsX - T * 20, hillY - T],[obsX + T * 18, hillY - T]].forEach(([dx,dy]) => {
+      rg.lineStyle(3, 0x4a4a60, 1); rg.moveTo(dx, dy); rg.lineTo(dx, dy + T * 2); rg.strokePath();
+      rg.lineStyle(2, 0x6a6a80, 0.8); rg.strokeCircle(dx, dy - T * 0.5, T * 1.5);
+      rg.lineStyle(1, 0x6a6a80, 0.4); rg.strokeCircle(dx, dy - T * 0.5, T);
+    });
+
+    // Path up the hill
+    rg.lineStyle(T * 1.5, 0x181820, 0.8);
+    rg.moveTo(obsX, hillY + T * 4); rg.lineTo(obsX - T * 10, WORLD_H);
+    rg.moveTo(obsX, hillY + T * 4); rg.lineTo(obsX + T * 10, WORLD_H);
+    rg.strokePath();
+  }
+
+  // ─── Starship Bridge ─────────────────────────────────────────
+  private drawBridge(this: Phaser.Scene & WorldScene) {
+    const rg = this.add.graphics().setDepth(1);
+    this.fillRect(rg, 0x06080e, 0, 0, WORLD_W, WORLD_H);
+
+    // Hull plating tiles
+    for (let r = 0; r < MH; r++) for (let c = 0; c < MW; c++) {
+      const col = ((r + c) % 6 < 1) ? 0x141820 : ((r % 4 === 0 || c % 4 === 0) ? 0x0e1218 : 0x0a0c10);
+      this.fillRect(rg, col, c * T, r * T, T, T);
+    }
+    // Accent lines
+    rg.lineStyle(2, 0x003355, 0.5);
+    for (let r = 0; r <= MH; r += 4) { rg.moveTo(0, r * T); rg.lineTo(WORLD_W, r * T); }
+    for (let c = 0; c <= MW; c += 4) { rg.moveTo(c * T, 0); rg.lineTo(c * T, WORLD_H); }
+    rg.strokePath();
+
+    // Forward viewport — massive panoramic window
+    const vpY = T * 2, vpH = T * 14;
+    this.fillRect(rg, 0x010510, T * 2, vpY, WORLD_W - T * 4, vpH);
+    rg.lineStyle(6, 0x2a5a8a, 1); rg.strokeRect(T * 2, vpY, WORLD_W - T * 4, vpH);
+    // Window frame struts
+    rg.lineStyle(4, 0x1a2a3a, 1);
+    for (let i = 1; i < 6; i++) { rg.moveTo(WORLD_W * (i / 6), vpY); rg.lineTo(WORLD_W * (i / 6), vpY + vpH); }
+    rg.strokePath();
+    // Stars outside window
+    const wsg = this.add.graphics().setDepth(2);
+    for (let i = 0; i < 250; i++) {
+      wsg.fillStyle(0xffffff, Math.random() * 0.8 + 0.2);
+      wsg.fillCircle(T * 2 + Math.random() * (WORLD_W - T * 4), vpY + Math.random() * vpH, Math.random() * 1.5 + 0.3);
+    }
+    // Planet visible through window
+    this.circle(wsg, 0x4a2aa0, WORLD_W * 0.75, vpY + vpH * 0.55, 120, 0.7);
+    this.circle(wsg, 0x6a4ac0, WORLD_W * 0.78, vpY + vpH * 0.45, 50, 0.5);
+    // Planet rings
+    wsg.lineStyle(6, 0x8a6ae0, 0.35);
+    wsg.strokeEllipse(WORLD_W * 0.75, vpY + vpH * 0.55, 320, 40);
+
+    // Warp streaks
+    wsg.lineStyle(1, 0xffffff, 0.15);
+    for (let i = 0; i < 30; i++) {
+      const wx = Math.random() * (WORLD_W - T * 4) + T * 2;
+      const wy = vpY + Math.random() * vpH;
+      const len = Math.random() * T * 3 + T;
+      wsg.moveTo(wx, wy); wsg.lineTo(wx + len, wy + len * 0.3); wsg.strokePath();
+    }
+
+    this.addWall(0, vpY, WORLD_W, T);
+    this.addWall(0, vpY + vpH, WORLD_W, T);
+
+    // Captain's chair — center raised platform
+    const platY = vpY + vpH + T * 2;
+    this.fillRect(rg, 0x0e1420, T * 20, platY, T * 40, T * 6);
+    rg.lineStyle(3, 0x2a4a6a, 0.9); rg.strokeRect(T * 20, platY, T * 40, T * 6);
+    // Chair
+    this.circle(rg, 0x1a1a2e, WORLD_W / 2, platY + T * 3, T * 2, 0.9);
+    rg.lineStyle(2, 0x00d4ff, 0.6); rg.strokeCircle(WORLD_W / 2, platY + T * 3, T * 2);
+    this.fillRect(rg, 0x0a0a18, WORLD_W / 2 - T, platY + T, T * 2, T * 4); // back
+    // Armrest consoles
+    [[WORLD_W / 2 - T * 3, platY + T * 2],[WORLD_W / 2 + T * 1.5, platY + T * 2]].forEach(([ax,ay]) => {
+      this.fillRect(rg, 0x0e1e2e, ax, ay, T * 1.5, T * 2);
+      this.fillRect(rg, 0x003344, ax + T * 0.2, ay + T * 0.3, T, T * 0.8);
+      rg.lineStyle(1, 0x00d4ff, 0.5); rg.strokeRect(ax + T * 0.2, ay + T * 0.3, T, T * 0.8);
+    });
+
+    // Helm / nav console
+    const helmY = platY + T * 7;
+    this.fillRect(rg, 0x0a1428, T * 25, helmY, T * 30, T * 3);
+    rg.lineStyle(3, 0x00d4ff, 0.7); rg.strokeRect(T * 25, helmY, T * 30, T * 3);
+    for (let b = 0; b < 12; b++) {
+      const bx = T * 26 + b * T * 2.3;
+      this.fillRect(rg, 0x001a33, bx, helmY + T * 0.5, T * 2, T * 1.5);
+      rg.lineStyle(1, 0x0088ff, 0.4); rg.strokeRect(bx, helmY + T * 0.5, T * 2, T * 1.5);
+    }
+    this.addWall(T * 25, helmY, T * 30, T * 0.5);
+
+    // Side tactical stations
+    [[T * 2, platY],[WORLD_W - T * 12, platY]].forEach(([sx,sy]) => {
+      this.fillRect(rg, 0x0a1420, sx, sy, T * 10, T * 8);
+      rg.lineStyle(2, 0x1a3a5a, 0.8); rg.strokeRect(sx, sy, T * 10, T * 8);
+      for (let sc = 0; sc < 3; sc++) {
+        this.fillRect(rg, 0x001a33, sx + T + sc * T * 3, sy + T, T * 2, T * 2);
+        rg.lineStyle(1, 0x0088ff, 0.4); rg.strokeRect(sx + T + sc * T * 3, sy + T, T * 2, T * 2);
+      }
+      this.addWall(sx, sy, T * 10, T);
+    });
+
+    // Engine status displays (bottom)
+    const engY = WORLD_H - T * 8;
+    this.fillRect(rg, 0x0e0e18, 0, engY, WORLD_W, T * 8);
+    this.addWall(0, engY, WORLD_W, T);
+    rg.lineStyle(3, 0x2a2a3a, 0.8); rg.strokeRect(0, engY, WORLD_W, T * 8);
+    for (let i = 0; i < 8; i++) {
+      const ex = T * (4 + i * 9);
+      this.fillRect(rg, 0x0a1820, ex, engY + T, T * 6, T * 5);
+      rg.lineStyle(2, 0x00d4ff, 0.4); rg.strokeRect(ex, engY + T, T * 6, T * 5);
+      // Engine bar graphs
+      const barH = Math.random() * T * 3 + T;
+      this.fillRect(rg, 0x00d4ff, ex + T, engY + T * 6 - barH, T * 0.8, barH);
+      this.fillRect(rg, 0x0088ff, ex + T * 2.2, engY + T * 6 - barH * 0.8, T * 0.8, barH * 0.8);
+      this.fillRect(rg, 0x00ff88, ex + T * 3.4, engY + T * 6 - barH * 0.6, T * 0.8, barH * 0.6);
+      this.fillRect(rg, 0xff3344, ex + T * 4.6, engY + T * 6 - barH * 0.4, T * 0.8, barH * 0.4);
+    }
+  }
+
   // ─── Player textures ──────────────────────────────────────────
 
   /**
@@ -675,111 +3078,181 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   private loadLpcSpritesheet(this: Phaser.Scene & WorldScene, url: string, startX: number, startY: number) {
     const KEY = "__lpc_sheet__";
 
-    const setupSprite = () => {
-      if (this.lpcSprite) return; // already done
+    // Pipoya format: 96×128px spritesheet → 32×32 per frame, 3 cols × 4 rows
+    // rows: 0=down, 1=left, 2=right, 3=up  |  walk cols: 0,1,2
+    // LPC format: frameWidth=64, rows 8-11, 9 cols per row
+    const isPipoya = (frameW: number) => frameW === 32;
 
-      // Register animations if not yet done
-      const dirs: Array<{ dir: "down"|"up"|"left"|"right"; row: number }> = [
-        { dir: "down",  row: LPC_WALK_ROWS.down  },
-        { dir: "up",    row: LPC_WALK_ROWS.up    },
-        { dir: "left",  row: LPC_WALK_ROWS.left  },
-        { dir: "right", row: LPC_WALK_ROWS.right },
-      ];
+    const setupSprite = (frameW: number) => {
+      if (this.lpcSprite) return;
+
+      const pipoya = isPipoya(frameW);
+
+      type Dir = "down"|"up"|"left"|"right";
+      const dirs: Array<{ dir: Dir; row: number }> = pipoya
+        ? [
+            { dir: "down",  row: 0 },
+            { dir: "left",  row: 1 },
+            { dir: "right", row: 2 },
+            { dir: "up",    row: 3 },
+          ]
+        : [
+            { dir: "down",  row: LPC_WALK_ROWS.down  },
+            { dir: "up",    row: LPC_WALK_ROWS.up    },
+            { dir: "left",  row: LPC_WALK_ROWS.left  },
+            { dir: "right", row: LPC_WALK_ROWS.right },
+          ];
+
+      const cols = pipoya ? 3 : LPC_WALK_FRAMES; // frames per row
 
       for (const { dir, row } of dirs) {
         const walkKey = `lpc_walk_${dir}`;
         const idleKey = `lpc_idle_${dir}`;
 
         if (!this.anims.exists(walkKey)) {
-          // Walk: frames 1-8 on the given row
           this.anims.create({
             key: walkKey,
-            frames: Array.from({ length: 8 }, (_, i) => ({
+            frames: Array.from({ length: pipoya ? 3 : 8 }, (_, i) => ({
               key: KEY,
-              frame: (row * LPC_WALK_FRAMES + 1 + i),
+              frame: pipoya ? row * cols + i : row * cols + 1 + i,
             })),
-            frameRate: 10,
+            frameRate: pipoya ? 8 : 10,
             repeat: -1,
           });
         }
 
         if (!this.anims.exists(idleKey)) {
-          // Idle: frame 0 on the given row
           this.anims.create({
             key: idleKey,
-            frames: [{ key: KEY, frame: row * LPC_WALK_FRAMES }],
+            frames: [{ key: KEY, frame: pipoya ? row * cols + 1 : row * cols }],
             frameRate: 1,
             repeat: -1,
           });
         }
       }
 
-      // Create physics sprite
+      // Base scale por formato + multiplicador do usuário (avatarScale)
+      const baseScale  = pipoya ? 1.5 : LPC_SCALE;
+      const userScale  = this.clampAvatarScale(
+        (this.avatarConfig as AvatarConfig | undefined)?.avatarScale ?? 1,
+      );
+      const scale = baseScale * userScale;
+
       const sprite = this.physics.add.sprite(startX, startY, KEY)
-        .setScale(LPC_SCALE)
+        .setScale(scale)
         .setDepth(20)
         .setCollideWorldBounds(true);
 
-      // Hitbox fits the visible character body (middle portion of 64×64 frame at 0.5 scale)
+      // Salva o baseScale e isPipoya pra poder reescalar depois sem recriar o sprite
+      sprite.setData("baseScale", baseScale);
+      sprite.setData("isPipoya",  pipoya);
+
       const body = sprite.body as Phaser.Physics.Arcade.Body;
-      body.setSize(24, 40).setOffset(20, 22);
+      if (pipoya) {
+        body.setSize(20, 28).setOffset(6, 4);
+      } else {
+        body.setSize(24, 40).setOffset(20, 22);
+      }
 
       this.lpcSprite = sprite;
       this.physics.add.collider(this.lpcSprite, this.walls);
-
-      // Camera — update target to lpcSprite
       this.cameras.main.startFollow(this.lpcSprite, true, 0.1, 0.1);
-
-      // Start idle animation
+      this.cameras.main.setZoom(this.currentZoom);
       this.lpcSprite.anims.play("lpc_idle_down");
+
+      // Broadcast initial position so others can see us immediately
+      window.dispatchEvent(new CustomEvent("space-station:player-moved", {
+        detail: { x: startX, y: startY },
+      }));
     };
 
+    // Always remove cached texture so new game instances load fresh
     if (this.textures.exists(KEY)) {
-      setupSprite();
-      return;
+      this.textures.remove(KEY);
     }
 
-    // Resolve URL — "pixel_astronaut" is a built-in that uses profile photo compositing
     const PIXEL_ASTRONAUT_BASE = "/lpc_pixel_astronaut.png";
     const isPixelAstronaut = url === "pixel_astronaut";
     const profileUrl = (this.avatarConfig as AvatarConfig & { _photoUrl?: string })?._photoUrl;
 
-    const loadFromUrl = (resolvedUrl: string) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        if (this.textures.exists(KEY)) { setupSprite(); return; }
-        const cols = Math.floor(img.naturalWidth  / LPC_FRAME);
-        const rows = Math.floor(img.naturalHeight / LPC_FRAME);
-        const canvas = document.createElement("canvas");
-        canvas.width  = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        canvas.getContext("2d")!.drawImage(img, 0, 0);
+    const isAlive = () => this.scene?.isActive?.() ?? !(this.game as Phaser.Game & { isDestroyed?: boolean })?.isDestroyed;
+
+    // Overlays from AvatarConfig — composited on top of the base spritesheet
+    // before registering with Phaser. Works for both Pipoya (32×32) and LPC
+    // (64×64) bases; buildCompositeSpritesheet scales mismatched overlays.
+    const ac = this.avatarConfig as (AvatarConfig & {
+      wokaEyesUrl?: string | null; wokaHairUrl?: string | null;
+      wokaClothesUrl?: string | null; wokaHatUrl?: string | null;
+      wokaAccessoryUrl?: string | null;
+    }) | undefined;
+
+    const applyCompositeToTexture = (canvas: HTMLCanvasElement) => {
+      if (!isAlive()) return;
+      const frameW = canvas.width <= 96 ? 32 : LPC_FRAME;
+      const cols = Math.floor(canvas.width  / frameW);
+      const rows = Math.floor(canvas.height / frameW);
+      if (!this.textures.exists(KEY)) {
         this.textures.addSpriteSheet(KEY, canvas as unknown as HTMLImageElement, {
-          frameWidth: LPC_FRAME, frameHeight: LPC_FRAME,
+          frameWidth: frameW, frameHeight: frameW,
           startFrame: 0, endFrame: cols * rows - 1,
         });
-        setupSprite();
-        // Revoke blob URL when done
+      }
+      setupSprite(frameW);
+    };
+
+    const handleLoadError = () => {
+      if (!isAlive()) return;
+      console.warn("[WorldScene] Failed to load spritesheet:", url);
+      const canvas = document.createElement("canvas");
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = (this.avatarConfig?.suitColor ?? "#7c3aed");
+      ctx.fillRect(6, 8, 20, 24);
+      ctx.fillStyle = (this.avatarConfig?.skinTone ?? "#FFDBB4");
+      ctx.beginPath(); ctx.arc(16, 10, 8, 0, Math.PI * 2); ctx.fill();
+      if (!this.textures.exists(KEY)) this.textures.addCanvas(KEY, canvas);
+      setupSprite(32);
+    };
+
+    const loadFromUrl = (resolvedUrl: string) => {
+      const hasOverlays = !!(ac?.wokaEyesUrl || ac?.wokaHairUrl ||
+                             ac?.wokaClothesUrl || ac?.wokaHatUrl ||
+                             ac?.wokaAccessoryUrl);
+
+      // Fast path: no overlays → use the original single-image loader
+      if (!hasOverlays) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          if (!isAlive()) return;
+          const canvas = document.createElement("canvas");
+          canvas.width  = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d")!.drawImage(img, 0, 0);
+          applyCompositeToTexture(canvas);
+          if (resolvedUrl.startsWith("blob:")) URL.revokeObjectURL(resolvedUrl);
+        };
+        img.onerror = handleLoadError;
+        img.src = resolvedUrl;
+        return;
+      }
+
+      // Slow path: build composite with overlays
+      buildCompositeSpritesheet({
+        base:      resolvedUrl,
+        eyes:      ac?.wokaEyesUrl,
+        hair:      ac?.wokaHairUrl,
+        clothes:   ac?.wokaClothesUrl,
+        hat:       ac?.wokaHatUrl,
+        accessory: ac?.wokaAccessoryUrl,
+      }).then((canvas) => {
+        if (!canvas) { handleLoadError(); return; }
+        applyCompositeToTexture(canvas);
         if (resolvedUrl.startsWith("blob:")) URL.revokeObjectURL(resolvedUrl);
-      };
-      img.onerror = () => {
-        console.warn("[WorldScene] Failed to load LPC spritesheet:", resolvedUrl);
-        const canvas = document.createElement("canvas");
-        canvas.width = LPC_FRAME; canvas.height = LPC_FRAME;
-        const ctx = canvas.getContext("2d")!;
-        ctx.fillStyle = (this.avatarConfig?.suitColor ?? "#7c3aed");
-        ctx.fillRect(16, 20, 32, 40);
-        ctx.fillStyle = (this.avatarConfig?.skinTone ?? "#FFDBB4");
-        ctx.beginPath(); ctx.arc(32, 14, 12, 0, Math.PI * 2); ctx.fill();
-        this.textures.addCanvas(KEY, canvas);
-        setupSprite();
-      };
-      img.src = resolvedUrl;
+      });
     };
 
     if (isPixelAstronaut) {
-      // Composite profile photo into visor, then load
       buildVisorSpritesheet(PIXEL_ASTRONAUT_BASE, profileUrl)
         .then(loadFromUrl)
         .catch(() => loadFromUrl(PIXEL_ASTRONAUT_BASE));
@@ -960,7 +3433,10 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
 
   private addWall(x: number, y: number, w: number, h: number) {
     const img = this.walls.create(x + w / 2, y + h / 2, "__blank__") as Phaser.Physics.Arcade.Image;
-    img.setSize(w, h).setVisible(false).refreshBody();
+    img.setDisplaySize(w, h).setVisible(false);
+    const sBody = img.body as Phaser.Physics.Arcade.StaticBody;
+    sBody.setSize(w, h, true);
+    sBody.updateFromGameObject();
   }
 
   private drawDesk(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, type: string, chairType: string) {
@@ -1001,28 +3477,191 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
 
   // ─── Remote players ───────────────────────────────────────────
 
-  private onRemoteJoin(data: { userId: string; x: number; y: number; name: string }) {
-    if (this.remotePlayers.has(data.userId)) return;
+  private onRemoteJoin(data: {
+    userId:     string;
+    x:          number;
+    y:          number;
+    name:       string;
+    spriteUrl?: string | null;
+    overlays?: {
+      eyes?:      string | null;
+      hair?:      string | null;
+      clothes?:   string | null;
+      hat?:       string | null;
+      accessory?: string | null;
+    } | null;
+  }) {
+    if (data.userId === this.localUserId) return;
+
+    const existing = this.remotePlayers.get(data.userId);
+
+    // Cache key combines base URL + overlays so we only rebuild when any layer changes
+    const resolvedUrl = resolveRemoteSpriteUrl(data.spriteUrl, data.userId);
+    const overlayKey = JSON.stringify(data.overlays ?? {});
+    const fullKey   = `${resolvedUrl}|${overlayKey}`;
+
+    if (existing) {
+      existing.gfx.setPosition(data.x, data.y);
+      existing.nameText.setPosition(data.x, data.y - 36);
+      existing.sprite?.setPosition(data.x, data.y);
+
+      if (data.name && existing.nameText.text !== data.name) {
+        existing.nameText.setText(data.name);
+      }
+
+      const alreadyLoaded  = existing.loadedSpriteUrl  === fullKey;
+      const alreadyLoading = existing.pendingSpriteUrl === fullKey;
+      if (!alreadyLoaded && !alreadyLoading) {
+        this.loadRemoteSprite(existing, data.userId, resolvedUrl, data.x, data.y, data.overlays ?? null, fullKey);
+      }
+      return;
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[WorldScene] creating remote player:", data.userId, "name:", data.name);
+    }
+
     const gfx = this.add.graphics().setDepth(19);
-    gfx.fillStyle(0xe67e22,1); gfx.fillCircle(0,-10,11); gfx.fillRect(-9,2,18,20);
     gfx.setPosition(data.x, data.y);
-    const nameText = this.add.text(data.x, data.y-32, data.name, {
-      fontSize: "9px", color: "#fde68a", backgroundColor: "#00000080", padding: {x:2,y:1},
-    }).setOrigin(0.5).setDepth(20);
-    this.remotePlayers.set(data.userId, { gfx, nameText });
+
+    const nameText = this.add.text(data.x, data.y - 36, data.name, {
+      fontSize: "9px", color: "#fde68a",
+      backgroundColor: "#00000088", padding: { x: 3, y: 1 },
+    }).setOrigin(0.5).setDepth(22);
+
+    const entry: RemotePlayer = { gfx, nameText, loadedSpriteUrl: null, pendingSpriteUrl: null, loadGen: 0 };
+    this.remotePlayers.set(data.userId, entry);
+
+    this.loadRemoteSprite(entry, data.userId, resolvedUrl, data.x, data.y, data.overlays ?? null, fullKey);
+  }
+
+  /** Load (or reload) the Pipoya sprite for a remote player via HTMLImage (cancellable) */
+  private loadRemoteSprite(
+    entry:     RemotePlayer,
+    userId:    string,
+    spriteUrl: string,
+    x:         number,
+    y:         number,
+    overlays: {
+      eyes?:      string | null;
+      hair?:      string | null;
+      clothes?:   string | null;
+      hat?:       string | null;
+      accessory?: string | null;
+    } | null = null,
+    cacheKey: string = spriteUrl,
+  ) {
+    if (entry._imgEl) {
+      entry._imgEl.onload  = null;
+      entry._imgEl.onerror = null;
+      entry._imgEl = undefined;
+    }
+
+    entry.pendingSpriteUrl = cacheKey;
+    entry.loadGen = (entry.loadGen ?? 0) + 1;
+    const loadGen = entry.loadGen;
+
+    const safeKey = userId.replace(/[^a-zA-Z0-9]/g, "_");
+    const texKey  = `__remote_${safeKey}__`;
+
+    const applyTexture = (canvas: HTMLCanvasElement) => {
+      if (entry.loadGen !== loadGen) return;
+      if (!this.scene?.isActive?.()) return;
+
+      if (this.textures.exists(texKey)) this.textures.remove(texKey);
+
+      const fw = canvas.width <= 96 ? 32 : 64;
+       
+      this.textures.addSpriteSheet(texKey, canvas as any, {
+        frameWidth: fw, frameHeight: fw,
+        startFrame: 0, endFrame: Math.floor(canvas.width / fw) * Math.floor(canvas.height / fw) - 1,
+      });
+
+      if (entry.sprite) { entry.sprite.destroy(); entry.sprite = undefined; }
+
+      const frameKey = `${texKey}_idle`;
+      if (!this.textures.get(texKey).has(frameKey)) {
+        this.textures.get(texKey).add(frameKey, 0, fw, 0, fw, fw);
+      }
+
+      // Use current gfx position — may have been updated while sprite was loading
+      const curX = entry.gfx?.x ?? x;
+      const curY = entry.gfx?.y ?? y;
+      const spr = this.add.sprite(curX, curY, texKey, frameKey)
+        .setDepth(20)
+        .setScale(fw === 32 ? 1.5 : 0.5);
+
+      entry.sprite          = spr;
+      entry.loadedSpriteUrl  = cacheKey;
+      entry.pendingSpriteUrl = null;
+      entry._imgEl           = undefined;
+    };
+
+    const fallbackCanvas = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 96; canvas.height = 128;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#7c3aed";
+      ctx.fillRect(6, 8, 20, 24);
+      ctx.fillStyle = "#FFDBB4";
+      ctx.beginPath(); ctx.arc(16, 10, 8, 0, Math.PI * 2); ctx.fill();
+      return canvas;
+    };
+
+    const hasOverlays = !!(overlays &&
+      (overlays.eyes || overlays.hair || overlays.clothes ||
+       overlays.hat  || overlays.accessory));
+
+    // Fast path: no overlays → plain image load
+    if (!hasOverlays) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      entry._imgEl = img;
+      img.onload = () => {
+        if (entry.loadGen !== loadGen) return;
+        const canvas = document.createElement("canvas");
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d")!.drawImage(img, 0, 0);
+        applyTexture(canvas);
+      };
+      img.onerror = () => {
+        if (entry.loadGen !== loadGen) return;
+        applyTexture(fallbackCanvas());
+      };
+      img.src = spriteUrl;
+    } else {
+      // Slow path: composite base + overlays
+      buildCompositeSpritesheet({
+        base:      spriteUrl,
+        eyes:      overlays?.eyes,
+        hair:      overlays?.hair,
+        clothes:   overlays?.clothes,
+        hat:       overlays?.hat,
+        accessory: overlays?.accessory,
+      }).then((canvas) => {
+        if (entry.loadGen !== loadGen) return;
+        applyTexture(canvas ?? fallbackCanvas());
+      });
+    }
+
+    if (entry.sprite) { entry.sprite.destroy(); entry.sprite = undefined; }
   }
 
   private onRemoteMove(data: { userId: string; x: number; y: number }) {
     const p = this.remotePlayers.get(data.userId);
     if (!p) return;
     p.gfx.setPosition(data.x, data.y);
-    p.nameText.setPosition(data.x, data.y-32);
+    p.nameText.setPosition(data.x, data.y - 36);
+    p.sprite?.setPosition(data.x, data.y);
   }
 
   private onRemoteLeave(data: { userId: string }) {
     const p = this.remotePlayers.get(data.userId);
     if (!p) return;
-    p.gfx.destroy(); p.nameText.destroy();
+    p.gfx.destroy();
+    p.nameText.destroy();
+    p.sprite?.destroy();
     this.remotePlayers.delete(data.userId);
     // Notify WebRTC hook to close peer connection
     if (this.nearbyPeers.has(data.userId)) {
@@ -1033,6 +3672,34 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     }
   }
 
+  // ─── Avatar scale helpers ────────────────────────────────────
+
+  /** Garante que a escala fique entre 0.5 e 2.5. */
+  private clampAvatarScale(value: number): number {
+    if (!Number.isFinite(value) || value <= 0) return 1;
+    return Math.max(0.5, Math.min(2.5, value));
+  }
+
+  /** Aplica novo multiplicador de escala ao sprite local + body de colisão.
+   *  Mantém o baseScale do formato (LPC vs Pipoya). */
+  private applyAvatarScale(this: Phaser.Scene & WorldScene, scale: number) {
+    if (!this.lpcSprite) return;
+    const userScale = this.clampAvatarScale(scale);
+    const baseScale = (this.lpcSprite.getData("baseScale") as number) ?? 1;
+    const isPipoya  = (this.lpcSprite.getData("isPipoya")  as boolean) ?? false;
+
+    this.lpcSprite.setScale(baseScale * userScale);
+
+    // Reescala o body de colisão proporcionalmente — o body cresce
+    // junto com o sprite pra colisão continuar coerente.
+    const body = this.lpcSprite.body as Phaser.Physics.Arcade.Body;
+    if (isPipoya) {
+      body.setSize(20 * userScale, 28 * userScale).setOffset(6 * userScale, 4 * userScale);
+    } else {
+      body.setSize(24 * userScale, 40 * userScale).setOffset(20 * userScale, 22 * userScale);
+    }
+  }
+
   // ─── Zoom helpers ─────────────────────────────────────────────
 
   private applyZoom(this: Phaser.Scene & WorldScene, delta: number) {
@@ -1040,7 +3707,7 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   }
 
   private setZoom(this: Phaser.Scene & WorldScene, value: number) {
-    this.currentZoom = Phaser.Math.Clamp(value, this.ZOOM_MIN, this.ZOOM_MAX);
+    this.currentZoom = Math.min(this.ZOOM_MAX, Math.max(this.ZOOM_MIN, value));
     this.cameras.main.setZoom(this.currentZoom);
     // Notify React of the current zoom level
     window.dispatchEvent(new CustomEvent("space-station:zoom-changed", {
@@ -1050,12 +3717,20 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
 
   // ─── Update ───────────────────────────────────────────────────
 
-  update(this: Phaser.Scene & WorldScene) {
+  update(this: Phaser.Scene & WorldScene, _time: number, delta: number) {
+    // ── Emit camera-view for minimap (throttled ~5x/s) ────────────
+    if (this.editorActive) {
+      this.cameraViewTickAcc += delta;
+      if (this.cameraViewTickAcc >= 200) {
+        this.cameraViewTickAcc = 0;
+        this.emitCameraView();
+      }
+    }
     const speed = 160;
-    const up    = this.cursors.up.isDown    || this.wasd.up.isDown;
-    const down  = this.cursors.down.isDown  || this.wasd.down.isDown;
-    const left  = this.cursors.left.isDown  || this.wasd.left.isDown;
-    const right = this.cursors.right.isDown || this.wasd.right.isDown;
+    const up    = this.cursors.up.isDown;
+    const down  = this.cursors.down.isDown;
+    const left  = this.cursors.left.isDown;
+    const right = this.cursors.right.isDown;
     const moving = up || down || left || right;
 
     if (this.lpcSprite) {
@@ -1084,7 +3759,7 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
           detail: { x: this.lpcSprite.x, y: this.lpcSprite.y },
         }));
       }
-    } else {
+    } else if (this.player) {
       // ── Canvas/SVG sprite movement ───────────────────────────────
       const body = this.player.body as Phaser.Physics.Arcade.Body;
       body.setVelocity(0, 0);
@@ -1117,11 +3792,67 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     // ── Proximity check (every 30 frames ~0.5s) ──────────────────
     if (this.game.getFrame() % 30 === 0) {
       this.checkProximity();
+      this.checkAreaTriggers();
+    }
+
+    // ── Animate proximity circle ──────────────────────────────────
+    if (this.proximityCircle) {
+      const active2 = this.lpcSprite ?? this.player;
+      if (active2) {
+        this.proximityCircle.setPosition(active2.x, active2.y);
+        if (this.proximityPulse) {
+          this.proximityPulse.setPosition(active2.x, active2.y);
+          this.proximityPulseScale += 0.004 * this.proximityPulseDir;
+          if (this.proximityPulseScale > 1.08) this.proximityPulseDir = -1;
+          if (this.proximityPulseScale < 0.92) this.proximityPulseDir =  1;
+          this.proximityPulse.setScale(this.proximityPulseScale);
+        }
+      }
+    }
+  }
+
+  private updateProximityCircle(this: Phaser.Scene & WorldScene, active: boolean, x: number, y: number) {
+    if (active && !this.proximityCircle) {
+      const r = this.PROXIMITY_RADIUS;
+
+      // Outer pulse ring
+      const pulse = this.add.graphics().setDepth(18);
+      pulse.lineStyle(2, 0xffffff, 0.12);
+      pulse.strokeCircle(0, 0, r + 12);
+      pulse.setPosition(x, y);
+      this.proximityPulse = pulse;
+
+      // Main circle: filled + border
+      const g = this.add.graphics().setDepth(18);
+      // Subtle filled area
+      g.fillStyle(0x6366f1, 0.06);
+      g.fillCircle(0, 0, r);
+      // Crisp dashed border — drawn as many short arcs
+      const segments = 36;
+      for (let i = 0; i < segments; i++) {
+        if (i % 2 === 0) {
+          const a0 = (i / segments) * Math.PI * 2;
+          const a1 = ((i + 1) / segments) * Math.PI * 2;
+          g.lineStyle(1.5, 0x818cf8, 0.55);
+          g.beginPath();
+          g.arc(0, 0, r, a0, a1);
+          g.strokePath();
+        }
+      }
+      g.setPosition(x, y);
+      this.proximityCircle = g;
+
+    } else if (!active && this.proximityCircle) {
+      this.proximityCircle.destroy();
+      this.proximityCircle = null;
+      this.proximityPulse?.destroy();
+      this.proximityPulse = null;
     }
   }
 
   private checkProximity(this: Phaser.Scene & WorldScene) {
     const active = this.lpcSprite ?? this.player;
+    if (!active) return;
     const px = active.x;
     const py = active.y;
     const r  = this.PROXIMITY_RADIUS;
@@ -1145,6 +3876,9 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
       }
     });
 
+    // Show/hide proximity circle
+    this.updateProximityCircle(nowNear.size > 0, px, py);
+
     // Detect departures
     this.nearbyPeers.forEach(userId => {
       if (!nowNear.has(userId)) {
@@ -1155,6 +3889,69 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     });
 
     this.nearbyPeers = nowNear;
+  }
+
+  // ─── Area triggers ────────────────────────────────────────────
+
+  private checkAreaTriggers(this: Phaser.Scene & WorldScene) {
+    const active = this.lpcSprite ?? this.player;
+    if (!active) return;
+
+    const px = active.x;
+    const py = active.y;
+
+    const nowInside = new Set<string>();
+    for (const area of this.areasState) {
+      if (px >= area.x && px <= area.x + area.w &&
+          py >= area.y && py <= area.y + area.h) {
+        nowInside.add(area.id);
+      }
+    }
+
+    // Detect enter events
+    for (const id of nowInside) {
+      if (!this.insideAreaIds.has(id)) {
+        const area = this.areasState.find(a => a.id === id);
+        if (area) {
+          this.onAreaEnter(area);
+        }
+      }
+    }
+
+    // Detect leave events
+    for (const id of this.insideAreaIds) {
+      if (!nowInside.has(id)) {
+        const area = this.areasState.find(a => a.id === id);
+        if (area) {
+          window.dispatchEvent(new CustomEvent("space-station:area-leave", {
+            detail: { areaId: id, type: area.type },
+          }));
+        }
+      }
+    }
+
+    this.insideAreaIds = nowInside;
+  }
+
+  private onAreaEnter(this: Phaser.Scene & WorldScene, area: MapArea) {
+    window.dispatchEvent(new CustomEvent("space-station:area-enter", {
+      detail: { areaId: area.id, type: area.type, props: area.props },
+    }));
+
+    // Built-in triggers
+    if (area.type === "credits") {
+      window.dispatchEvent(new CustomEvent("space-station:open-credits"));
+    }
+    if (area.type === "info" && area.props?.message) {
+      window.dispatchEvent(new CustomEvent("space-station:show-info", {
+        detail: { message: area.props.message },
+      }));
+    }
+    if (area.type === "website" && area.props?.url) {
+      window.dispatchEvent(new CustomEvent("space-station:open-website", {
+        detail: { url: area.props.url },
+      }));
+    }
   }
 
   // ─── Drawing utils ────────────────────────────────────────────

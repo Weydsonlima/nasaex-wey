@@ -2,7 +2,6 @@ import { requireAdminMiddleware } from "@/app/middlewares/admin";
 import { base } from "@/app/middlewares/base";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
-import { getStripe } from "../../../lib/stripe";
 
 const adminBase = base.use(requireAdminMiddleware);
 
@@ -23,8 +22,6 @@ const planShape = z.object({
   ctaGatewayId: z.string().nullable(),
   highlighted: z.boolean(),
   isActive: z.boolean(),
-  stripeProductId: z.string().nullable(),
-  stripePriceId: z.string().nullable(),
   orgCount: z.number(),
 });
 
@@ -36,28 +33,16 @@ export const listPlans = adminBase
   .handler(async () => {
     const rows = await prisma.plan.findMany({
       orderBy: [{ sortOrder: "asc" }, { priceMonthly: "asc" }],
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        slogan: true,
-        sortOrder: true,
-        monthlyStars: true,
-        priceMonthly: true,
-        billingType: true,
-        maxUsers: true,
-        rolloverPct: true,
-        benefits: true,
-        ctaLabel: true,
-        ctaLink: true,
-        ctaGatewayId: true,
-        highlighted: true,
-        isActive: true,
-        stripeProductId: true,
-        stripePriceId: true,
-        _count: { select: { organizations: true } },
-      },
     });
+
+    // Get org counts in a separate query to avoid Prisma _count select issues
+    const orgCounts = await prisma.organization.groupBy({
+      by: ["planId"],
+      _count: { _all: true },
+    });
+    const countByPlan = new Map(
+      orgCounts.map((c) => [c.planId ?? "", c._count._all]),
+    );
 
     return {
       plans: rows.map((p) => ({
@@ -77,9 +62,7 @@ export const listPlans = adminBase
         ctaGatewayId: p.ctaGatewayId,
         highlighted: p.highlighted,
         isActive: p.isActive,
-        stripeProductId: p.stripeProductId,
-        stripePriceId: p.stripePriceId,
-        orgCount: p._count.organizations,
+        orgCount: countByPlan.get(p.id) ?? 0,
       })),
     };
   });
@@ -108,7 +91,6 @@ export const createPlan = adminBase
   )
   .output(z.object({ id: z.string() }))
   .handler(async ({ input }) => {
-    // Generate slug from name
     const slug = input.name
       .toLowerCase()
       .normalize("NFD")
@@ -118,8 +100,6 @@ export const createPlan = adminBase
       .slice(0, 40);
 
     const unique = `${slug}-${Date.now().toString(36)}`;
-
-    const stripe = getStripe();
 
     const plan = await prisma.plan.create({
       data: {
@@ -141,49 +121,9 @@ export const createPlan = adminBase
       },
     });
 
-    try {
-      // 1. Create Stripe Product
-      const product = await stripe.products.create({
-        name: plan.name,
-        description: plan.slogan ?? undefined,
-        metadata: {
-          planId: plan.id,
-          slug: plan.slug,
-        },
-      });
-
-      // 2. Map billing type to Stripe interval
-      const intervalMap: Record<string, "month" | "year" | "week"> = {
-        monthly: "month",
-        annual: "year",
-        weekly: "week",
-      };
-
-      const interval = intervalMap[plan.billingType] || "month";
-
-      // 3. Create Stripe Price
-      const price = await stripe.prices.create({
-        unit_amount: Math.round(Number(plan.priceMonthly) * 100), // Cents
-        currency: "brl",
-        recurring: { interval },
-        product: product.id,
-        metadata: {
-          planId: plan.id,
-        },
-      });
-
-      // 4. Update Plan with Stripe IDs
-      await prisma.plan.update({
-        where: { id: plan.id },
-        data: {
-          stripeProductId: product.id,
-          stripePriceId: price.id,
-        },
-      });
-    } catch (err) {
-      console.error("[Stripe] Error creating product/price:", err);
-      // We don't throw here to avoid failing the whole request, but you might want to handle this better
-    }
+    // Stripe Product/Price provisioning is now handled per-environment via
+    // STRIPE_PRICE_<SLUG_UPPER> env variables. See src/lib/auth.ts for the
+    // mapping in the Stripe plugin.
 
     return { id: plan.id };
   });
@@ -213,11 +153,7 @@ export const updatePlan = adminBase
   )
   .output(z.object({ success: z.boolean() }))
   .handler(async ({ input }) => {
-    const oldPlan = await prisma.plan.findUniqueOrThrow({
-      where: { id: input.id },
-    });
-
-    const updatedPlan = await prisma.plan.update({
+    await prisma.plan.update({
       where: { id: input.id },
       data: {
         name: input.name,
@@ -237,61 +173,6 @@ export const updatePlan = adminBase
       },
     });
 
-    // Stripe Sync Logic
-    if (updatedPlan.stripeProductId) {
-      const stripe = getStripe();
-
-      try {
-        // 1. If name changed, update product
-        if (
-          updatedPlan.name !== oldPlan.name ||
-          updatedPlan.slogan !== oldPlan.slogan
-        ) {
-          await stripe.products.update(updatedPlan.stripeProductId, {
-            name: updatedPlan.name,
-            description: updatedPlan.slogan ?? undefined,
-          });
-        }
-
-        // 2. If price or billing type changed, create new price
-        if (
-          Number(updatedPlan.priceMonthly) !== Number(oldPlan.priceMonthly) ||
-          updatedPlan.billingType !== oldPlan.billingType
-        ) {
-          const intervalMap: Record<string, "month" | "year" | "week"> = {
-            monthly: "month",
-            annual: "year",
-            weekly: "week",
-          };
-
-          const newPrice = await stripe.prices.create({
-            unit_amount: Math.round(Number(updatedPlan.priceMonthly) * 100),
-            currency: "brl",
-            recurring: {
-              interval: intervalMap[updatedPlan.billingType] || "month",
-            },
-            product: updatedPlan.stripeProductId,
-            metadata: { planId: updatedPlan.id },
-          });
-
-          // Update DB with new Price ID
-          await prisma.plan.update({
-            where: { id: updatedPlan.id },
-            data: { stripePriceId: newPrice.id },
-          });
-
-          // Archive old price if it exists
-          if (oldPlan.stripePriceId) {
-            await stripe.prices.update(oldPlan.stripePriceId, {
-              active: false,
-            });
-          }
-        }
-      } catch (err) {
-        console.error("[Stripe] Error syncing update:", err);
-      }
-    }
-
     return { success: true };
   });
 
@@ -304,29 +185,18 @@ export const deletePlan = adminBase
   .handler(async ({ input, errors }) => {
     const plan = await prisma.plan.findUnique({
       where: { id: input.id },
-      select: {
-        id: true,
-        stripeProductId: true,
-        _count: { select: { organizations: true } },
-      },
     });
 
     if (!plan) throw errors.NOT_FOUND({ message: "Plano não encontrado." });
 
-    if (plan._count.organizations > 0)
-      throw errors.BAD_REQUEST({
-        message: `Este plano está em uso por ${plan._count.organizations} empresa(s). Remova-as antes de excluir.`,
-      });
+    const orgCount = await prisma.organization.count({
+      where: { planId: input.id },
+    });
 
-    // Archive in Stripe if applicable
-    if (plan.stripeProductId) {
-      try {
-        const stripe = getStripe();
-        await stripe.products.update(plan.stripeProductId, { active: false });
-      } catch (err) {
-        console.error("[Stripe] Error archiving product on delete:", err);
-      }
-    }
+    if (orgCount > 0)
+      throw errors.BAD_REQUEST({
+        message: `Este plano está em uso por ${orgCount} empresa(s). Remova-as antes de excluir.`,
+      });
 
     await prisma.plan.delete({ where: { id: input.id } });
     return { success: true };

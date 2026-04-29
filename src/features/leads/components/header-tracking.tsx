@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StarsWidget } from "@/features/stars";
 import { SpacePointWidget } from "@/features/space-point";
+import { LinkSpacehomeButton } from "@/features/space-page/components/link-space-page-button";
 
 interface HeaderTrackingProps {
   title?: string;
@@ -29,7 +30,7 @@ export function HeaderTracking({ title }: HeaderTrackingProps) {
         "group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
       ].join(" ")}
     >
-      {/* ── Left: sidebar trigger + page title ── */}
+      {/* ── Left: sidebar trigger + page title + spacehome button ── */}
       <div className="flex items-center gap-2 px-4 flex-1 min-w-0">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -45,6 +46,11 @@ export function HeaderTracking({ title }: HeaderTrackingProps) {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+        <Separator
+          orientation="vertical"
+          className="ml-1 data-[orientation=vertical]:h-4 opacity-50"
+        />
+        <LinkSpacehomeButton />
       </div>
 
       {/* ── Right: space point + stars widget ── */}

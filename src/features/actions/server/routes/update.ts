@@ -2,10 +2,22 @@ import { requiredAuthMiddleware } from "@/app/middlewares/auth";
 import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
-import { logOrgActivity } from "@/lib/org-activity-log";
 import { z } from "zod";
 import { awardPoints } from "@/app/router/space-point/utils";
-import { sendWorkspaceWorkflowEvent } from "@/inngest/utils";
+import { generatePublicSlug } from "@/features/public-calendar/utils/slug";
+
+const EVENT_CATEGORY_VALUES = [
+  "WORKSHOP",
+  "PALESTRA",
+  "LANCAMENTO",
+  "WEBINAR",
+  "NETWORKING",
+  "CURSO",
+  "REUNIAO",
+  "HACKATHON",
+  "CONFERENCIA",
+  "OUTRO",
+] as const;
 
 export const updateAction = base
   .use(requiredAuthMiddleware)
@@ -22,23 +34,52 @@ export const updateAction = base
       endDate: z.date().nullable().optional(),
       isDone: z.boolean().optional(),
       orgProjectId: z.string().nullable().optional(),
+      // ─── Calendário Público ──────────────────────────────────────────
+      isPublic: z.boolean().optional(),
+      eventCategory: z.enum(EVENT_CATEGORY_VALUES).nullable().optional(),
+      country: z.string().nullable().optional(),
+      state: z.string().nullable().optional(),
+      city: z.string().nullable().optional(),
+      address: z.string().nullable().optional(),
+      registrationUrl: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
     const { actionId, ...data } = input;
     const { session } = context;
-    const changedFields = Object.keys(data).filter(
-      (key) => (data as Record<string, unknown>)[key] !== undefined,
-    );
 
     const previous = await prisma.action.findUnique({
       where: { id: actionId },
     });
 
+    // Ao publicar pela 1ª vez: gerar publicSlug único + setar publishedAt
+    let publicSlug: string | undefined;
+    let publishedAt: Date | null | undefined;
+    if (data.isPublic === true && previous && !previous.publicSlug) {
+      // tenta até 3x caso colida com um slug existente
+      for (let i = 0; i < 3; i++) {
+        const candidate = generatePublicSlug(previous.title);
+        const exists = await prisma.action.findUnique({
+          where: { publicSlug: candidate },
+          select: { id: true },
+        });
+        if (!exists) {
+          publicSlug = candidate;
+          break;
+        }
+      }
+      publishedAt = new Date();
+    } else if (data.isPublic === false && previous?.isPublic) {
+      // Despublicar: mantém o slug mas limpa publishedAt
+      publishedAt = null;
+    }
+
     const action = await prisma.action.update({
       where: { id: actionId },
       data: {
         ...data,
+        ...(publicSlug ? { publicSlug } : {}),
+        ...(publishedAt !== undefined ? { publishedAt } : {}),
         closedAt:
           data.isDone === true
             ? new Date()
@@ -47,31 +88,6 @@ export const updateAction = base
               : undefined,
       },
     });
-
-    if (changedFields.length > 0) {
-      await logOrgActivity({
-        organizationId: context.org.id,
-        userId: context.user.id,
-        userName: context.user.name ?? "Usuário",
-        userEmail: context.user.email ?? "",
-        action: data.columnId !== undefined ? "action.moved" : "action.updated",
-        resource: "action",
-        resourceId: action.id,
-        metadata: {
-          changes: changedFields,
-          ...(previous &&
-            data.columnId !== undefined && {
-              from: { columnId: previous.columnId },
-              to: { columnId: data.columnId },
-            }),
-          ...(previous &&
-            data.isDone !== undefined && {
-              from: { isDone: previous.isDone },
-              to: { isDone: data.isDone },
-            }),
-        },
-      });
-    }
 
     // Somente pontua quando transiciona de não-feito para concluído
     if (previous && !previous.isDone && data.isDone === true) {
@@ -82,37 +98,6 @@ export const updateAction = base
           orgId,
           "complete_card",
           "Card concluído ✅",
-        );
-      }
-      try {
-        await sendWorkspaceWorkflowEvent({
-          trigger: "WS_ACTION_COMPLETED",
-          workspaceId: action.workspaceId,
-          actionId: action.id,
-        });
-      } catch (err) {
-        console.error(
-          "[workspace-workflow] failed to emit action.completed",
-          err,
-        );
-      }
-    }
-
-    if (
-      previous &&
-      data.columnId !== undefined &&
-      previous.columnId !== data.columnId
-    ) {
-      try {
-        await sendWorkspaceWorkflowEvent({
-          trigger: "WS_ACTION_MOVED_COLUMN",
-          workspaceId: action.workspaceId,
-          actionId: action.id,
-        });
-      } catch (err) {
-        console.error(
-          "[workspace-workflow] failed to emit action.moved (update)",
-          err,
         );
       }
     }

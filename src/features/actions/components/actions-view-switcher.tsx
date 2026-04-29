@@ -19,10 +19,16 @@ interface Props {
 }
 
 export function ActionsViewSwitcher({ workspaceId }: Props) {
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
   const [view, setView] = useQueryState("action-view", {
     defaultValue: "list",
   });
+  const [createParam, setCreateParam] = useQueryState("create");
+  const presetPublic = createParam === "event-public";
+
+  // Modal abre se o usuário clicou no botão OU se chegou com ?create=event-public
+  const open = localOpen || presetPublic;
+  const setOpen = setLocalOpen;
 
   return (
     <>
@@ -49,7 +55,9 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
           {/* Filters bar */}
           <div className="px-4 py-2 border-b bg-background/80 flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <FiltersBar workspaceId={workspaceId} />
+              <div className="hidden sm:flex">
+                <FiltersBar workspaceId={workspaceId} />
+              </div>
               <FiltersSheet workspaceId={workspaceId} />
             </div>
             <div className="flex items-center gap-2 w-full lg:w-auto">
@@ -84,8 +92,13 @@ export function ActionsViewSwitcher({ workspaceId }: Props) {
       </Tabs>
       <CreateActionModal
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          setLocalOpen(next);
+          // Limpa o query param ao fechar o modal
+          if (!next && presetPublic) setCreateParam(null);
+        }}
         workspaceId={workspaceId}
+        presetPublic={presetPublic}
       />
     </>
   );

@@ -90,6 +90,7 @@ export const intentEnum = z.enum([
   "PRODUCT",
   "PORTFOLIO",
   "CUSTOM",
+  "SPACE_PAGE",
 ]);
 
 export const pageStatusEnum = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);

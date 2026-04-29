@@ -9,19 +9,29 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { useOrgRole } from "@/hooks/use-org-role";
 import { useGetCompanyCode } from "@/features/workspace/hooks/use-workspace";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2Icon, CopyIcon, Lock, UploadIcon } from "lucide-react";
+import { Briefcase, Building2Icon, CopyIcon, FileBadge, Lock, Mail, Phone, UploadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useSpacePointCtx } from "@/features/space-point/components/space-point-provider";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { orpc, client as orpcClient } from "@/lib/orpc";
+import { COMPANY_TYPES, COMPANY_TYPE_SLUGS } from "@/features/company/constants";
 
 interface UploadLogo {
   file: File | null;
@@ -30,9 +40,32 @@ interface UploadLogo {
   objectUrl?: string;
 }
 
+const cnpjRegex = /^(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{14})$/;
+
 const formCompanySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(50, "Nome muito longo"),
   logo: z.string().optional(),
+  companyType: z
+    .string()
+    .nullable()
+    .refine((v) => v === null || v === "" || COMPANY_TYPE_SLUGS.includes(v), {
+      message: "Tipo de empresa inválido",
+    })
+    .optional(),
+  companySegment: z.string().max(120).nullable().optional(),
+  cnpj: z
+    .string()
+    .optional()
+    .refine((v) => !v || cnpjRegex.test(v), {
+      message: "CNPJ inválido (use 00.000.000/0001-00 ou 14 dígitos)",
+    }),
+  contactEmail: z
+    .string()
+    .optional()
+    .refine((v) => !v || z.string().email().safeParse(v).success, {
+      message: "E-mail inválido",
+    }),
+  contactPhone: z.string().optional(),
 });
 
 type FormCompanySchema = z.infer<typeof formCompanySchema>;
@@ -52,11 +85,21 @@ export function FormCompany({ company }: Props) {
   const { isSingle } = useOrgRole();
   const { data: codeData, isLoading: isLoadingCode } = useGetCompanyCode();
   const { earn } = useSpacePointCtx();
+  const queryClient = useQueryClient();
+  const { data: profileData } = useQuery({
+    ...orpc.orgs.getCompanyProfile.queryOptions(),
+    staleTime: 60_000,
+  });
   const form = useForm<FormCompanySchema>({
     resolver: zodResolver(formCompanySchema),
     values: {
       name: company.name,
       logo: company.logo,
+      companyType: profileData?.org?.companyType ?? "",
+      companySegment: profileData?.org?.companySegment ?? "",
+      cnpj: profileData?.org?.cnpj ?? "",
+      contactEmail: profileData?.org?.contactEmail ?? "",
+      contactPhone: profileData?.org?.contactPhone ?? "",
     },
   });
 
@@ -121,6 +164,27 @@ export function FormCompany({ company }: Props) {
 
     if (error) {
       toast.error("Erro ao atualizar empresa");
+      return;
+    }
+
+    try {
+      await orpcClient.orgs.updateCompanyProfile({
+        companyType: data.companyType ?? "",
+        companySegment: data.companySegment ?? null,
+        cnpj: data.cnpj || null,
+        contactEmail: data.contactEmail || null,
+        contactPhone: data.contactPhone || null,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: orpc.orgs.getCompanyProfile.key(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: orpc.spaceHelp.getSetupProgress.key(),
+      });
+    } catch (err) {
+      console.error("[settings/company] companyProfile update failed:", err);
+      toast.error("Falha ao salvar dados institucionais");
+      return;
     }
 
     toast.success("Empresa atualizada com sucesso");
@@ -163,6 +227,124 @@ export function FormCompany({ company }: Props) {
             readOnly={isSingle}
           />
           <FieldDescription>Insira o nome da sua empresa</FieldDescription>
+        </Field>
+
+        <Field>
+          <FieldLabel className="flex items-center gap-1.5">
+            <Briefcase className="size-3.5 text-violet-500" />
+            Tipo da empresa
+          </FieldLabel>
+          <Controller
+            control={form.control}
+            name="companyType"
+            render={({ field }) => (
+              <Select
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                disabled={isSingle}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o segmento da sua empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPANY_TYPES.map((t) => (
+                    <SelectItem key={t.slug} value={t.slug}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{t.label}</span>
+                        {t.description && (
+                          <span className="text-xs text-muted-foreground">
+                            {t.description}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          <FieldDescription>
+            Define o tipo de empresa para personalizar a hierarquia e relatórios.
+          </FieldDescription>
+          {form.formState.errors.companyType && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.companyType.message}
+            </p>
+          )}
+        </Field>
+
+        <Field>
+          <FieldLabel>Sub-nicho / segmento (opcional)</FieldLabel>
+          <Input
+            placeholder="Ex.: foco em e-commerce de moda"
+            {...form.register("companySegment")}
+            disabled={isSingle}
+            readOnly={isSingle}
+          />
+          <FieldDescription>
+            Texto livre para detalhar o segmento da sua empresa.
+          </FieldDescription>
+        </Field>
+
+        <FieldSeparator />
+
+        <Field>
+          <FieldLabel className="flex items-center gap-1.5">
+            <FileBadge className="size-3.5 text-violet-500" />
+            CNPJ
+          </FieldLabel>
+          <Input
+            placeholder="00.000.000/0001-00"
+            {...form.register("cnpj")}
+            disabled={isSingle}
+            readOnly={isSingle}
+          />
+          <FieldDescription>
+            Usado em contratos e propostas via variável {"{{empresa_cnpj}}"}.
+          </FieldDescription>
+          {form.formState.errors.cnpj && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.cnpj.message}
+            </p>
+          )}
+        </Field>
+
+        <Field>
+          <FieldLabel className="flex items-center gap-1.5">
+            <Mail className="size-3.5 text-violet-500" />
+            E-mail institucional
+          </FieldLabel>
+          <Input
+            type="email"
+            placeholder="contato@suaempresa.com.br"
+            {...form.register("contactEmail")}
+            disabled={isSingle}
+            readOnly={isSingle}
+          />
+          <FieldDescription>
+            Usado em contratos e propostas via variável {"{{empresa_email}}"}.
+          </FieldDescription>
+          {form.formState.errors.contactEmail && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.contactEmail.message}
+            </p>
+          )}
+        </Field>
+
+        <Field>
+          <FieldLabel className="flex items-center gap-1.5">
+            <Phone className="size-3.5 text-violet-500" />
+            Telefone / WhatsApp de contato
+          </FieldLabel>
+          <Input
+            placeholder="(11) 90000-0000"
+            {...form.register("contactPhone")}
+            disabled={isSingle}
+            readOnly={isSingle}
+          />
+          <FieldDescription>
+            Usado em contratos e propostas via variável {"{{empresa_contato}}"}.
+          </FieldDescription>
         </Field>
 
         <FieldSeparator />

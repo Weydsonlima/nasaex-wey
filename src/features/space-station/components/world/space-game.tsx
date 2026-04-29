@@ -1,15 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+const EmpresasPanel = dynamic(() => import("./empresas-panel"), { ssr: false });
 import { X, Globe, Settings, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { StationWorldConfig, AvatarConfig } from "../../types";
+import type { StationWorldConfig, AvatarConfig, AreaType } from "../../types";
+import { AREA_TYPE_META } from "../../types";
 import { StationExplorer } from "../station-explorer";
 import { WorldSettingsPanel } from "./world-settings-panel";
 import { MediaBar } from "./media-bar";
 import { MediaSettingsPanel } from "./media-settings-panel";
 import { VideoOverlay } from "./video-overlay";
+import { BubbleAppsPanel, type BubbleApp } from "./bubble-apps-panel";
+import { BubbleChatPanel } from "./bubble-chat-panel";
+import { toast } from "sonner";
+import { ProximityBar } from "./proximity-bar";
+import { ParticipantsPanel } from "./participants-panel";
+import { ConnectPeoplePanel } from "./connect-people-panel";
+import { SharePanel } from "./share-panel";
+import { CreditsPanel } from "./credits-panel";
+import { WokaAvatarPanel } from "./woka-avatar-panel";
+import { ScreenShareOverlay } from "./screen-share-overlay";
+import { MapMenu } from "./map-editor/map-menu";
+import { MapEditor } from "./map-editor/map-editor";
+import { PublishTemplateModal } from "./publish-template-modal";
 import { useWebRTC } from "../../hooks/use-webrtc";
+import { useWorldPresence } from "../../hooks/use-world-presence";
 
 interface Props {
   worldConfig:   StationWorldConfig;
@@ -21,28 +38,115 @@ interface Props {
   /** User session data for WebRTC identity */
   userId?:       string;
   userName?:     string;
+  userNick?:     string;
 }
 
 export function SpaceGame({
   worldConfig: initialWorldConfig,
   avatarConfig: initialAvatarConfig,
   stationId, nick, isOwner, userImage,
-  userId    = "guest",
+  userId: rawUserId = "guest",
   userName  = nick,
+  userNick,
 }: Props) {
+  // Guests share the same server-side userId (derived from stationId), which
+  // causes each tab to filter out others' events thinking they are themselves.
+  // We assign a stable per-tab unique ID stored in sessionStorage so every
+  // open tab — even in incognito or localhost — gets a distinct identity.
+  const [effectiveUserId] = useState<string>(() => {
+    if (typeof window === "undefined") return rawUserId;
+    // Logged-in users already have a real UUID — use it as-is
+    if (!rawUserId.startsWith("guest")) return rawUserId;
+    const KEY = `_nasa_world_uid_${stationId}`;
+    try {
+      const stored = sessionStorage.getItem(KEY);
+      if (stored) return stored;
+      const fresh = `${rawUserId}_${Math.random().toString(36).slice(2, 9)}`;
+      sessionStorage.setItem(KEY, fresh);
+      return fresh;
+    } catch {
+      // sessionStorage unavailable (rare) — fall back to transient random
+      return `${rawUserId}_${Math.random().toString(36).slice(2, 9)}`;
+    }
+  });
+  const userId = effectiveUserId;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef      = useRef<import("phaser").Game | null>(null);
   const [loading, setLoading]           = useState(true);
   const [galaxyOpen, setGalaxyOpen]     = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [worldConfig, setWorldConfig]   = useState(initialWorldConfig);
-  const [avatarConfig, setAvatarConfig] = useState(initialAvatarConfig);
+
+  // Avatar state — overlaid with the per-visitor localStorage copy so each
+  // user (including guests in incognito) keeps their customisation on refresh.
+  // The station's `avatarConfig` coming from the DB is only the default for
+  // visitors who have never customised. Per-visitor preferences live client-side
+  // because only the station OWNER can write to SpaceStationWorld.avatarConfig.
+  const avatarLocalKey = `_nasa_avatar_${stationId}_${userId}`;
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig | undefined>(() => {
+    if (typeof window === "undefined") return initialAvatarConfig;
+    try {
+      const stored = localStorage.getItem(avatarLocalKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as AvatarConfig;
+        // Merge station defaults with personal overrides (personal wins)
+        return { ...initialAvatarConfig, ...parsed } as AvatarConfig;
+      }
+    } catch { /* ignore parse errors, fall through to default */ }
+    return initialAvatarConfig;
+  });
+
+  // Persist avatar changes immediately to localStorage
+  useEffect(() => {
+    if (typeof window === "undefined" || !avatarConfig) return;
+    try {
+      localStorage.setItem(avatarLocalKey, JSON.stringify(avatarConfig));
+    } catch { /* quota exceeded or disabled — non-fatal */ }
+  }, [avatarConfig, avatarLocalKey]);
   const [zoomLevel, setZoomLevel]       = useState(1.6);
   const [zoomMin,   setZoomMin]         = useState(0.4);
   const [zoomMax,   setZoomMax]         = useState(3.5);
+  const [pipActive,  setPipActive]      = useState(false);
+  const [shareOpen,  setShareOpen]      = useState(false);
+  const [creditsOpen, setCreditsOpen]  = useState(false);
+  const [avatarPanelOpen, setAvatarPanelOpen] = useState(false);
+  const [connectPanelOpen, setConnectPanelOpen] = useState(false);
+  const [mapMenuOpen, setMapMenuOpen]   = useState(false);
+  const [mapEditorOpen, setMapEditorOpen] = useState(false);
+  const [empresasOpen, setEmpresasOpen] = useState(false);
+  const [chatPeerId,   setChatPeerId]   = useState<string | null>(null);
+  const [chatPeerName, setChatPeerName] = useState<string | null>(null);
+  const [areaToast, setAreaToast] = useState<{
+    id: string; type: AreaType; title: string; message: string;
+  } | null>(null);
+  const [websiteOverlay, setWebsiteOverlay] = useState<{ url: string; areaId: string } | null>(null);
+  const [exitOverlay,    setExitOverlay]    = useState<{ targetNick: string; areaId: string } | null>(null);
+  const areaAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // ── WebRTC ─────────────────────────────────────────────────────────────────
   const webrtc = useWebRTC({ stationId, userId, userName, userImage });
+
+  // ── World presence (multiplayer positions) ─────────────────────────────────
+  // IMPORTANT: broadcast the RAW spriteUrl (may be the "pixel_astronaut"
+  // sentinel or a real URL), NOT the locally-resolved PNG. If we resolved
+  // pixel_astronaut here, every remote viewer would receive the shared base
+  // PNG "/lpc_pixel_astronaut.png" and render every such user with the same
+  // sprite. resolveRemoteSpriteUrl() on the receiver side handles the sentinel
+  // by falling back to a deterministic Pipoya sprite per userId.
+  const rawSpriteUrl = (
+    avatarConfig as (AvatarConfig & { lpcSpritesheetUrl?: string }) | undefined
+  )?.lpcSpritesheetUrl;
+  // Overlays follow the same broadcast convention — raw values transmitted so
+  // receivers can composite the final sprite on their side.
+  const overlays = {
+    eyes:      avatarConfig?.wokaEyesUrl      ?? null,
+    hair:      avatarConfig?.wokaHairUrl      ?? null,
+    clothes:   avatarConfig?.wokaClothesUrl   ?? null,
+    hat:       avatarConfig?.wokaHatUrl       ?? null,
+    accessory: avatarConfig?.wokaAccessoryUrl ?? null,
+  };
+  useWorldPresence({ stationId, userId, userName, userNick, spriteUrl: rawSpriteUrl, overlays });
 
   // ── Phaser game init ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -58,30 +162,48 @@ export function SpaceGame({
       const { WorldScene }   = await import("./scenes/world-scene");
       const { buildGameConfig } = await import("./game-config");
 
-      let channel: { bind: (event: string, cb: (data: unknown) => void) => void } | undefined;
-      try {
-        const { pusherClient } = await import("@/lib/pusher");
-        // ensure auth endpoint
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (pusherClient.config as any).authEndpoint = "/api/pusher/auth";
-        channel = pusherClient.subscribe(`presence-world-${stationId}`) as typeof channel;
-      } catch {
-        // Pusher not configured, single-player mode
-      }
-
       const capturedWorldConfig  = worldConfig;
       const capturedAvatarConfig = avatarConfig;
       const capturedUserImage    = userImage;
+      const capturedUserId       = userId;
+
+      // Pré-renderizar mapa Tiled direto no <canvas> antes do Phaser iniciar
+      let tiledCanvas:   HTMLCanvasElement | null = null;
+      let tiledWidthPx:  number = 0;
+      let tiledHeightPx: number = 0;
+      let tiledSpawnX:   number = 0;
+      let tiledSpawnY:   number = 0;
+      const rawMap = capturedWorldConfig.mapData as import("../../types").WorldMapData | null;
+      if (rawMap?.scenario === "tiled" && rawMap.tiledMapUrl) {
+        try {
+          const { renderTiledMapToCanvas } = await import("../../utils/tiled-canvas-renderer");
+          const result = await renderTiledMapToCanvas(
+            rawMap.tiledMapUrl,
+            rawMap.tiledBaseUrl ?? rawMap.tiledMapUrl.substring(0, rawMap.tiledMapUrl.lastIndexOf("/") + 1),
+          );
+          tiledCanvas   = result.canvas;
+          tiledWidthPx  = result.widthPx;
+          tiledHeightPx = result.heightPx;
+          tiledSpawnX   = result.spawnX;
+          tiledSpawnY   = result.spawnY;
+        } catch (e) {
+          console.error("[SpaceGame] Falha ao pré-renderizar mapa Tiled:", e);
+        }
+      }
 
       const worldSceneWithData = class extends WorldScene {
-        create() {
+        init() {
           super.init({
             worldConfig: capturedWorldConfig,
             avatarConfig: capturedAvatarConfig,
-            channel,
             userImage: capturedUserImage,
+            userId: capturedUserId,
+            tiledCanvas,
+            tiledWidthPx,
+            tiledHeightPx,
+            tiledSpawnX,
+            tiledSpawnY,
           });
-          super.create();
         }
       };
 
@@ -95,26 +217,112 @@ export function SpaceGame({
 
     initGame();
 
-    const onGalaxy = () => setGalaxyOpen(true);
+    const onGalaxy   = () => setGalaxyOpen(true);
+    const onCredits  = () => setCreditsOpen(true);
     const onZoomChanged = (e: Event) => {
       const { zoom, min, max } = (e as CustomEvent).detail as { zoom: number; min: number; max: number };
       setZoomLevel(zoom);
       setZoomMin(min);
       setZoomMax(max);
     };
-    window.addEventListener("space-station:open-galaxy", onGalaxy);
+    const onAreaEnter = (e: Event) => {
+      const { areaId, type, props } = (e as CustomEvent).detail as {
+        areaId: string; type: AreaType;
+        props?: { message?: string; url?: string; roomName?: string; audioUrl?: string; targetNick?: string };
+      };
+
+      // ── Website: mostra overlay com botão de abrir ──────────────────────
+      if (type === "website") {
+        const url = props?.url;
+        if (url) setWebsiteOverlay({ url, areaId });
+        return;
+      }
+
+      // ── Exit: mostra overlay de portal ──────────────────────────────────
+      if (type === "exit") {
+        const targetNick = props?.targetNick ?? "";
+        setExitOverlay({ targetNick, areaId });
+        return;
+      }
+
+      // ── Play-audio: inicia reprodução ────────────────────────────────────
+      if (type === "play-audio") {
+        const audioUrl = props?.audioUrl;
+        if (audioUrl) {
+          try {
+            if (areaAudioRef.current) {
+              areaAudioRef.current.pause();
+              areaAudioRef.current = null;
+            }
+            const audio = new Audio(audioUrl);
+            audio.loop   = true;
+            audio.volume = 0.4;
+            audio.play().catch(() => { /* autoplay blocked — silently ignore */ });
+            areaAudioRef.current = audio;
+          } catch { /* ignore */ }
+        }
+        const meta = AREA_TYPE_META[type];
+        setAreaToast({ id: areaId, type, title: `${meta.emoji} Áudio`, message: "Reproduzindo áudio da área." });
+        return;
+      }
+
+      // ── Credits: já tratado pelo WorldScene (open-credits) ──────────────
+      if (type === "credits") return;
+
+      // ── Demais tipos: toast informativo ──────────────────────────────────
+      const meta = AREA_TYPE_META[type];
+      if (!meta) return;
+      const messages: Partial<Record<AreaType, string>> = {
+        silent:  "Você está em uma zona silenciosa. Apenas quem estiver dentro pode ouvir você.",
+        focus:   "Você entrou em uma área de foco. Apenas quem estiver dentro dela pode ouvir você.",
+        entry:   "Ponto de entrada da estação.",
+        meeting: props?.roomName ? `Sala de reunião: ${props.roomName}` : "Você entrou em uma sala de reunião.",
+        info:    props?.message ?? "Informação da área.",
+        custom:  props?.message ?? "Você entrou em uma área personalizada.",
+      };
+      const message = messages[type];
+      if (!message) return;
+      setAreaToast({
+        id: areaId,
+        type,
+        title: `${meta.emoji} ${meta.label === "Silenciosa" ? "Zona silenciosa" : meta.label}`,
+        message,
+      });
+    };
+    const onAreaLeave = (e: Event) => {
+      const { areaId } = (e as CustomEvent).detail as { areaId: string };
+      setAreaToast(prev => (prev?.id === areaId ? null : prev));
+      setWebsiteOverlay(prev => (prev?.areaId === areaId ? null : prev));
+      setExitOverlay(prev => (prev?.areaId === areaId ? null : prev));
+      // Para áudio ao sair da área
+      if (areaAudioRef.current) {
+        areaAudioRef.current.pause();
+        areaAudioRef.current = null;
+      }
+    };
+
+    window.addEventListener("space-station:open-galaxy",  onGalaxy);
+    window.addEventListener("space-station:open-credits", onCredits);
     window.addEventListener("space-station:zoom-changed", onZoomChanged);
+    window.addEventListener("space-station:area-enter",   onAreaEnter);
+    window.addEventListener("space-station:area-leave",   onAreaLeave);
 
     return () => {
-      window.removeEventListener("space-station:open-galaxy", onGalaxy);
+      window.removeEventListener("space-station:open-galaxy",  onGalaxy);
+      window.removeEventListener("space-station:open-credits", onCredits);
       window.removeEventListener("space-station:zoom-changed", onZoomChanged);
-      game?.destroy(true);
+      window.removeEventListener("space-station:area-enter",   onAreaEnter);
+      window.removeEventListener("space-station:area-leave",   onAreaLeave);
+      // Destroy whichever instance is current (game may still be null if initGame didn't finish)
+      const toDestroy = gameRef.current ?? game;
+      toDestroy?.destroy(true);
+      gameRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldConfig, avatarConfig, stationId]);
 
-  function handleApply(newWorldConfig: StationWorldConfig, newAvatarConfig: AvatarConfig) {
-    setSettingsOpen(false);
+  function handleApply(newWorldConfig: StationWorldConfig, newAvatarConfig: AvatarConfig, closePanel = false) {
+    if (closePanel) setSettingsOpen(false);
     setWorldConfig(newWorldConfig);
     setAvatarConfig(newAvatarConfig);
   }
@@ -149,12 +357,121 @@ export function SpaceGame({
           userImage={userImage}
           micOn={webrtc.micOn}
           camOn={webrtc.camOn}
+          screenOn={webrtc.screenOn}
           onToggleMic={webrtc.toggleMic}
           onToggleCam={webrtc.toggleCam}
+          onToggleScreen={webrtc.toggleScreen}
           onOpenSettings={() => webrtc.setSettingsOpen(o => !o)}
-          onEnterRoom={() => window.dispatchEvent(new Event("space-station:enter-room"))}
+          onOpenShare={() => setShareOpen(o => !o)}
+          localSpriteUrl={rawSpriteUrl === "pixel_astronaut" ? "/lpc_pixel_astronaut.png" : rawSpriteUrl ?? null}
+          onOpenConnect={() => setConnectPanelOpen(o => !o)}
+          connectPanelOpen={connectPanelOpen}
+          onOpenMap={() => setMapMenuOpen(o => !o)}
+          onOpenEmpresas={() => setEmpresasOpen(true)}
+          onOpenAvatar={() => setAvatarPanelOpen(true)}
+          mapActive={mapMenuOpen || mapEditorOpen}
           peers={webrtc.peers}
           isOwner={isOwner}
+        />
+      )}
+
+      {/* ── Area trigger toast ── */}
+      {areaToast && !loading && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div
+            className="max-w-sm rounded-2xl px-5 py-4 text-center shadow-2xl backdrop-blur-md border"
+            style={{
+              backgroundColor: `${AREA_TYPE_META[areaToast.type].color}33`,
+              borderColor:     `${AREA_TYPE_META[areaToast.type].color}66`,
+            }}
+          >
+            <p className="text-white text-sm font-semibold mb-1">{areaToast.title}</p>
+            <p className="text-white/90 text-xs leading-relaxed">{areaToast.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Website area overlay (bottom-center, clicável) ── */}
+      {websiteOverlay && !loading && (
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="bg-slate-900/95 backdrop-blur-md border border-white/20 rounded-2xl px-5 py-3.5 shadow-2xl flex items-center gap-3 max-w-sm">
+            <Globe className="h-5 w-5 text-indigo-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">Área Web</p>
+              <p className="text-slate-400 text-xs truncate max-w-[180px]">{websiteOverlay.url}</p>
+            </div>
+            <Button
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white shrink-0 h-8 px-3 text-xs"
+              onClick={() => window.open(websiteOverlay.url, "_blank", "noopener,noreferrer")}
+            >
+              Abrir site
+            </Button>
+            <button
+              className="text-slate-400 hover:text-white ml-1 shrink-0"
+              onClick={() => setWebsiteOverlay(null)}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Exit area overlay (portal de saída) ── */}
+      {exitOverlay && !loading && (
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="bg-amber-950/95 backdrop-blur-md border border-amber-500/30 rounded-2xl px-5 py-3.5 shadow-2xl flex items-center gap-3 max-w-sm">
+            <span className="text-xl shrink-0">🚪</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">Portal de Saída</p>
+              {exitOverlay.targetNick ? (
+                <p className="text-amber-300 text-xs">→ @{exitOverlay.targetNick}</p>
+              ) : (
+                <p className="text-amber-300/70 text-xs">Destino não configurado</p>
+              )}
+            </div>
+            {exitOverlay.targetNick && (
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-500 text-white shrink-0 h-8 px-3 text-xs"
+                onClick={() => { window.location.href = `/world/${exitOverlay.targetNick}`; }}
+              >
+                Ir
+              </Button>
+            )}
+            <button
+              className="text-amber-400 hover:text-white ml-1 shrink-0"
+              onClick={() => setExitOverlay(null)}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Empresas directory ── */}
+      {empresasOpen && !loading && (
+        <EmpresasPanel onClose={() => setEmpresasOpen(false)} />
+      )}
+
+      {/* ── Map dropdown menu ── */}
+      {mapMenuOpen && !loading && (
+        <MapMenu
+          onClose={() => setMapMenuOpen(false)}
+          onOpenEditor={() => setMapEditorOpen(true)}
+          onExploreRoom={() => window.dispatchEvent(new Event("space-station:zoom-reset"))}
+          onGlobalMessage={() => { /* TODO: global message */ }}
+          onBackOffice={() => { if (isOwner) setSettingsOpen(true); }}
+          canEdit={!!isOwner}
+        />
+      )}
+
+      {/* ── Map editor panel (left side) ── */}
+      {mapEditorOpen && !loading && isOwner && (
+        <MapEditor
+          stationId={stationId}
+          worldConfig={worldConfig}
+          onClose={() => setMapEditorOpen(false)}
         />
       )}
 
@@ -177,15 +494,96 @@ export function SpaceGame({
         />
       )}
 
+      {/* ── Connect people panel (Conectar pessoas) — sempre montado para notificações ── */}
+      {!loading && (
+        <ConnectPeoplePanel
+          stationId={stationId}
+          userId={userId}
+          userName={userName}
+          open={connectPanelOpen}
+          onClose={() => setConnectPanelOpen(false)}
+        />
+      )}
+
+      {/* ── Participants panel (lista de todos no mundo) ── */}
+      {!loading && (
+        <ParticipantsPanel
+          localName={userName}
+          localNick={userNick}
+          localSpriteUrl={rawSpriteUrl === "pixel_astronaut" ? "/lpc_pixel_astronaut.png" : rawSpriteUrl ?? null}
+          onSendMessage={(peerId, peerName) => {
+            setChatPeerId(peerId);
+            setChatPeerName(peerName);
+          }}
+          onInviteUser={() => setShareOpen(true)}
+        />
+      )}
+
+      {/* ── Proximity bar — top center, WorkAdventure-style ── */}
+      {!loading && (
+        <ProximityBar
+          bubblePeers={webrtc.bubblePeers}
+          peers={webrtc.peers}
+          localName={userName}
+          localNick={userNick}
+          localMicOn={webrtc.micOn}
+          localSpriteUrl={rawSpriteUrl === "pixel_astronaut" ? "/lpc_pixel_astronaut.png" : rawSpriteUrl ?? null}
+          onLeave={() => {
+            // Dispatch leave for all bubble peers to clear the bubble
+            webrtc.bubblePeers.forEach(peerId => {
+              window.dispatchEvent(new CustomEvent("space-station:proximity-leave", {
+                detail: { peerId },
+              }));
+            });
+          }}
+        />
+      )}
+
+      {/* ── Bubble apps panel (bottom-right) ── */}
+      {!loading && (
+        <BubbleAppsPanel
+          bubblePeers={webrtc.bubblePeers}
+          peers={webrtc.peers}
+          bubbleLocked={webrtc.bubbleLocked}
+          onToggleLock={webrtc.toggleBubbleLock}
+          onConnectMyInstance={() => {
+            toast.info("Conecte seu WhatsApp em Configurações → Integrações", {
+              action: { label: "Abrir", onClick: () => window.open("/settings", "_blank") },
+            });
+          }}
+          onOpenChat={(peerUserId) => {
+            setChatPeerId(peerUserId);
+            setChatPeerName(webrtc.peers.get(peerUserId)?.name ?? null);
+          }}
+          onOpenApp={(app: BubbleApp, peerUserId) => {
+            toast.info(`${app} → ${webrtc.peers.get(peerUserId)?.name ?? "peer"} — em implementação`);
+          }}
+        />
+      )}
+
+      {/* ── Bubble chat drawer ── */}
+      <BubbleChatPanel
+        open={!!chatPeerId}
+        peerUserId={chatPeerId}
+        peerName={chatPeerId
+          ? (webrtc.peers.get(chatPeerId)?.name ?? chatPeerName ?? null)
+          : null
+        }
+        onClose={() => { setChatPeerId(null); setChatPeerName(null); }}
+      />
+
       {/* ── Video overlay (bottom-right) ── */}
       {!loading && (
         <VideoOverlay
           localStream={webrtc.localStream}
+          localScreenStream={webrtc.screenStream}
           localMicOn={webrtc.micOn}
           localCamOn={webrtc.camOn}
+          localScreenOn={webrtc.screenOn}
           localName={userName}
           localImage={userImage}
           peers={webrtc.peers}
+          onPiPToggle={setPipActive}
         />
       )}
 
@@ -277,7 +675,56 @@ export function SpaceGame({
           >
             <Maximize2 className="h-3.5 w-3.5" />
           </button>
+          <button
+            onClick={() => setCreditsOpen(o => !o)}
+            className="w-9 h-9 rounded-xl bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-white/10 transition-all backdrop-blur-sm"
+            title="Créditos e licenças (CC BY-SA)"
+          >
+            <span className="text-[13px] leading-none font-semibold">©</span>
+          </button>
         </div>
+      )}
+
+      {/* ── Screen share overlay (visible to all in bubble) ── */}
+      {!loading && (
+        <ScreenShareOverlay
+          localScreenStream={webrtc.screenStream}
+          localScreenOn={webrtc.screenOn}
+          localName={userName}
+          peers={webrtc.peers}
+        />
+      )}
+
+      {/* ── Share panel ── */}
+      {shareOpen && !loading && (
+        <SharePanel nick={nick} onClose={() => setShareOpen(false)} />
+      )}
+
+      {/* ── Credits / Attribution panel (CC BY-SA 3.0) ── */}
+      {creditsOpen && (
+        <CreditsPanel onClose={() => setCreditsOpen(false)} />
+      )}
+
+      {/* ── Avatar personalization panel (available to ALL users incl. guests) ── */}
+      {avatarPanelOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-3xl h-[70vh] max-h-[620px]">
+            <WokaAvatarPanel
+              avatarConfig={avatarConfig}
+              onChange={(partial) => {
+                // Merge into current avatar state — the useEffect at the top
+                // of SpaceGame persists this to localStorage automatically.
+                setAvatarConfig((prev) => ({ ...prev, ...partial } as AvatarConfig));
+              }}
+              onClose={() => setAvatarPanelOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Publish Template modal (owner only, triggered by MapEditor) ── */}
+      {isOwner && (
+        <PublishTemplateModal stationId={stationId} worldConfig={worldConfig} />
       )}
 
       {/* ── World settings panel ── */}

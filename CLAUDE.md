@@ -29,10 +29,31 @@ npm run db:generate   # Gerar cliente Prisma
 npm run db:migrate    # Rodar migrações
 npm run db:studio     # Abrir Prisma Studio
 npm run build         # Build de produção
-git add .
-git commit -m "msg"
-git push main
 ```
+
+## Git Workflow (OBRIGATÓRIO)
+
+> **NUNCA** commitar/pushar diretamente em `main`. Toda alteração mora numa branch feature.
+
+1. **Início de sessão** — antes de qualquer alteração de código, rode:
+   ```
+   /start <app> <descricao-curta>
+   ```
+   Cria a branch `feature/W-<app-slug>-<desc-slug>-<YYYYMMDD>` a partir da `main` atualizada.
+   - `<app>`: nome do App NASA (ex: `space-help`, `forge`, `tracking`, `insights`).
+   - `<descricao-curta>`: o que vai mudar (ex: `uploader-imagem`, `fix-template-pdf`).
+
+2. **Durante a sessão** — uma branch por sessão. Trabalhe inteiro nela; não troque de branch no meio.
+
+3. **Final de sessão** — quando terminar, rode:
+   ```
+   /ship <mensagem-do-commit>
+   ```
+   Claude commita tudo, faz push pra `origin` e abre PR pra `main` via `gh`.
+
+4. **Se precisar mexer no código mas estiver em `main`**: PARE imediatamente, peça ao usuário pra rodar `/start` antes. O hook `PreToolUse` bloqueia `git commit`/`git push` na main.
+
+5. **Padrão dos devs**: histórico do time usa `feature/<descricao-kebab>` em lowercase. Mantemos compatível, só prefixando `W-<app>-` pra rastrear quem/qual app.
 
 ## Banco de Dados
 

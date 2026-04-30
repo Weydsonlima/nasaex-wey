@@ -15,6 +15,33 @@ import { imgSrc } from "@/features/public-calendar/utils/img-src";
 
 dayjs.locale("pt-br");
 
+// Datas fixas: "MM-DD" → nome
+const FIXED_HOLIDAYS: Record<string, string> = {
+  "01-01": "Confraternização Universal",
+  "02-14": "Dia dos Namorados 💕",
+  "03-08": "Dia da Mulher 🌸",
+  "04-21": "Tiradentes",
+  "05-01": "Dia do Trabalho",
+  "05-11": "Dia das Mães 💐",
+  "06-12": "Dia dos Namorados 💕",
+  "06-13": "Corpus Christi",
+  "07-09": "Revolução Constitucionalista",
+  "08-10": "Dia dos Pais 👨‍👧",
+  "09-07": "Independência do Brasil 🇧🇷",
+  "10-12": "N. Sra. Aparecida / Dia das Crianças 🎈",
+  "11-02": "Finados",
+  "11-15": "Proclamação da República",
+  "11-20": "Consciência Negra",
+  "12-24": "Véspera de Natal 🎄",
+  "12-25": "Natal 🎅",
+  "12-31": "Réveillon 🎆",
+};
+
+function getHoliday(date: Dayjs): string | null {
+  const key = date.format("MM-DD");
+  return FIXED_HOLIDAYS[key] ?? null;
+}
+
 export interface WorkspaceCalendarAction {
   id: string;
   title: string;
@@ -342,6 +369,7 @@ export function WorkspaceCalendarMonthGrid({
           const isOutside = !day.isSame(cursor, "month");
           const isToday = day.isSame(today, "day");
           const overflow = dayActions.length - MAX_VISIBLE;
+          const holiday = getHoliday(day);
 
           return (
             <div
@@ -373,10 +401,18 @@ export function WorkspaceCalendarMonthGrid({
                 {day.date()}
               </div>
 
+              {holiday && (
+                <div className="pointer-events-none absolute left-0 right-0 top-[28px] px-[5px]">
+                  <p className="truncate rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-amber-700 dark:text-amber-300">
+                    {holiday}
+                  </p>
+                </div>
+              )}
+
               {dayActions.length > 0 && (
                 <div
                   className="flex h-full flex-col"
-                  style={{ gap: `${CARD_GAP}px` }}
+                  style={{ gap: `${CARD_GAP}px`, paddingTop: holiday ? 48 : 28 }}
                 >
                   {dayActions.slice(0, MAX_VISIBLE).map((a) => (
                     <MiniCard

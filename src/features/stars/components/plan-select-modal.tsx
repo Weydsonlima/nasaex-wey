@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StarIcon } from "./star-icon";
-import {
-  Loader2, Sparkles, Users, ExternalLink, Zap,
-} from "lucide-react";
+import { Loader2, Sparkles, Users, ExternalLink, Zap } from "lucide-react";
 
 interface PlanSelectModalProps {
   open: boolean;
@@ -20,8 +21,8 @@ interface PlanSelectModalProps {
 
 const BILLING_LABEL: Record<string, string> = {
   monthly: "/mês",
-  annual:  "/ano",
-  weekly:  "/sem",
+  annual: "/ano",
+  weekly: "/sem",
 };
 
 export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
@@ -34,7 +35,7 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
 
   const plans = data?.plans ?? [];
 
-  const handleChoose = async (plan: typeof plans[number]) => {
+  const handleChoose = async (plan: (typeof plans)[number]) => {
     if (loadingId) return;
 
     if (plan.ctaLink) {
@@ -49,9 +50,9 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            planId:   plan.id,
+            planId: plan.id,
             planSlug: plan.slug,
-            mode:     "subscription",
+            mode: "subscription",
             itemType: "plan",
             itemSlug: plan.slug,
           }),
@@ -68,23 +69,34 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
       return;
     }
 
-    window.open("mailto:vendas@nasaex.com.br?subject=Plano " + plan.name, "_blank");
+    window.open(
+      "mailto:vendas@nasaex.com.br?subject=Plano " + plan.name,
+      "_blank",
+    );
   };
 
   // Determine grid columns based on plan count
   const colClass =
-    plans.length <= 1 ? "grid-cols-1 max-w-xs mx-auto" :
-    plans.length === 2 ? "grid-cols-2" :
-    plans.length === 3 ? "grid-cols-3" :
-    "grid-cols-2 sm:grid-cols-3";
+    plans.length <= 1
+      ? "grid-cols-1 max-w-xs mx-auto"
+      : plans.length === 2
+        ? "grid-cols-2"
+        : plans.length === 3
+          ? "grid-cols-3"
+          : "grid-cols-2 sm:grid-cols-3";
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#0a0a14] border-white/10">
         {/* Header */}
         <DialogHeader className="pb-1">
           <div className="flex items-start gap-3">
-            <div className="size-10 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#a855f7] flex items-center justify-center shrink-0">
+            <div className="size-10 rounded-xl bg-linear-to-br from-[#7C3AED] to-[#a855f7] flex items-center justify-center shrink-0">
               <Sparkles className="size-5 text-white" />
             </div>
             <div>
@@ -92,7 +104,8 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
                 Escolha seu plano
               </DialogTitle>
               <p className="text-xs text-white/40 mt-0.5 leading-relaxed">
-                Stars são creditados mensalmente e usados para manter integrações ativas
+                Stars são creditados mensalmente e usados para manter
+                integrações ativas
               </p>
             </div>
           </div>
@@ -102,7 +115,10 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
         {isLoading ? (
           <div className="grid grid-cols-3 gap-3 py-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-52 rounded-xl bg-white/5 animate-pulse" />
+              <div
+                key={i}
+                className="h-52 rounded-xl bg-white/5 animate-pulse"
+              />
             ))}
           </div>
         ) : plans.length === 0 ? (
@@ -112,9 +128,9 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
         ) : (
           <div className={cn("grid gap-3 py-1", colClass)}>
             {plans.map((plan) => {
-              const busy         = loadingId === plan.id;
+              const busy = loadingId === plan.id;
               const billingLabel = BILLING_LABEL[plan.billingType] ?? "/mês";
-              const isFree       = plan.priceMonthly === 0;
+              const isFree = plan.priceMonthly === 0;
 
               return (
                 <div
@@ -123,7 +139,7 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
                     "relative flex flex-col rounded-xl border p-4 transition-all",
                     plan.highlighted
                       ? "border-[#7C3AED]/60 bg-[#7C3AED]/8 shadow-[0_0_24px_rgba(124,58,237,.15)]"
-                      : "border-white/10 bg-white/4 hover:border-white/20 hover:bg-white/6"
+                      : "border-white/10 bg-white/4 hover:border-white/20 hover:bg-white/6",
                   )}
                 >
                   {/* Popular badge */}
@@ -145,15 +161,23 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
                     {isFree ? (
                       <div className="text-2xl font-extrabold text-white">
                         R$ 0
-                        <span className="text-xs text-white/40 font-normal">{billingLabel}</span>
+                        <span className="text-xs text-white/40 font-normal">
+                          {billingLabel}
+                        </span>
                       </div>
                     ) : (
                       <div>
-                        <span className="text-[11px] text-white/50 font-medium">R$</span>
-                        <span className="text-3xl font-extrabold text-white mx-1 leading-none">
-                          {plan.priceMonthly.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+                        <span className="text-[11px] text-white/50 font-medium">
+                          R$
                         </span>
-                        <span className="text-[11px] text-white/40">{billingLabel}</span>
+                        <span className="text-3xl font-extrabold text-white mx-1 leading-none">
+                          {plan.priceMonthly.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 0,
+                          })}
+                        </span>
+                        <span className="text-[11px] text-white/40">
+                          {billingLabel}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -161,10 +185,12 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
                   {/* Stars */}
                   <div className="flex items-center justify-center gap-1.5 mb-1.5">
                     <StarIcon className="size-3.5 shrink-0" />
-                    <span className={cn(
-                      "text-[12px] font-bold",
-                      plan.highlighted ? "text-[#a78bfa]" : "text-[#7C3AED]"
-                    )}>
+                    <span
+                      className={cn(
+                        "text-[12px] font-bold",
+                        plan.highlighted ? "text-[#a78bfa]" : "text-[#7C3AED]",
+                      )}
+                    >
                       {plan.monthlyStars.toLocaleString("pt-BR")} stars/mês
                     </span>
                   </div>
@@ -188,15 +214,21 @@ export function PlanSelectModal({ open, onClose }: PlanSelectModalProps) {
                       "w-full mt-auto gap-1.5 font-semibold text-xs rounded-lg h-8",
                       plan.highlighted
                         ? "bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-lg shadow-[#7C3AED]/20"
-                        : "bg-white/10 hover:bg-white/15 text-white border border-white/10"
+                        : "bg-white/10 hover:bg-white/15 text-white border border-white/10",
                     )}
                   >
                     {busy ? (
-                      <><Loader2 className="size-3.5 animate-spin" /> Aguarde...</>
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" /> Aguarde...
+                      </>
                     ) : plan.ctaLink ? (
-                      <><ExternalLink className="size-3.5" /> {plan.ctaLabel}</>
+                      <>
+                        <ExternalLink className="size-3.5" /> {plan.ctaLabel}
+                      </>
                     ) : (
-                      <><Zap className="size-3.5" /> {plan.ctaLabel}</>
+                      <>
+                        <Zap className="size-3.5" /> {plan.ctaLabel}
+                      </>
                     )}
                   </Button>
                 </div>

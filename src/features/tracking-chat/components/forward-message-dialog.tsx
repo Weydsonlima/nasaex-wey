@@ -12,10 +12,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
-import { orpc } from "@/lib/orpc";
-import { useInfiniteQuery } from "@tanstack/react-query";
 import { CheckIcon, MessageSquareIcon, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useConversationListInfinite } from "../hooks/use-conversation";
 import { useForwardMessage } from "../hooks/use-messages";
 import { Message } from "../types";
 
@@ -38,35 +37,17 @@ export function ForwardMessageDialog({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const forward = useForwardMessage();
 
-  const infiniteOptions = orpc.conversation.list.infiniteOptions({
-    input: (pageParam: string | undefined) => ({
-      trackingId,
-      cursor: pageParam,
-      limit: 50,
-    }),
-    queryKey: ["conversations.list.forward", trackingId],
-    initialPageParam: undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-  });
-
-  const { data, isLoading } = useInfiniteQuery({
-    ...infiniteOptions,
-    enabled: open && !!trackingId,
-  });
-
-  const conversations = useMemo(
-    () => data?.pages.flatMap((p) => p.items) ?? [],
-    [data],
-  );
+  const { items, isLoading, isFetchingNextPage, scrollRef, handleScroll } =
+    useConversationListInfinite({ trackingId, search, enabled: open });
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return conversations.filter(
+    return items.filter(
       (c) =>
         c.lead.name?.toLowerCase().includes(q) ||
         c.lead.phone?.toLowerCase().includes(q),
     );
-  }, [conversations, search]);
+  }, [items, search]);
 
   function toggle(id: string) {
     setSelectedIds((prev) =>
@@ -120,7 +101,11 @@ export function ForwardMessageDialog({
             />
           </div>
 
-          <ScrollArea className="h-[300px] pr-4">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="h-[300px] overflow-y-auto pr-1"
+          >
             <div className="space-y-2">
               {isLoading && (
                 <div className="flex justify-center py-8">
@@ -160,14 +145,22 @@ export function ForwardMessageDialog({
               {!isLoading && filtered.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <MessageSquareIcon className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">Nenhuma conversa encontrada</p>
+                  <p className="text-sm font-medium">
+                    Nenhuma conversa encontrada
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Tente buscar por outro nome ou telefone
                   </p>
                 </div>
               )}
+
+              {isFetchingNextPage && (
+                <div className="flex justify-center py-4">
+                  <Spinner className="size-4" />
+                </div>
+              )}
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="flex gap-2">
             <Button

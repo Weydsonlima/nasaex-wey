@@ -18,6 +18,7 @@ export type Action = {
   description: string | null;
   isArchived: boolean;
   isFavorited: boolean;
+  isFavoritedByMe?: boolean;
   workspaceId: string;
   participants: {
     user: {
@@ -246,6 +247,7 @@ export const columns: ColumnDef<Action>[] = [
           actionId={row.original.id}
           workspaceId={row.original.workspaceId}
           isFavorited={row.original.isFavorited}
+          isFavoritedByMe={row.original.isFavoritedByMe}
           isArchived={row.original.isArchived}
           className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
         />

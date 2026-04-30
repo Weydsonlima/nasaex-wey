@@ -7,6 +7,8 @@ import {
   CopyIcon,
   Share2Icon,
   StarIcon,
+  PinIcon,
+  PinOffIcon,
   ArchiveIcon,
   Building2Icon,
   Trash2Icon,
@@ -31,9 +33,12 @@ import {
   useColumnsByWorkspace,
 } from "@/features/workspace/hooks/use-workspace";
 import { useDeleteAction } from "../hooks/use-tasks";
+import { useToggleFavoritePersonal } from "../hooks/use-toggle-favorite-personal";
+import { useToggleFavoriteGlobal } from "../hooks/use-toggle-favorite-global";
 import { ShareActionDialog } from "./share-action-dialog";
 import { MoveActionWorkspaceDialog } from "./move-action-workspace";
 import { authClient } from "@/lib/auth-client";
+import { useOrgRole } from "@/hooks/use-org-role";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -41,6 +46,7 @@ interface Props {
   actionTitle?: string;
   workspaceId: string;
   isFavorited?: boolean;
+  isFavoritedByMe?: boolean;
   isArchived?: boolean;
   createdBy?: string;
   onClose?: () => void;
@@ -52,6 +58,7 @@ export function CardActionsMenu({
   actionTitle = "Card",
   workspaceId,
   isFavorited = false,
+  isFavoritedByMe = false,
   isArchived = false,
   createdBy,
   onClose,
@@ -64,9 +71,13 @@ export function CardActionsMenu({
   const copyAction = useCopyAction();
   const moveAction = useMoveAction();
   const updateFields = useUpdateActionFields();
+  const togglePersonal = useToggleFavoritePersonal(workspaceId);
+  const toggleGlobal = useToggleFavoriteGlobal(workspaceId);
   const deleteAction = useDeleteAction();
   const { columns } = useColumnsByWorkspace(workspaceId);
   const session = authClient.useSession();
+  const { isMaster, isAdmin, isModerador } = useOrgRole();
+  const canManageGlobal = isMaster || isAdmin || isModerador;
 
   const canDelete =
     isArchived && !!createdBy && createdBy === session.data?.user?.id;
@@ -77,12 +88,8 @@ export function CardActionsMenu({
     moveAction.mutate({ actionId, columnId, workspaceId });
   };
 
-  const handleToggleFavorite = () => {
-    updateFields.mutate({ actionId, isFavorited: !isFavorited });
-    toast.success(
-      isFavorited ? "Removido dos favoritos" : "Adicionado aos favoritos",
-    );
-  };
+  const handleTogglePersonal = () => togglePersonal.mutate({ actionId });
+  const handleToggleGlobal = () => toggleGlobal.mutate({ actionId });
 
   const handleToggleArchive = () => {
     updateFields.mutate({ actionId, isArchived: !isArchived });
@@ -205,20 +212,38 @@ export function CardActionsMenu({
             Compartilhar com empresa
           </DropdownMenuItem>
 
-          {/* Favorite */}
+          {/* Personal favorite */}
           <DropdownMenuItem
-            onClick={handleToggleFavorite}
-            disabled={updateFields.isPending}
+            onClick={handleTogglePersonal}
+            disabled={togglePersonal.isPending}
             className="gap-2 cursor-pointer"
           >
             <StarIcon
               className={cn(
-                "size-3.5",
-                isFavorited && "fill-yellow-400 text-yellow-400",
+                "size-3.5 transition-transform",
+                isFavoritedByMe && "fill-yellow-400 text-yellow-400 scale-110",
               )}
             />
-            {isFavorited ? "Remover favorito" : "Favoritar"}
+            {isFavoritedByMe
+              ? "Remover dos meus favoritos"
+              : "Favoritar pra mim"}
           </DropdownMenuItem>
+
+          {/* Global favorite (admin/owner/moderador only) */}
+          {canManageGlobal && (
+            <DropdownMenuItem
+              onClick={handleToggleGlobal}
+              disabled={toggleGlobal.isPending}
+              className="gap-2 cursor-pointer"
+            >
+              {isFavorited ? (
+                <PinOffIcon className="size-3.5" />
+              ) : (
+                <PinIcon className="size-3.5 text-violet-600" />
+              )}
+              {isFavorited ? "Desfixar de todos" : "Fixar para todos"}
+            </DropdownMenuItem>
+          )}
 
           {/* History */}
           {/* <DropdownMenuItem

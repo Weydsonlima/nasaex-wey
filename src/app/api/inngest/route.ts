@@ -12,6 +12,14 @@ import { checkMilestones } from "@/inngest/functions/crons/check-milestones";
 import { onProposalPaid } from "@/inngest/functions/on-proposal-paid";
 import { onOnboardingFormsCompleted } from "@/inngest/functions/on-onboarding-forms-completed";
 import { processReminder } from "@/inngest/functions/crons/check-reminders";
+import { partnerReferralActivityRecalc } from "@/inngest/functions/crons/partner-referral-activity-recalc";
+import {
+  partnerTierRecalcDaily,
+  partnerTierRecalcMany,
+  partnerTierRecalcOne,
+} from "@/inngest/functions/crons/partner-tier-recalc";
+import { partnerPayoutCloseCycle } from "@/inngest/functions/crons/partner-payout-close-cycle";
+import { partnerGracePeriodMonitor } from "@/inngest/functions/crons/partner-grace-period-monitor";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -19,6 +27,13 @@ export const { GET, POST, PUT } = serve({
     executeWorkflow,
     executeWorkspaceWorkflow,
     processReminder,
+    // ── NASA Partner ──
+    partnerReferralActivityRecalc,
+    partnerTierRecalcDaily,
+    partnerTierRecalcMany,
+    partnerTierRecalcOne,
+    partnerPayoutCloseCycle,
+    partnerGracePeriodMonitor,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,

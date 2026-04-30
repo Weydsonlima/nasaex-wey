@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { purchaseTopUp } from "@/lib/star-service";
+import { processPaymentPartnerEffects } from "@/lib/partner-service";
 
 interface AsaasWebhookPayload {
   event:   string;  // "PAYMENT_RECEIVED" | "PAYMENT_CONFIRMED" | etc.
@@ -69,6 +70,13 @@ export async function POST(req: NextRequest) {
 
     // Credit stars to the organization
     await purchaseTopUp(starsPayment.organizationId, starsPayment.packageId);
+
+    // ── NASA Partner: comissão + auditoria de compra com desconto ──
+    try {
+      await processPaymentPartnerEffects(starsPayment.id);
+    } catch (err) {
+      console.error("[asaas/webhook] partner effects failed:", err);
+    }
 
     console.log(
       `[asaas/webhook] ✅ ${starsPayment.starsAmount} stars credited to org`,

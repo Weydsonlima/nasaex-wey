@@ -78,21 +78,31 @@ model User {
   publicActionShares     PublicActionShare[]    @relation("PublicActionShareSharer")
   actionReminders        ActionReminder[]       @relation("ActionReminderUser")
 
-  profileCard            UserProfileCard?
-  orgRoles               OrgRole[]
-  orgFollows             OrgFollow[]
-  companyReviews         CompanyReview[]
-  companyPosts           CompanyPost[]
-  companyPostComments    CompanyPostComment[]
-  spaceHelpProgress      SpaceHelpProgress[]
-  spaceHelpBadges        UserSpaceHelpBadge[]
-  nasaRouteCoursesCreated NasaRouteCourse[]      @relation("NasaRouteCreatorUser")
-  nasaRouteEnrollments    NasaRouteEnrollment[]
-  nasaRouteProgress       NasaRouteProgress[]
-  nasaRouteFreeAccess     NasaRouteFreeAccess[]  @relation("NasaRouteFreeAccessUser")
-  nasaRouteFreeAccessGranted NasaRouteFreeAccess[] @relation("NasaRouteFreeAccessGrantor")
-  nasaRouteCertificates   NasaRouteCertificate[]
-  remindersCreated        Reminder[]             @relation("ReminderCreatedBy")
+  profileCard                UserProfileCard?
+  orgRoles                   OrgRole[]
+  orgFollows                 OrgFollow[]
+  companyReviews             CompanyReview[]
+  companyPosts               CompanyPost[]
+  companyPostComments        CompanyPostComment[]
+  spaceHelpProgress          SpaceHelpProgress[]
+  spaceHelpBadges            UserSpaceHelpBadge[]
+  nasaRouteCoursesCreated    NasaRouteCourse[]      @relation("NasaRouteCreatorUser")
+  nasaRouteEnrollments       NasaRouteEnrollment[]
+  nasaRouteProgress          NasaRouteProgress[]
+  nasaRouteFreeAccess        NasaRouteFreeAccess[]  @relation("NasaRouteFreeAccessUser")
+  nasaRouteFreeAccessGranted NasaRouteFreeAccess[]  @relation("NasaRouteFreeAccessGrantor")
+  nasaRouteCertificates      NasaRouteCertificate[]
+  remindersCreated           Reminder[]             @relation("ReminderCreatedBy")
+
+  // ── NASA Partner ──
+  referralLink                  PartnerReferralLink?
+  partner                       Partner?
+  partnerReferralsCreated       PartnerReferral[]     @relation("PartnerReferralsAsPartner")
+  partnerReferralsAttachedByMe  PartnerReferral[]     @relation("PartnerReferralsAttachedByAdmin")
+  partnerTermsVersionsPublished PartnerTermsVersion[] @relation("PartnerTermsVersionPublisher")
+  partnerTierHistoryTriggered   PartnerTierHistory[]  @relation("PartnerTierHistoryTrigger")
+  partnerPayoutsMarkedPaid      PartnerPayout[]       @relation("PartnerPayoutPaidBy")
+
   @@unique([email])
   @@map("user")
 }
@@ -148,11 +158,11 @@ model Verification {
 }
 
 model Organization {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String
-  logo        String?
-  createdAt   DateTime
+  id           String   @id @default(cuid())
+  name         String
+  slug         String
+  logo         String?
+  createdAt    DateTime
   metadata     String?
   companyCode  String?  @unique @map("company_code")
   companyNiche String?  @map("company_niche")
@@ -251,26 +261,32 @@ model Organization {
   longitude   Float?
   geocodedAt  DateTime? @map("geocoded_at")
 
-  companyType    String? @map("company_type")    // slug ex: "agencia-publicidade" — vide src/features/company/constants.ts
-  companySegment String? @map("company_segment") // texto livre opcional (sub-nicho)
-  cnpj          String?
-  contactEmail  String?  @map("contact_email")
-  contactPhone  String?  @map("contact_phone")
-  bio               String?
-  bannerUrl         String?  @map("banner_url")
-  website           String?
-  isSpacehomePublic Boolean  @default(false) @map("is_spacehome_public")
-  spacehomeTemplate String?  @default("default") @map("spacehome_template")
-  nasaPageId        String?  @unique @map("nasa_page_id")
-  nasaPage          NasaPage?            @relation("OrgSpacehome", fields: [nasaPageId], references: [id], onDelete: SetNull)
-  orgRoles          OrgRole[]
-  orgFollows        OrgFollow[]
-  companyReviews    CompanyReview[]
-  companyPosts      CompanyPost[]
-  spacehomeAuditLogs SpacehomeAuditLog[]
-  nasaRouteCoursesCreated   NasaRouteCourse[]     @relation("NasaRouteCreatorOrg")
+  companyType                 String?               @map("company_type") // slug ex: "agencia-publicidade" — vide src/features/company/constants.ts
+  companySegment              String?               @map("company_segment") // texto livre opcional (sub-nicho)
+  cnpj                        String?
+  contactEmail                String?               @map("contact_email")
+  contactPhone                String?               @map("contact_phone")
+  bio                         String?
+  bannerUrl                   String?               @map("banner_url")
+  website                     String?
+  isSpacehomePublic           Boolean               @default(false) @map("is_spacehome_public")
+  spacehomeTemplate           String?               @default("default") @map("spacehome_template")
+  nasaPageId                  String?               @unique @map("nasa_page_id")
+  nasaPage                    NasaPage?             @relation("OrgSpacehome", fields: [nasaPageId], references: [id], onDelete: SetNull)
+  orgRoles                    OrgRole[]
+  orgFollows                  OrgFollow[]
+  companyReviews              CompanyReview[]
+  companyPosts                CompanyPost[]
+  spacehomeAuditLogs          SpacehomeAuditLog[]
+  nasaRouteCoursesCreated     NasaRouteCourse[]     @relation("NasaRouteCreatorOrg")
   nasaRouteEnrollmentsAsBuyer NasaRouteEnrollment[] @relation("NasaRouteBuyerOrg")
-  nasaRouteFreeAccess       NasaRouteFreeAccess[] @relation("NasaRouteFreeAccessOrg")
+  nasaRouteFreeAccess         NasaRouteFreeAccess[] @relation("NasaRouteFreeAccessOrg")
+
+  // ── NASA Partner ──
+  partnerReferral        PartnerReferral?
+  partnerCommissions     PartnerCommission[]
+  partnerLifetimeGranted Boolean             @default(false) @map("partner_lifetime_granted")
+
   @@unique([slug])
   @@map("organization")
 }
@@ -860,8 +876,8 @@ model Action {
   @@index([isPublic, publishedAt])
   @@index([country, state, city])
   @@index([eventCategory])
-  @@map("actions")
   @@index([organizationId, isPublic, publishedAt])
+  @@map("actions")
 }
 
 // ─── Calendário Público: Likes / Views / Shares / Reminders ─────────────────
@@ -1114,6 +1130,7 @@ model Form {
   onboardingOnboardingForms ClientOnboardingProcess[] @relation("OnboardingOnboardingForm")
 
   isPublicOnSpace Boolean @default(false) @map("is_public_on_space")
+
   @@map("forms")
 }
 
@@ -1268,7 +1285,6 @@ model WhatsAppInstance {
   @@map("whatsapp_instances")
 }
 
-
 // ─────────────────────────────────────────────
 // REMINDERS
 // ─────────────────────────────────────────────
@@ -1281,28 +1297,28 @@ enum ReminderRecurrenceType {
 }
 
 model Reminder {
-  id              String                 @id @default(cuid())
-  createdByUserId String                 @map("created_by_user_id")
+  id              String @id @default(cuid())
+  createdByUserId String @map("created_by_user_id")
 
-  message         String
-  recurrenceType  ReminderRecurrenceType @map("recurrence_type")
-  dayOfMonth      Int?                   @map("day_of_month")
-  remindTime      String                 @map("remind_time")
-  notifyPhone     String?                @map("notify_phone")
+  message        String
+  recurrenceType ReminderRecurrenceType @map("recurrence_type")
+  dayOfMonth     Int?                   @map("day_of_month")
+  remindTime     String                 @map("remind_time")
+  notifyPhone    String?                @map("notify_phone")
 
-  nextRemindAt    DateTime?              @map("next_remind_at")
-  isActive        Boolean                @default(true) @map("is_active")
-  createdAt       DateTime               @default(now()) @map("created_at")
-  updatedAt       DateTime               @updatedAt @map("updated_at")
+  nextRemindAt DateTime? @map("next_remind_at")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  leadId         String?  @map("lead_id")
-  conversationId String?  @map("conversation_id")
-  trackingId     String?  @map("tracking_id")
+  leadId         String? @map("lead_id")
+  conversationId String? @map("conversation_id")
+  trackingId     String? @map("tracking_id")
 
-  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
-  tracking     Tracking?     @relation(fields: [trackingId], references: [id], onDelete: SetNull)
-  createdBy    User          @relation("ReminderCreatedBy", fields: [createdByUserId], references: [id])
+  lead         Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  conversation Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  tracking     Tracking?            @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+  createdBy    User                 @relation("ReminderCreatedBy", fields: [createdByUserId], references: [id])
   occurrences  ReminderOccurrence[]
 
   @@index([nextRemindAt, isActive])
@@ -1758,7 +1774,8 @@ model ForgeContract {
   template     ForgeContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   createdBy    User                   @relation("ForgeContractCreatedBy", fields: [createdById], references: [id])
 
-  clientData   Json?               @map("client_data")
+  clientData Json? @map("client_data")
+
   @@index([organizationId])
   @@index([proposalId])
   @@index([status])
@@ -1898,8 +1915,8 @@ enum StarTransactionType {
   ROLLOVER // rollover do ciclo anterior
   MANUAL_ADJUST // ajuste manual (admin)
   REFUND // estorno
-  COURSE_PURCHASE   // débito ao comprar curso NASA Route
-  COURSE_PAYOUT     // crédito ao criador por venda de curso NASA Route
+  COURSE_PURCHASE // débito ao comprar curso NASA Route
+  COURSE_PAYOUT // crédito ao criador por venda de curso NASA Route
 }
 
 model StarTransaction {
@@ -2009,12 +2026,13 @@ model NBoxItem {
   createdBy           User                     @relation("NBoxItemCreatedBy", fields: [createdById], references: [id])
   campaignBrandAssets NasaCampaignBrandAsset[]
 
-  isPublic         Boolean      @default(false) @map("is_public")
-  publicToken      String?      @unique @map("public_token")
+  isPublic    Boolean @default(false) @map("is_public")
+  publicToken String? @unique @map("public_token")
+
   @@index([organizationId])
   @@index([folderId])
-  @@map("nbox_items")
   @@index([organizationId, isPublic])
+  @@map("nbox_items")
 }
 
 // ─── NASA Planner ──────────────────────────────────────────────────────────────
@@ -2685,6 +2703,10 @@ model StarsPayment {
   gatewayConfig PaymentGatewayConfig? @relation(fields: [gatewayId], references: [id])
   gatewayId     String?               @map("gateway_id")
 
+  // ── NASA Partner ──
+  partnerCommission   PartnerCommission?
+  partnerStarPurchase PartnerStarPurchase?
+
   @@index([userId])
   @@index([organizationId])
   @@index([externalId])
@@ -2912,7 +2934,8 @@ model OrgProject {
   nasaPlannerPosts          NasaPlannerPost[]
   clientOnboardingProcesses ClientOnboardingProcess[]
 
-  isPublicOnSpace Boolean  @default(false) @map("is_public_on_space")
+  isPublicOnSpace Boolean @default(false) @map("is_public_on_space")
+
   @@index([organizationId])
   @@map("org_projects")
 }
@@ -3595,7 +3618,8 @@ model NasaPage {
   assets         NasaPageAsset[]
   domainPurchase NasaPageDomainPurchase?
 
-  orgAsSpacehome Organization?            @relation("OrgSpacehome")
+  orgAsSpacehome Organization? @relation("OrgSpacehome")
+
   @@index([organizationId])
   @@index([status])
   @@index([customDomain])
@@ -3693,21 +3717,21 @@ model JobTitleCatalog {
   level     Int         @default(0) // 0=C-level, 1=diretor, 2=gerente, 3=sênior, 4=pleno, 5=jr
   createdAt DateTime    @default(now()) @map("created_at")
 
-  orgRoles  OrgRole[]
+  orgRoles OrgRole[]
 
   @@index([category, level])
   @@map("job_title_catalog")
 }
 
 model OrgRole {
-  id            String    @id @default(cuid())
-  orgId         String    @map("org_id")
-  userId        String?   @map("user_id") // null = vaga aberta
-  jobTitleId    String    @map("job_title_id")
-  customLabel   String?   @map("custom_label") // complemento opcional
-  parentId      String?   @map("parent_id")
-  department    String?
-  order         Int       @default(0)
+  id          String  @id @default(cuid())
+  orgId       String  @map("org_id")
+  userId      String? @map("user_id") // null = vaga aberta
+  jobTitleId  String  @map("job_title_id")
+  customLabel String? @map("custom_label") // complemento opcional
+  parentId    String? @map("parent_id")
+  department  String?
+  order       Int     @default(0)
 
   // Opt-in explícito do usuário
   publicConsent Boolean   @default(false) @map("public_consent")
@@ -3715,8 +3739,8 @@ model OrgRole {
   showPhoto     Boolean   @default(true) @map("show_photo")
   showName      Boolean   @default(true) @map("show_name")
 
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   org      Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user     User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -3731,32 +3755,32 @@ model OrgRole {
 }
 
 model UserProfileCard {
-  id           String   @id @default(cuid())
-  userId       String   @unique @map("user_id")
-  headline     String?
-  bio          String?
+  id       String  @id @default(cuid())
+  userId   String  @unique @map("user_id")
+  headline String?
+  bio      String?
 
-  cvUrl        String?  @map("cv_url")
-  linkedinUrl  String?  @map("linkedin_url")
-  githubUrl    String?  @map("github_url")
-  portfolioUrl String?  @map("portfolio_url")
+  cvUrl        String? @map("cv_url")
+  linkedinUrl  String? @map("linkedin_url")
+  githubUrl    String? @map("github_url")
+  portfolioUrl String? @map("portfolio_url")
   email        String?
 
   // Master switch — default FALSE (opt-in explícito)
-  isPublic     Boolean  @default(false) @map("is_public")
+  isPublic Boolean @default(false) @map("is_public")
 
   // Toggles granulares
-  showHeadline  Boolean @default(true)  @map("show_headline")
-  showBio       Boolean @default(true)  @map("show_bio")
+  showHeadline  Boolean @default(true) @map("show_headline")
+  showBio       Boolean @default(true) @map("show_bio")
   showCv        Boolean @default(false) @map("show_cv")
-  showLinkedin  Boolean @default(true)  @map("show_linkedin")
-  showGithub    Boolean @default(true)  @map("show_github")
-  showPortfolio Boolean @default(true)  @map("show_portfolio")
+  showLinkedin  Boolean @default(true) @map("show_linkedin")
+  showGithub    Boolean @default(true) @map("show_github")
+  showPortfolio Boolean @default(true) @map("show_portfolio")
   showEmail     Boolean @default(false) @map("show_email")
-  showSkills    Boolean @default(true)  @map("show_skills")
-  showTools     Boolean @default(true)  @map("show_tools")
+  showSkills    Boolean @default(true) @map("show_skills")
+  showTools     Boolean @default(true) @map("show_tools")
 
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills UserSkill[]
@@ -3837,13 +3861,13 @@ enum ReviewStatus {
 model CompanyReview {
   id          String       @id @default(cuid())
   orgId       String       @map("org_id")
-  authorId    String?      @map("author_id")   // null = anônimo
+  authorId    String?      @map("author_id") // null = anônimo
   authorName  String?      @map("author_name")
-  rating      Int                               // 1-5
+  rating      Int // 1-5
   title       String?
   comment     String?
-  verified    Boolean      @default(false)      // true se authorId in Member
-  status      ReviewStatus @default(PENDING)    // moderação obrigatória
+  verified    Boolean      @default(false) // true se authorId in Member
+  status      ReviewStatus @default(PENDING) // moderação obrigatória
   ipHash      String?      @map("ip_hash")
   fingerprint String?
   createdAt   DateTime     @default(now()) @map("created_at")
@@ -3863,7 +3887,7 @@ model CompanyPost {
   title       String
   slug        String    @unique
   excerpt     String?
-  content     Json                               // TipTap JSON
+  content     Json // TipTap JSON
   coverUrl    String?   @map("cover_url")
   isPublished Boolean   @default(false) @map("is_published")
   publishedAt DateTime? @map("published_at")
@@ -3880,14 +3904,14 @@ model CompanyPost {
 }
 
 model CompanyPostComment {
-  id         String   @id @default(cuid())
-  postId     String   @map("post_id")
-  authorId   String?  @map("author_id")
-  authorName String?  @map("author_name")
+  id         String       @id @default(cuid())
+  postId     String       @map("post_id")
+  authorId   String?      @map("author_id")
+  authorName String?      @map("author_name")
   content    String
-  parentId   String?  @map("parent_id")
-  status     ReviewStatus @default(PENDING)    // moderação obrigatória
-  createdAt  DateTime @default(now()) @map("created_at")
+  parentId   String?      @map("parent_id")
+  status     ReviewStatus @default(PENDING) // moderação obrigatória
+  createdAt  DateTime     @default(now()) @map("created_at")
 
   post    CompanyPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
   author  User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
@@ -3903,7 +3927,7 @@ model SpacehomeAuditLog {
   id        String   @id @default(cuid())
   orgId     String   @map("org_id")
   actorId   String?  @map("actor_id")
-  action    String   // "review_submitted", "review_moderated", "role_consented", "space_toggled_public"
+  action    String // "review_submitted", "review_moderated", "role_consented", "space_toggled_public"
   target    String?
   metadata  Json?
   ipHash    String?  @map("ip_hash")
@@ -3926,7 +3950,7 @@ model SpaceHelpCategory {
   isPublished    Boolean  @default(true) @map("is_published")
   organizationId String?  @map("organization_id")
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt      @map("updated_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   features SpaceHelpFeature[]
   tracks   SpaceHelpTrack[]
@@ -3945,7 +3969,7 @@ model SpaceHelpFeature {
   youtubeUrl  String?  @map("youtube_url")
   updatedById String?  @map("updated_by_id")
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt      @map("updated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   category SpaceHelpCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   steps    SpaceHelpStep[]
@@ -3983,14 +4007,14 @@ model SpaceHelpTrack {
   categoryId        String?  @map("category_id")
   order             Int      @default(0)
   isPublished       Boolean  @default(true) @map("is_published")
-  rewardStars       Int      @default(0)    @map("reward_stars")
-  rewardSpacePoints Int      @default(0)    @map("reward_space_points")
+  rewardStars       Int      @default(0) @map("reward_stars")
+  rewardSpacePoints Int      @default(0) @map("reward_space_points")
   rewardBadgeId     String?  @map("reward_badge_id")
   createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt      @map("updated_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  category    SpaceHelpCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  rewardBadge SpaceHelpBadge?    @relation(fields: [rewardBadgeId], references: [id], onDelete: SetNull)
+  category    SpaceHelpCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  rewardBadge SpaceHelpBadge?      @relation(fields: [rewardBadgeId], references: [id], onDelete: SetNull)
   lessons     SpaceHelpLesson[]
   progress    SpaceHelpProgress[]
   awards      UserSpaceHelpBadge[]
@@ -4017,11 +4041,11 @@ model SpaceHelpLesson {
 }
 
 model SpaceHelpProgress {
-  id                 String   @id @default(cuid())
-  userId             String   @map("user_id")
-  trackId            String   @map("track_id")
-  completedLessonIds String[] @map("completed_lesson_ids")
-  startedAt          DateTime @default(now()) @map("started_at")
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  trackId            String    @map("track_id")
+  completedLessonIds String[]  @map("completed_lesson_ids")
+  startedAt          DateTime  @default(now()) @map("started_at")
   completedAt        DateTime? @map("completed_at")
 
   user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4073,7 +4097,7 @@ model NasaRouteCategory {
   order       Int      @default(0)
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt      @map("updated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   courses NasaRouteCourse[]
 
@@ -4100,17 +4124,17 @@ model NasaRouteCourse {
   studentsCount      Int       @default(0) @map("students_count")
   rewardSpOnComplete Int       @default(0) @map("reward_sp_on_complete")
   createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt      @map("updated_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  creatorOrg  Organization       @relation("NasaRouteCreatorOrg", fields: [creatorOrgId], references: [id], onDelete: Cascade)
-  creatorUser User               @relation("NasaRouteCreatorUser", fields: [creatorUserId], references: [id], onDelete: Restrict)
-  category    NasaRouteCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  modules     NasaRouteModule[]
-  lessons     NasaRouteLesson[]
-  enrollments NasaRouteEnrollment[]
-  progress    NasaRouteProgress[]
-  freeAccess  NasaRouteFreeAccess[]
-  plans       NasaRoutePlan[]
+  creatorOrg   Organization           @relation("NasaRouteCreatorOrg", fields: [creatorOrgId], references: [id], onDelete: Cascade)
+  creatorUser  User                   @relation("NasaRouteCreatorUser", fields: [creatorUserId], references: [id], onDelete: Restrict)
+  category     NasaRouteCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  modules      NasaRouteModule[]
+  lessons      NasaRouteLesson[]
+  enrollments  NasaRouteEnrollment[]
+  progress     NasaRouteProgress[]
+  freeAccess   NasaRouteFreeAccess[]
+  plans        NasaRoutePlan[]
   certificates NasaRouteCertificate[]
 
   @@unique([creatorOrgId, slug])
@@ -4127,7 +4151,7 @@ model NasaRouteModule {
   title     String
   summary   String?
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   course  NasaRouteCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons NasaRouteLesson[]
@@ -4151,7 +4175,7 @@ model NasaRouteLesson {
   isFreePreview Boolean  @default(false) @map("is_free_preview")
   awardSp       Int      @default(10) @map("award_sp")
   createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt      @map("updated_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   course      NasaRouteCourse       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   module      NasaRouteModule?      @relation(fields: [moduleId], references: [id], onDelete: SetNull)
@@ -4170,14 +4194,14 @@ model NasaRouteEnrollment {
   paidStars   Int       @default(0) @map("paid_stars")
   source      String    @default("purchase") // "purchase" | "free_access" | "gift"
   paymentRef  String?   @map("payment_ref")
-  status      String    @default("active")    // "active" | "refunded"
+  status      String    @default("active") // "active" | "refunded"
   enrolledAt  DateTime  @default(now()) @map("enrolled_at")
   completedAt DateTime? @map("completed_at")
 
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course   NasaRouteCourse  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  plan     NasaRoutePlan?   @relation(fields: [planId], references: [id], onDelete: SetNull)
-  buyerOrg Organization?    @relation("NasaRouteBuyerOrg", fields: [buyerOrgId], references: [id], onDelete: SetNull)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      NasaRouteCourse       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  plan        NasaRoutePlan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  buyerOrg    Organization?         @relation("NasaRouteBuyerOrg", fields: [buyerOrgId], references: [id], onDelete: SetNull)
   certificate NasaRouteCertificate?
 
   @@unique([userId, courseId])
@@ -4233,7 +4257,7 @@ model NasaRoutePlan {
   order       Int      @default(0)
   isDefault   Boolean  @default(false) @map("is_default")
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt      @map("updated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   course      NasaRouteCourse           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons     NasaRoutePlanLesson[]
@@ -4259,17 +4283,17 @@ model NasaRoutePlanLesson {
 }
 
 model NasaRoutePlanAttachment {
-  id        String   @id @default(cuid())
-  planId    String   @map("plan_id")
-  kind      String   // "pdf" | "link"
-  title     String
-  url       String?
-  fileKey   String?  @map("file_key")
-  fileSize  Int?     @map("file_size")
+  id          String   @id @default(cuid())
+  planId      String   @map("plan_id")
+  kind        String // "pdf" | "link"
+  title       String
+  url         String?
+  fileKey     String?  @map("file_key")
+  fileSize    Int?     @map("file_size")
   description String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   plan NasaRoutePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
@@ -4296,4 +4320,288 @@ model NasaRouteCertificate {
   @@index([userId])
   @@index([courseId])
   @@map("nasa_route_certificate")
+}
+
+// ─────────────────────────────────────────────
+// NASA PARTNER — Programa de Parceiros
+// ─────────────────────────────────────────────
+
+enum PartnerTier {
+  SUITE
+  EARTH
+  GALAXY
+  CONSTELLATION
+  INFINITY
+}
+
+enum PartnerStatus {
+  ELIGIBLE // ainda <10 orgs ativas, link funciona mas sem painel
+  ACTIVE // habilitado, painel /partner liberado
+  SUSPENDED // pausado pelo admin
+}
+
+enum PartnerCommissionStatus {
+  PENDING // ciclo aberto
+  READY // ciclo fechou, payout criado, aguardando repasse
+  PAID // repassado
+  CANCELLED // estornado
+}
+
+enum PartnerPayoutStatus {
+  SCHEDULED // ciclo fechado, aguardando data de repasse
+  ADVANCED // antecipado pelo parceiro
+  PAID // pago
+  FAILED // falha no repasse
+}
+
+enum PartnerReferralActivity {
+  ACTIVE
+  AT_RISK
+  INACTIVE
+}
+
+model PartnerReferralLink {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  code      String   @unique
+  visits    Int      @default(0)
+  signups   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visitsLog PartnerLinkVisit[]
+  referrals PartnerReferral[]
+
+  @@index([code])
+  @@map("partner_referral_link")
+}
+
+model PartnerLinkVisit {
+  id        String   @id @default(cuid())
+  linkId    String   @map("link_id")
+  ip        String?
+  userAgent String?  @map("user_agent")
+  visitedAt DateTime @default(now()) @map("visited_at")
+
+  link PartnerReferralLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId, visitedAt])
+  @@map("partner_link_visit")
+}
+
+model PartnerReferral {
+  id                       String                  @id @default(cuid())
+  linkId                   String?                 @map("link_id")
+  partnerUserId            String                  @map("partner_user_id")
+  referredOrganizationId   String                  @unique @map("referred_organization_id")
+  signedUpAt               DateTime                @default(now()) @map("signed_up_at")
+  source                   String                  @default("link") // "link" | "admin_manual"
+  attachedByAdminId        String?                 @map("attached_by_admin_id")
+  attachedReason           String?                 @map("attached_reason")
+  activityStatus           PartnerReferralActivity @default(ACTIVE) @map("activity_status")
+  lastQualifyingActivityAt DateTime?               @map("last_qualifying_activity_at")
+  lastQualifyingType       String?                 @map("last_qualifying_type") // "purchase" | "consumption"
+  totalStarsConsumed       Int                     @default(0) @map("total_stars_consumed")
+  totalPurchasedBrl        Decimal                 @default(0) @map("total_purchased_brl") @db.Decimal(10, 2)
+  activityRecalcedAt       DateTime?               @map("activity_recalced_at")
+
+  link                 PartnerReferralLink? @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  partnerUser          User                 @relation("PartnerReferralsAsPartner", fields: [partnerUserId], references: [id], onDelete: Cascade)
+  referredOrganization Organization         @relation(fields: [referredOrganizationId], references: [id], onDelete: Cascade)
+  attachedByAdmin      User?                @relation("PartnerReferralsAttachedByAdmin", fields: [attachedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([partnerUserId, activityStatus])
+  @@index([source])
+  @@map("partner_referral")
+}
+
+model Partner {
+  id                      String        @id @default(cuid())
+  userId                  String        @unique @map("user_id")
+  status                  PartnerStatus @default(ELIGIBLE)
+  tier                    PartnerTier?
+  tierAchievedAt          DateTime?     @map("tier_achieved_at")
+  activatedAt             DateTime?     @map("activated_at")
+  totalEarnedBrl          Decimal       @default(0) @map("total_earned_brl") @db.Decimal(10, 2)
+  totalPaidBrl            Decimal       @default(0) @map("total_paid_brl") @db.Decimal(10, 2)
+  totalSavingsBrl         Decimal       @default(0) @map("total_savings_brl") @db.Decimal(10, 2)
+  totalReferralRevenueBrl Decimal       @default(0) @map("total_referral_revenue_brl") @db.Decimal(10, 2)
+  manualTierOverride      Boolean       @default(false) @map("manual_tier_override")
+  promotedByAdminId       String?       @map("promoted_by_admin_id")
+  gracePeriodEndsAt       DateTime?     @map("grace_period_ends_at")
+  gracePeriodFromTier     PartnerTier?  @map("grace_period_from_tier")
+  gracePeriodToTier       PartnerTier?  @map("grace_period_to_tier")
+  lastTierEvalAt          DateTime?     @map("last_tier_eval_at")
+  acceptedTermsVersionId  String?       @map("accepted_terms_version_id")
+  acceptedTermsAt         DateTime?     @map("accepted_terms_at")
+  notes                   String?
+  createdAt               DateTime      @default(now()) @map("created_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
+
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commissions      PartnerCommission[]
+  payouts          PartnerPayout[]
+  starPurchases    PartnerStarPurchase[]
+  termsAcceptances PartnerTermsAcceptance[]
+  tierHistory      PartnerTierHistory[]
+
+  @@index([status, tier])
+  @@map("partner")
+}
+
+model PartnerCommission {
+  id                   String                  @id @default(cuid())
+  partnerId            String                  @map("partner_id")
+  payoutId             String?                 @map("payout_id")
+  starsPaymentId       String                  @unique @map("stars_payment_id")
+  organizationId       String                  @map("organization_id")
+  tierAtMoment         PartnerTier             @map("tier_at_moment")
+  ratePercent          Decimal                 @map("rate_percent") @db.Decimal(5, 2)
+  packageIdSnapshot    String                  @map("package_id_snapshot")
+  packageLabelSnapshot String                  @map("package_label_snapshot")
+  starsAmountSnapshot  Int                     @map("stars_amount_snapshot")
+  unitPriceBrlSnapshot Decimal                 @map("unit_price_brl_snapshot") @db.Decimal(10, 4)
+  basePaymentBrl       Decimal                 @map("base_payment_brl") @db.Decimal(10, 2)
+  commissionBrl        Decimal                 @map("commission_brl") @db.Decimal(10, 2)
+  status               PartnerCommissionStatus @default(PENDING)
+  cycleYearMonth       String                  @map("cycle_year_month") // "2026-04"
+  createdAt            DateTime                @default(now()) @map("created_at")
+
+  partner      Partner        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  payout       PartnerPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  starsPayment StarsPayment   @relation(fields: [starsPaymentId], references: [id])
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, status])
+  @@index([cycleYearMonth])
+  @@map("partner_commission")
+}
+
+model PartnerStarPurchase {
+  id                  String      @id @default(cuid())
+  partnerId           String      @map("partner_id")
+  starsPaymentId      String      @unique @map("stars_payment_id")
+  tierAtMoment        PartnerTier @map("tier_at_moment")
+  discountRatePercent Decimal     @map("discount_rate_percent") @db.Decimal(5, 2)
+  starsAmountSnapshot Int         @map("stars_amount_snapshot")
+  originalPriceBrl    Decimal     @map("original_price_brl") @db.Decimal(10, 2)
+  paidPriceBrl        Decimal     @map("paid_price_brl") @db.Decimal(10, 2)
+  savingsBrl          Decimal     @map("savings_brl") @db.Decimal(10, 2)
+  createdAt           DateTime    @default(now()) @map("created_at")
+
+  partner      Partner      @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  starsPayment StarsPayment @relation(fields: [starsPaymentId], references: [id])
+
+  @@index([partnerId, createdAt])
+  @@map("partner_star_purchase")
+}
+
+model PartnerPayout {
+  id             String              @id @default(cuid())
+  partnerId      String              @map("partner_id")
+  cycleYearMonth String              @map("cycle_year_month")
+  cycleStart     DateTime            @map("cycle_start")
+  cycleEnd       DateTime            @map("cycle_end")
+  scheduledFor   DateTime            @map("scheduled_for")
+  grossBrl       Decimal             @map("gross_brl") @db.Decimal(10, 2)
+  advanceFeeBrl  Decimal             @default(0) @map("advance_fee_brl") @db.Decimal(10, 2)
+  netBrl         Decimal             @map("net_brl") @db.Decimal(10, 2)
+  status         PartnerPayoutStatus @default(SCHEDULED)
+  paidAt         DateTime?           @map("paid_at")
+  paidByAdminId  String?             @map("paid_by_admin_id")
+  proofUrl       String?             @map("proof_url")
+  notes          String?
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  partner     Partner             @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  paidByAdmin User?               @relation("PartnerPayoutPaidBy", fields: [paidByAdminId], references: [id], onDelete: SetNull)
+  commissions PartnerCommission[]
+
+  @@unique([partnerId, cycleYearMonth])
+  @@index([status, scheduledFor])
+  @@map("partner_payout")
+}
+
+model PartnerTierHistory {
+  id              String       @id @default(cuid())
+  partnerId       String       @map("partner_id")
+  fromTier        PartnerTier? @map("from_tier")
+  toTier          PartnerTier? @map("to_tier")
+  reason          String // "auto_upgrade" | "auto_downgrade" | "admin_manual" | "grace_expired" | "first_activation"
+  activeReferrals Int          @map("active_referrals")
+  triggeredById   String?      @map("triggered_by_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  partner     Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  triggeredBy User?   @relation("PartnerTierHistoryTrigger", fields: [triggeredById], references: [id], onDelete: SetNull)
+
+  @@index([partnerId, createdAt])
+  @@map("partner_tier_history")
+}
+
+model PartnerTermsVersion {
+  id               String   @id @default(cuid())
+  version          String   @unique
+  title            String
+  spaceHelpTrackId String?  @map("space_help_track_id")
+  contentHash      String   @map("content_hash")
+  effectiveAt      DateTime @map("effective_at")
+  publishedById    String?  @map("published_by_id")
+  changeSummary    String?  @map("change_summary")
+  isActive         Boolean  @default(false) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  publishedBy User?                    @relation("PartnerTermsVersionPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  acceptances PartnerTermsAcceptance[]
+
+  @@index([isActive, effectiveAt])
+  @@map("partner_terms_version")
+}
+
+model PartnerTermsAcceptance {
+  id                String   @id @default(cuid())
+  partnerId         String   @map("partner_id")
+  termsVersionId    String   @map("terms_version_id")
+  acceptedAt        DateTime @default(now()) @map("accepted_at")
+  ipAddress         String?  @map("ip_address")
+  userAgent         String?  @map("user_agent")
+  contentHashAtTime String   @map("content_hash_at_time")
+
+  partner      Partner             @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  termsVersion PartnerTermsVersion @relation(fields: [termsVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, termsVersionId])
+  @@index([partnerId])
+  @@map("partner_terms_acceptance")
+}
+
+model PartnerProgramSettings {
+  id                          String   @id @default("singleton")
+  suiteThreshold              Int      @default(10) @map("suite_threshold")
+  earthThreshold              Int      @default(25) @map("earth_threshold")
+  galaxyThreshold             Int      @default(50) @map("galaxy_threshold")
+  constellationThreshold      Int      @default(100) @map("constellation_threshold")
+  infinityThreshold           Int      @default(200) @map("infinity_threshold")
+  suiteCommissionRate         Decimal  @default(10) @map("suite_commission_rate") @db.Decimal(5, 2)
+  earthCommissionRate         Decimal  @default(15) @map("earth_commission_rate") @db.Decimal(5, 2)
+  galaxyCommissionRate        Decimal  @default(20) @map("galaxy_commission_rate") @db.Decimal(5, 2)
+  constellationCommissionRate Decimal  @default(30) @map("constellation_commission_rate") @db.Decimal(5, 2)
+  infinityCommissionRate      Decimal  @default(40) @map("infinity_commission_rate") @db.Decimal(5, 2)
+  suiteDiscountRate           Decimal  @default(10) @map("suite_discount_rate") @db.Decimal(5, 2)
+  earthDiscountRate           Decimal  @default(15) @map("earth_discount_rate") @db.Decimal(5, 2)
+  galaxyDiscountRate          Decimal  @default(20) @map("galaxy_discount_rate") @db.Decimal(5, 2)
+  constellationDiscountRate   Decimal  @default(50) @map("constellation_discount_rate") @db.Decimal(5, 2)
+  infinityDiscountRate        Decimal  @default(50) @map("infinity_discount_rate") @db.Decimal(5, 2)
+  payoutDayOfMonth            Int      @default(10) @map("payout_day_of_month")
+  advanceFeePercent           Decimal  @default(5) @map("advance_fee_percent") @db.Decimal(5, 2)
+  advanceMinDaysBefore        Int      @default(3) @map("advance_min_days_before")
+  activeOrgWindowDays         Int      @default(90) @map("active_org_window_days")
+  activeOrgMinPurchaseBrl     Decimal  @default(0) @map("active_org_min_purchase_brl") @db.Decimal(10, 2)
+  activeOrgMinStarsConsumed   Int      @default(1) @map("active_org_min_stars_consumed")
+  atRiskWarningDays           Int      @default(14) @map("at_risk_warning_days")
+  downgradeGracePeriodDays    Int      @default(30) @map("downgrade_grace_period_days")
+  tierRecalcCadenceDays       Int      @default(1) @map("tier_recalc_cadence_days")
+  updatedAt                   DateTime @updatedAt @map("updated_at")
+
+  @@map("partner_program_settings")
 }

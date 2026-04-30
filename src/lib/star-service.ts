@@ -291,6 +291,7 @@ export async function runMonthlyCycle(organizationId: string): Promise<void> {
     select: {
       starsBalance: true,
       starsCycleStart: true,
+      partnerLifetimeGranted: true,
       plan: true,
       workspaceIntegrations: {
         where: { isActive: true },
@@ -326,12 +327,15 @@ export async function runMonthlyCycle(organizationId: string): Promise<void> {
     });
   }
 
-  // Credit plan stars
+  // Credit plan stars — anotando se for cortesia do programa Partner Infinity
+  const lifetime = org.partnerLifetimeGranted;
   await creditStars(
     organizationId,
     monthlyStars,
     StarTransactionType.PLAN_CREDIT,
-    `Crédito mensal do plano ${org.plan.name} (${monthlyStars} ★)`
+    lifetime
+      ? `Crédito mensal do plano ${org.plan.name} (${monthlyStars} ★) — Cortesia NASA Partner Infinity`
+      : `Crédito mensal do plano ${org.plan.name} (${monthlyStars} ★)`,
   );
 
   // Debit monthly charges for each active app
@@ -354,6 +358,28 @@ export async function runMonthlyCycle(organizationId: string): Promise<void> {
       data: { lastChargedAt: new Date() },
     });
   }
+}
+
+// ─── Plan billing eligibility ────────────────────────────────────────────────
+
+/**
+ * Determina se a organização deve ser cobrada pela assinatura do plano.
+ * Retorna `false` quando a org tem `partnerLifetimeGranted=true`
+ * (parceiro NASA Partner tier Infinity recebe acesso vitalício).
+ *
+ * O cobrador mensal de assinatura (Stripe / Asaas) deve consultar este
+ * helper antes de gerar fatura. Se retornar `false`, pular cobrança e
+ * registrar log de cortesia.
+ */
+export async function shouldChargePlanForOrganization(
+  organizationId: string,
+): Promise<boolean> {
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { partnerLifetimeGranted: true },
+  });
+  if (!org) return true;
+  return !org.partnerLifetimeGranted;
 }
 
 // ─── App cost info ────────────────────────────────────────────────────────────

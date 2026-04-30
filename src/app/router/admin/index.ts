@@ -55,6 +55,7 @@ import {
   adminCreateStarRule,
   adminUpdateStarRule,
 } from "./star-rules";
+import { adminPartnersRouter } from "./partners";
 
 export const adminRouter = {
   getDashboard,
@@ -108,4 +109,6 @@ export const adminRouter = {
   adminGetStarRules,
   adminCreateStarRule,
   adminUpdateStarRule,
+  // Partners
+  partners: adminPartnersRouter,
 };

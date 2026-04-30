@@ -16,6 +16,7 @@ import { constructWebhookEvent } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import { purchaseTopUp, runMonthlyCycle } from "@/lib/star-service";
 import { StarTransactionType } from "@/generated/prisma/client";
+import { processPaymentPartnerEffects } from "@/lib/partner-service";
 
 export async function POST(req: NextRequest) {
   const payload   = await req.text();
@@ -49,6 +50,14 @@ export async function POST(req: NextRequest) {
               data:  { status: "paid", externalId: session.id },
             });
             await purchaseTopUp(sp.organizationId, sp.packageId);
+
+            // ── NASA Partner: comissão + auditoria de compra com desconto ──
+            try {
+              await processPaymentPartnerEffects(starsPaymentId);
+            } catch (err) {
+              console.error("[stripe/webhook] partner effects failed:", err);
+            }
+
             console.log(`[stripe/webhook] ✅ ${sp.starsAmount} stars credited via gateway checkout`);
           }
           break;

@@ -30,13 +30,15 @@ export function StarsLearnCard({ className }: { className?: string }) {
   return (
     <div className={cn("rounded-xl border bg-card overflow-hidden", className)}>
       {/* Header */}
-      <div className="px-4 py-3 bg-gradient-to-r from-yellow-50 to-yellow-50/30 dark:from-yellow-950/20 dark:to-transparent border-b flex items-center gap-2">
+      <div className="px-4 py-3 bg-linear-to-r from-yellow-50 to-yellow-50/30 dark:from-yellow-950/20 dark:to-transparent border-b flex items-center gap-2">
         <div className="size-7 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 flex items-center justify-center">
           <StarIcon className="size-3.5" />
         </div>
         <div>
           <p className="text-sm font-semibold">Como funcionam as ★ Stars</p>
-          <p className="text-[11px] text-muted-foreground">Moeda interna da plataforma NASA</p>
+          <p className="text-[11px] text-muted-foreground">
+            Moeda interna da plataforma NASA
+          </p>
         </div>
       </div>
 
@@ -47,13 +49,34 @@ export function StarsLearnCard({ className }: { className?: string }) {
         </p>
         <div className="grid grid-cols-3 gap-2">
           {[
-            { name: "Earth", stars: "500 ★", price: "R$ 149/mês", users: "3 usuários" },
-            { name: "Explore", stars: "2.000 ★", price: "R$ 399/mês", users: "10 usuários" },
-            { name: "Constellation", stars: "Ilimitado", price: "Sob consulta", users: "Ilimitado" },
+            {
+              name: "Earth",
+              stars: "500 ★",
+              price: "R$ 149/mês",
+              users: "3 usuários",
+            },
+            {
+              name: "Explore",
+              stars: "2.000 ★",
+              price: "R$ 399/mês",
+              users: "10 usuários",
+            },
+            {
+              name: "Constellation",
+              stars: "Ilimitado",
+              price: "Sob consulta",
+              users: "Ilimitado",
+            },
           ].map((plan) => (
-            <div key={plan.name} className="rounded-lg bg-muted/40 p-2 text-center space-y-0.5">
+            <div
+              key={plan.name}
+              className="rounded-lg bg-muted/40 p-2 text-center space-y-0.5"
+            >
               <p className="text-[11px] font-semibold">{plan.name}</p>
-              <p className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold flex items-center justify-center gap-0.5"><StarIcon className="size-2.5" />{plan.stars}</p>
+              <p className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold flex items-center justify-center gap-0.5">
+                <StarIcon className="size-2.5" />
+                {plan.stars}
+              </p>
               <p className="text-[10px] text-muted-foreground">{plan.price}</p>
               <p className="text-[10px] text-muted-foreground">{plan.users}</p>
             </div>
@@ -75,8 +98,14 @@ export function StarsLearnCard({ className }: { className?: string }) {
             { stars: "500 ★", price: "R$ 79" },
             { stars: "1.000 ★", price: "R$ 139" },
           ].map((pkg) => (
-            <div key={pkg.stars} className="rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800 p-2 text-center">
-              <p className="text-[11px] font-bold text-yellow-700 dark:text-yellow-400 flex items-center justify-center gap-0.5"><StarIcon className="size-2.5" />{pkg.stars.replace(" ★", "")}</p>
+            <div
+              key={pkg.stars}
+              className="rounded-lg bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800 p-2 text-center"
+            >
+              <p className="text-[11px] font-bold text-yellow-700 dark:text-yellow-400 flex items-center justify-center gap-0.5">
+                <StarIcon className="size-2.5" />
+                {pkg.stars.replace(" ★", "")}
+              </p>
               <p className="text-[10px] text-muted-foreground">{pkg.price}</p>
             </div>
           ))}
@@ -94,7 +123,9 @@ export function StarsLearnCard({ className }: { className?: string }) {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium">{item.q}</p>
               {openIdx === i && (
-                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{item.a}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                  {item.a}
+                </p>
               )}
             </div>
             {openIdx === i ? (

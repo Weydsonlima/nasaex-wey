@@ -40,8 +40,8 @@ export function getWorkflowStepsPreview(
     visited.add(current.id);
     const label = NODE_LABELS.get(current.type) ?? current.name ?? current.type;
     labels.push(label.toUpperCase());
-    const next = outgoing.get(current.id)?.[0];
-    current = next ? nodeById.get(next.toNodeId) : undefined;
+    const nextConn: Connection | undefined = outgoing.get(current.id)?.[0];
+    current = nextConn ? nodeById.get(nextConn.toNodeId) : undefined;
   }
 
   return { labels, total: nodes.length };

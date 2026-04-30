@@ -20,16 +20,7 @@ export function patchActionFavoriteInCaches(
   actionId: string,
   patch: Patch,
 ) {
-  const apply = <T,>(item: T): T => {
-    if (!item || typeof item !== "object") return item;
-    const obj = item as Record<string, unknown>;
-    if (obj.id === actionId) {
-      return { ...obj, ...patch } as T;
-    }
-    return item;
-  };
-
-  qc.setQueriesData<any>({ predicate: () => true }, (data) => {
+  qc.setQueriesData<any>({ predicate: () => true }, (data: any) => {
     if (!data || typeof data !== "object") return data;
 
     // action.get → { action: {...}, hasAccess }

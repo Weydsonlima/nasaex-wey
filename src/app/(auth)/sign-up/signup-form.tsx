@@ -141,6 +141,24 @@ export function SignupForm() {
     }
   };
 
+  /**
+   * NASA Partner: consome cookie nasa_ref (setado pelo edge middleware)
+   * e cria PartnerReferral vinculando a org recém-criada ao parceiro indicador.
+   */
+  const consumePartnerReferral = async () => {
+    try {
+      const session = await authClient.getSession();
+      const orgId = session.data?.session?.activeOrganizationId;
+      if (!orgId) return;
+      await orpcClient.partner.consumeReferralFromCookie({
+        organizationId: orgId,
+      });
+    } catch (err) {
+      // Não bloqueia signup — referral pode ser atribuído manualmente depois
+      console.error("[signup] Falha ao consumir referral:", err);
+    }
+  };
+
   const onSignUp = (data: SignUpData) => {
     setIsLoading(async () => {
       const result = await authClient.signUp.email({
@@ -168,6 +186,7 @@ export function SignupForm() {
           const session = await authClient.getSession();
           if (session.data) {
             await persistCompanyType(data.companyType);
+            await consumePartnerReferral();
             toast.success("🚀 Conta criada! Bem-vindo ao NASA.ex!");
             router.push(callbackUrl ?? "/home");
             return;
@@ -184,6 +203,7 @@ export function SignupForm() {
       }
 
       await persistCompanyType(data.companyType);
+      await consumePartnerReferral();
       toast.success("🚀 Conta criada! Bem-vindo ao NASA.ex!");
       router.push(callbackUrl ?? "/home");
     });

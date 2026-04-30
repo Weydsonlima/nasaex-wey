@@ -22,6 +22,7 @@ import {
   LayoutTemplate,
   Globe,
   Handshake,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,7 @@ const NAV = [
   { href: "/admin/partners", icon: Handshake, label: "Parceiros" },
   { href: "/admin/moderators", icon: ShieldCheck, label: "Moderadores" },
   { href: "/admin/patterns", icon: LayoutTemplate, label: "Padrões NASA" },
+  { href: "/admin/space-help", icon: GraduationCap, label: "Space Help" },
   { href: "/admin/space_station", icon: Globe, label: "Space Station" },
   { href: "/admin/atalhos", icon: Keyboard, label: "Atalhos" },
   { href: "/admin/support", icon: LifeBuoyIcon, label: "Suporte" },

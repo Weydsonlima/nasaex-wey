@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CircleQuestionMarkIcon, GraduationCap, GripVertical, Map } from "lucide-react";
+import {
+  CircleQuestionMarkIcon,
+  GraduationCap,
+  GripVertical,
+  Map,
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -82,14 +87,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
+          {/* <SidebarMenuItem>
             <SidebarMenuButton tooltip={"Space Help"} asChild>
               <Link href="/space-help">
                 <GraduationCap className="size-4" />
                 <span>Space Help</span>
               </Link>
             </SidebarMenuButton>
-          </SidebarMenuItem>
+          </SidebarMenuItem> */}
         </SidebarMenu>
         <NavUser />
       </SidebarFooter>

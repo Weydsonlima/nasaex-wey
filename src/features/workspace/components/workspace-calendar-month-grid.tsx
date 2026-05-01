@@ -24,6 +24,55 @@ interface CalendarEventInfo {
   color: "amber" | "indigo";
 }
 
+// ── Helpers: datas variáveis ─────────────────────────────────────────────────
+function nthWeekday(year: number, month: number, weekday: number, n: number): string {
+  const first = dayjs(new Date(year, month - 1, 1));
+  const offset = (weekday - first.day() + 7) % 7;
+  return first.add(offset + (n - 1) * 7, "day").format("YYYY-MM-DD");
+}
+
+function easterDate(year: number): Dayjs {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mo = Math.floor((h + l - 7 * m + 114) / 31);
+  const dy = ((h + l - 7 * m + 114) % 31) + 1;
+  return dayjs(new Date(year, mo - 1, dy));
+}
+
+function buildVariableHolidays(years: Set<number>): Record<string, CalendarEventInfo> {
+  const map: Record<string, CalendarEventInfo> = {};
+  for (const year of years) {
+    map[nthWeekday(year, 5, 0, 2)] = {
+      label: "💐 Dia das Mães", color: "amber",
+      title: "Dia das Mães",
+      description: "Uma das datas com maior apelo emocional e comercial do Brasil — 2º domingo de maio. Flores, chocolates, joias, experiências e restaurantes lideram as vendas.",
+      impact: "Altíssimo volume de vendas. Segunda data mais importante do varejo após o Natal.",
+      tips: ["Lance campanha 3 semanas antes", "Ofereça kits e combos com frete grátis", "Crie urgência com contagem regressiva", "Ative e-mail marketing segmentado"],
+    };
+    map[nthWeekday(year, 8, 0, 2)] = {
+      label: "👨‍👧 Dia dos Pais", color: "amber",
+      title: "Dia dos Pais",
+      description: "Terceira data mais importante do varejo — 2º domingo de agosto. Forte apelo em eletrônicos, bebidas, experiências e moda masculina.",
+      impact: "Alto volume de vendas em categorias masculinas. Oportunidade para restaurantes e experiências.",
+      tips: ["Lance campanha 2 semanas antes", "Destaque eletrônicos, bebidas e experiências", "Crie combos e kits temáticos"],
+    };
+    const corpus = easterDate(year).add(60, "day");
+    map[corpus.format("YYYY-MM-DD")] = {
+      label: "✝️ Corpus Christi", color: "amber",
+      title: "Corpus Christi — Feriado Nacional",
+      description: "Feriado religioso católico — sempre numa quinta-feira, 60 dias após a Páscoa. Muitas empresas fazem emenda até sexta-feira.",
+      impact: "Feriado nacional. Muitos clientes em emenda de 4 dias.",
+      tips: ["Verifique se clientes fazem emenda qui+sex", "Antecipe entregas e decisões para quarta-feira"],
+    };
+  }
+  return map;
+}
+
 // ── Feriados fixos: "MM-DD" ──────────────────────────────────────────────────
 const FIXED_HOLIDAYS: Record<string, CalendarEventInfo> = {
   "01-01": {
@@ -119,8 +168,8 @@ const FIXED_HOLIDAYS: Record<string, CalendarEventInfo> = {
   },
 };
 
-function getHoliday(date: Dayjs): CalendarEventInfo | null {
-  return FIXED_HOLIDAYS[date.format("MM-DD")] ?? null;
+function getHoliday(date: Dayjs, variableHolidays: Record<string, CalendarEventInfo>): CalendarEventInfo | null {
+  return FIXED_HOLIDAYS[date.format("MM-DD")] ?? variableHolidays[date.format("YYYY-MM-DD")] ?? null;
 }
 
 // ── Eventos de Mobilização Nacional: "YYYY-MM-DD" ────────────────────────────
@@ -362,6 +411,11 @@ export function WorkspaceCalendarMonthGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const todayCellRef = useRef<HTMLDivElement>(null);
 
+  const variableHolidays = useMemo(() => {
+    const years = new Set(grid.map((d) => d.year()));
+    return buildVariableHolidays(years);
+  }, [grid]);
+
   const actionsByDay = useMemo(() => {
     const map = new Map<string, WorkspaceCalendarAction[]>();
     for (const a of actions) {
@@ -495,7 +549,7 @@ export function WorkspaceCalendarMonthGrid({
           const isOutside = !day.isSame(cursor, "month");
           const isToday = day.isSame(today, "day");
           const overflow = dayActions.length - MAX_VISIBLE;
-          const holiday = getHoliday(day);
+          const holiday = getHoliday(day, variableHolidays);
           const mobilization = getMobilizationEvent(day);
           const hasTopLabel = !!(holiday || mobilization);
 

@@ -16,6 +16,8 @@ import {
   Link2,
   Coins,
   Star,
+  Rocket,
+  Map as MapIcon,
 } from "lucide-react";
 import type { AppModule } from "@/features/insights/types";
 import { ALL_MODULES } from "@/features/insights/types";
@@ -150,6 +152,24 @@ export const MODULE_DEFS: ModuleDef[] = [
     bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
     activeBg: "bg-fuchsia-600",
     border: "border-fuchsia-500",
+  },
+  {
+    id: "space-station",
+    label: "Space Station",
+    icon: Rocket,
+    color: "text-indigo-600",
+    bg: "bg-indigo-50 dark:bg-indigo-950/40",
+    activeBg: "bg-indigo-600",
+    border: "border-indigo-500",
+  },
+  {
+    id: "nasa-route",
+    label: "NASA Route",
+    icon: MapIcon,
+    color: "text-sky-600",
+    bg: "bg-sky-50 dark:bg-sky-950/40",
+    activeBg: "bg-sky-600",
+    border: "border-sky-500",
   },
 ];
 

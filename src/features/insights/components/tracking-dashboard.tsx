@@ -39,7 +39,10 @@ import {
   LinnkerSection,
   SpacePointsSection,
   StarsSection,
+  SpaceStationSection,
+  NasaRouteSection,
 } from "./apps-sections";
+import { SortableDashboardSections } from "./sortable-dashboard-sections";
 import { useQueryAppsInsights } from "@/features/insights/hooks/use-dashboard";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
@@ -105,6 +108,7 @@ export function TrackingDashboard({
     dateRange,
     settings,
     selectedModules,
+    moduleOrder,
     setTrackingId,
     toggleOrganizationId,
     setDateRange,
@@ -113,6 +117,7 @@ export function TrackingDashboard({
     setChartType,
     resetSettings,
     setSelectedModules,
+    setModuleOrder,
   } = useDashboardStore();
 
   // Usando Tanstack Query para fetch dos dados
@@ -393,48 +398,27 @@ export function TrackingDashboard({
               }
             />
 
-            {/* App-specific sections */}
-            <div className="space-y-8">
-              {selectedModules.includes("forge") && appsInsights?.forge && (
-                <ForgeSection data={appsInsights.forge} />
-              )}
-              {selectedModules.includes("spacetime") &&
-                appsInsights?.spacetime && (
-                  <SpacetimeSection data={appsInsights.spacetime} />
-                )}
-              {selectedModules.includes("nasa-planner") &&
-                appsInsights?.nasaPlanner && (
-                  <NasaPlannerSection data={appsInsights.nasaPlanner} />
-                )}
-              {selectedModules.includes("integrations") && (
-                <IntegrationsSection metaAds={metaInsights ?? undefined} />
-              )}
-              {selectedModules.includes("workspace") &&
-                appsInsights?.workspace && (
-                  <WorkspaceSection data={appsInsights.workspace} />
-                )}
-              {selectedModules.includes("forms") && appsInsights?.forms && (
-                <FormsSection data={appsInsights.forms} />
-              )}
-              {selectedModules.includes("nbox") && appsInsights?.nbox && (
-                <NBoxSection data={appsInsights.nbox} />
-              )}
-              {selectedModules.includes("payment") &&
-                appsInsights?.payment && (
-                  <PaymentSection data={appsInsights.payment} />
-                )}
-              {selectedModules.includes("linnker") &&
-                appsInsights?.linnker && (
-                  <LinnkerSection data={appsInsights.linnker} />
-                )}
-              {selectedModules.includes("space-points") &&
-                appsInsights?.spacePoints && (
-                  <SpacePointsSection data={appsInsights.spacePoints} />
-                )}
-              {selectedModules.includes("stars") && appsInsights?.stars && (
-                <StarsSection data={appsInsights.stars} />
-              )}
-            </div>
+            {/* App-specific sections — drag & drop reorderable */}
+            <SortableDashboardSections
+              moduleOrder={moduleOrder}
+              selectedModules={selectedModules}
+              onReorder={setModuleOrder}
+              sections={{
+                forge: appsInsights?.forge ? <ForgeSection data={appsInsights.forge} /> : null,
+                spacetime: appsInsights?.spacetime ? <SpacetimeSection data={appsInsights.spacetime} /> : null,
+                "nasa-planner": appsInsights?.nasaPlanner ? <NasaPlannerSection data={appsInsights.nasaPlanner} /> : null,
+                integrations: <IntegrationsSection metaAds={metaInsights ?? undefined} />,
+                workspace: appsInsights?.workspace ? <WorkspaceSection data={appsInsights.workspace} /> : null,
+                forms: appsInsights?.forms ? <FormsSection data={appsInsights.forms} /> : null,
+                nbox: appsInsights?.nbox ? <NBoxSection data={appsInsights.nbox} /> : null,
+                payment: appsInsights?.payment ? <PaymentSection data={appsInsights.payment} /> : null,
+                linnker: appsInsights?.linnker ? <LinnkerSection data={appsInsights.linnker} /> : null,
+                "space-points": appsInsights?.spacePoints ? <SpacePointsSection data={appsInsights.spacePoints} /> : null,
+                stars: appsInsights?.stars ? <StarsSection data={appsInsights.stars} /> : null,
+                "space-station": appsInsights?.spaceStation ? <SpaceStationSection data={appsInsights.spaceStation} /> : null,
+                "nasa-route": appsInsights?.nasaRoute ? <NasaRouteSection data={appsInsights.nasaRoute} /> : null,
+              }}
+            />
 
             <WidgetList organizationIds={organizationIds} />
           </TabsContent>

@@ -10,6 +10,7 @@ interface DashboardState {
   dateRange: DateRange;
   settings: DashboardSettings;
   selectedModules: AppModule[];
+  moduleOrder: AppModule[];
 }
 
 interface DashboardActions {
@@ -26,6 +27,8 @@ interface DashboardActions {
   ) => void;
   resetSettings: () => void;
   setSelectedModules: (modules: AppModule[]) => void;
+  setModuleOrder: (order: AppModule[]) => void;
+  resetModuleOrder: () => void;
 }
 
 const defaultSettings: DashboardSettings = {
@@ -53,6 +56,7 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
       dateRange: { from: undefined, to: undefined },
       settings: defaultSettings,
       selectedModules: ALL_MODULES,
+      moduleOrder: ALL_MODULES,
 
       setTrackingId: (trackingId) => set({ trackingId }),
       setDateRange: (dateRange) => set({ dateRange }),
@@ -112,6 +116,18 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
 
       setSelectedModules: (modules) =>
         set({ selectedModules: modules.length > 0 ? modules : ALL_MODULES }),
+
+      setModuleOrder: (order) =>
+        set((state) => {
+          // Garante que todos os módulos novos (não persistidos) sejam anexados
+          const merged = [
+            ...order.filter((m) => ALL_MODULES.includes(m)),
+            ...ALL_MODULES.filter((m) => !order.includes(m)),
+          ];
+          return { moduleOrder: merged };
+        }),
+
+      resetModuleOrder: () => set({ moduleOrder: ALL_MODULES }),
     }),
     {
       name: "insights-storage",
@@ -124,6 +140,7 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
         tagIds: state.tagIds,
         dateRange: state.dateRange,
         selectedModules: state.selectedModules,
+        moduleOrder: state.moduleOrder,
       }),
       onRehydrateStorage: () => (state) => {
         // Converte strings de data de volta para objetos Date após a rehidratação
@@ -134,6 +151,14 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
           if (state.dateRange.to) {
             state.dateRange.to = new Date(state.dateRange.to);
           }
+        }
+        // Mescla módulos novos que ainda não estão na ordem persistida
+        if (state) {
+          const persistedOrder = state.moduleOrder ?? [];
+          state.moduleOrder = [
+            ...persistedOrder.filter((m) => ALL_MODULES.includes(m)),
+            ...ALL_MODULES.filter((m) => !persistedOrder.includes(m)),
+          ];
         }
       },
     },

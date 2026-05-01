@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { debitStars } from "@/lib/star-service";
+import { logActivity } from "@/lib/activity-logger";
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { NasaPlannerPostType, NasaPlannerPostStatus, StarTransactionType } from "@/generated/prisma/enums";
@@ -286,6 +287,22 @@ INSTRUÇÕES:
           slides: { orderBy: { order: "asc" } },
           createdBy: { select: { id: true, name: true, image: true } },
         },
+      });
+
+      await logActivity({
+        organizationId: context.org.id,
+        userId: context.user.id,
+        userName: context.user.name,
+        userEmail: context.user.email,
+        userImage: (context.user as any).image,
+        appSlug: "nasa-planner",
+        subAppSlug: "planner-posts",
+        featureKey: "planner.post.generated",
+        action: "planner.post.generated",
+        actionLabel: `Gerou conteúdo IA para um ${postTypeLabel}`,
+        resource: parsed.title ?? null,
+        resourceId: updatedPost.id,
+        metadata: { type: post.type, starsSpent: STARS_PER_GENERATION, hasImage: !!generatedImageKey },
       });
 
       return { post: updatedPost, starsSpent: STARS_PER_GENERATION, balanceAfter: debit.newBalance };

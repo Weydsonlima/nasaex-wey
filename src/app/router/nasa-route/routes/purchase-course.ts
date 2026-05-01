@@ -8,6 +8,7 @@ import { StarTransactionType } from "@/generated/prisma/enums";
 import { pusherServer } from "@/lib/pusher";
 import { awardPoints } from "@/app/router/space-point/utils";
 import { canEnrollFree, PLATFORM_FEE_PCT } from "../utils";
+import { logActivity } from "@/lib/activity-logger";
 
 /**
  * Compra de curso pelo aluno (paga com STARs da org dele).
@@ -250,6 +251,22 @@ export const purchaseCourse = base
       courseTitle: course.title,
       paidStars: priceStars,
       payoutStars,
+    });
+
+    await logActivity({
+      organizationId: buyerOrgId,
+      userId,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-route",
+      subAppSlug: "nasa-route-courses",
+      featureKey: "route.course.purchased",
+      action: "route.course.purchased",
+      actionLabel: `Comprou o curso "${course.title}"`,
+      resource: course.title,
+      resourceId: course.id,
+      metadata: { paidStars: priceStars, planName: plan.name },
     });
 
     return {

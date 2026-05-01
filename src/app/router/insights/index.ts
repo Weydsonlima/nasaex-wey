@@ -15,6 +15,10 @@ import { listLeadsAtInsights } from "./list-leads-at-insight";
 import { listMyOrganizations } from "./list-my-organizations";
 import { getActivitySummary } from "./get-activity-summary";
 import { getActivityNow } from "./get-activity-now";
+import { saveReport } from "./saved-reports/save-report";
+import { listSavedReports } from "./saved-reports/list-saved-reports";
+import { getSavedReport } from "./saved-reports/get-saved-report";
+import { deleteSavedReport } from "./saved-reports/delete-saved-report";
 
 export const insightsRouter = {
   getAppsInsights,
@@ -34,4 +38,8 @@ export const insightsRouter = {
   listMyOrganizations,
   getActivitySummary,
   getActivityNow,
+  saveReport,
+  listSavedReports,
+  getSavedReport,
+  deleteSavedReport,
 };

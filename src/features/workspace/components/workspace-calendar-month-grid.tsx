@@ -411,11 +411,6 @@ export function WorkspaceCalendarMonthGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const todayCellRef = useRef<HTMLDivElement>(null);
 
-  const variableHolidays = useMemo(() => {
-    const years = new Set(grid.map((d) => d.year()));
-    return buildVariableHolidays(years);
-  }, [grid]);
-
   const actionsByDay = useMemo(() => {
     const map = new Map<string, WorkspaceCalendarAction[]>();
     for (const a of actions) {
@@ -435,6 +430,11 @@ export function WorkspaceCalendarMonthGrid({
     for (let i = 0; i < 42; i++) days.push(firstDayOfGrid.add(i, "day"));
     return days;
   }, [cursor]);
+
+  const variableHolidays = useMemo(() => {
+    const years = new Set(grid.map((d) => d.year()));
+    return buildVariableHolidays(years);
+  }, [grid]);
 
   const rowHeights = useMemo(() => {
     const heights: number[] = [];

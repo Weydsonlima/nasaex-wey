@@ -19,6 +19,11 @@ import { saveReport } from "./saved-reports/save-report";
 import { listSavedReports } from "./saved-reports/list-saved-reports";
 import { getSavedReport } from "./saved-reports/get-saved-report";
 import { deleteSavedReport } from "./saved-reports/delete-saved-report";
+import { getOrgLayout } from "./layout/get-org-layout";
+import { saveOrgLayout } from "./layout/save-org-layout";
+import { getAppMetric } from "./layout/get-app-metric";
+import { getPinnedBlocksForApp } from "./layout/get-pinned-blocks-for-app";
+import { getCrossInsights } from "./cross/get-cross-insights";
 
 export const insightsRouter = {
   getAppsInsights,
@@ -42,4 +47,9 @@ export const insightsRouter = {
   listSavedReports,
   getSavedReport,
   deleteSavedReport,
+  getOrgLayout,
+  saveOrgLayout,
+  getAppMetric,
+  getPinnedBlocksForApp,
+  getCrossInsights,
 };

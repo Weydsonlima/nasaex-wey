@@ -21,20 +21,33 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppModule } from "@/features/insights/types";
+import type { InsightBlock } from "@/lib/insights/app-metrics";
+import { useOrgLayout } from "@/features/insights/context/org-layout-provider";
 
 interface SortableDashboardSectionsProps {
-  moduleOrder: AppModule[];
   selectedModules: AppModule[];
-  onReorder: (next: AppModule[]) => void;
   sections: Partial<Record<AppModule, ReactNode>>;
+  renderTagTile?: (block: Extract<InsightBlock, { type: "tag-tile" }>) => ReactNode;
+  renderAppMetric?: (
+    block: Extract<InsightBlock, { type: "app-metric" }>,
+  ) => ReactNode;
+  renderCustomChart?: (
+    block: Extract<InsightBlock, { type: "custom-chart" }>,
+  ) => ReactNode;
+  renderAddAnchor?: (
+    block: Extract<InsightBlock, { type: "add-anchor" }>,
+  ) => ReactNode;
 }
 
 export function SortableDashboardSections({
-  moduleOrder,
   selectedModules,
-  onReorder,
   sections,
+  renderTagTile,
+  renderAppMetric,
+  renderCustomChart,
+  renderAddAnchor,
 }: SortableDashboardSectionsProps) {
+  const { blocks, reorderBlocks, canEdit } = useOrgLayout();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -43,30 +56,43 @@ export function SortableDashboardSections({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const visibleIds = useMemo<AppModule[]>(() => {
-    return moduleOrder.filter(
-      (id) => selectedModules.includes(id) && sections[id] != null,
-    );
-  }, [moduleOrder, selectedModules, sections]);
+  const visible = useMemo(() => {
+    return blocks.filter((b) => {
+      if (b.type === "section") {
+        return (
+          selectedModules.includes(b.appModule) && sections[b.appModule] != null
+        );
+      }
+      return true;
+    });
+  }, [blocks, selectedModules, sections]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = moduleOrder.indexOf(active.id as AppModule);
-    const newIndex = moduleOrder.indexOf(over.id as AppModule);
+    const oldIndex = blocks.findIndex((b) => b.id === active.id);
+    const newIndex = blocks.findIndex((b) => b.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
 
-    onReorder(arrayMove(moduleOrder, oldIndex, newIndex));
+    reorderBlocks(arrayMove(blocks, oldIndex, newIndex));
   };
 
-  if (visibleIds.length === 0) return null;
+  if (visible.length === 0) return null;
 
-  if (!mounted) {
+  if (!mounted || !canEdit) {
     return (
       <div className="space-y-8">
-        {visibleIds.map((id) => (
-          <div key={id}>{sections[id]}</div>
+        {visible.map((b) => (
+          <BlockRenderer
+            key={b.id}
+            block={b}
+            sections={sections}
+            renderTagTile={renderTagTile}
+            renderAppMetric={renderAppMetric}
+            renderCustomChart={renderCustomChart}
+            renderAddAnchor={renderAddAnchor}
+          />
         ))}
       </div>
     );
@@ -78,12 +104,22 @@ export function SortableDashboardSections({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={visible.map((b) => b.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="space-y-8">
-          {visibleIds.map((id) => (
-            <SortableSection key={id} id={id}>
-              {sections[id]}
-            </SortableSection>
+          {visible.map((b) => (
+            <SortableBlock key={b.id} id={b.id}>
+              <BlockRenderer
+                block={b}
+                sections={sections}
+                renderTagTile={renderTagTile}
+                renderAppMetric={renderAppMetric}
+                renderCustomChart={renderCustomChart}
+                renderAddAnchor={renderAddAnchor}
+              />
+            </SortableBlock>
           ))}
         </div>
       </SortableContext>
@@ -91,7 +127,35 @@ export function SortableDashboardSections({
   );
 }
 
-function SortableSection({ id, children }: { id: AppModule; children: ReactNode }) {
+function BlockRenderer({
+  block,
+  sections,
+  renderTagTile,
+  renderAppMetric,
+  renderCustomChart,
+  renderAddAnchor,
+}: {
+  block: InsightBlock;
+  sections: Partial<Record<AppModule, ReactNode>>;
+  renderTagTile?: SortableDashboardSectionsProps["renderTagTile"];
+  renderAppMetric?: SortableDashboardSectionsProps["renderAppMetric"];
+  renderCustomChart?: SortableDashboardSectionsProps["renderCustomChart"];
+  renderAddAnchor?: SortableDashboardSectionsProps["renderAddAnchor"];
+}) {
+  if (block.type === "section") {
+    return <>{sections[block.appModule] ?? null}</>;
+  }
+  if (block.type === "tag-tile") return <>{renderTagTile?.(block) ?? null}</>;
+  if (block.type === "app-metric")
+    return <>{renderAppMetric?.(block) ?? null}</>;
+  if (block.type === "custom-chart")
+    return <>{renderCustomChart?.(block) ?? null}</>;
+  if (block.type === "add-anchor")
+    return <>{renderAddAnchor?.(block) ?? null}</>;
+  return null;
+}
+
+function SortableBlock({ id, children }: { id: string; children: ReactNode }) {
   const {
     attributes,
     listeners,
@@ -119,8 +183,9 @@ function SortableSection({ id, children }: { id: AppModule; children: ReactNode 
         type="button"
         {...attributes}
         {...listeners}
-        aria-label="Arrastar seção"
-        className="absolute -left-7 top-2 hidden md:flex size-6 items-center justify-center rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted cursor-grab active:cursor-grabbing opacity-0 group-hover/section:opacity-100 transition-opacity"
+        aria-label="Arrastar bloco"
+        title="Arrastar para reorganizar"
+        className="absolute -left-2 md:-left-8 top-2 z-10 flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab active:cursor-grabbing shadow-sm"
       >
         <GripVerticalIcon className="size-4" />
       </button>

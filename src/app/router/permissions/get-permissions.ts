@@ -11,6 +11,7 @@ export const ALL_APPS = [
   { key: "spacetime",    label: "SpaceTime / Agenda",   icon: "📅" },
   { key: "nasa-planner", label: "NASA Planner",             icon: "📸" },
   { key: "insights",     label: "Insights",             icon: "📊" },
+  { key: "insights-layout", label: "Insights · Layout", icon: "🧩" },
   { key: "integrations", label: "Integrações",          icon: "🔗" },
   { key: "explorer",     label: "NASA Explorer",        icon: "🚀" },
   { key: "nbox",         label: "NBox",                 icon: "📦" },

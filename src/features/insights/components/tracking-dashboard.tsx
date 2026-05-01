@@ -27,6 +27,12 @@ import { WidgetList } from "./widget";
 import { ChannelInsights } from "./channel-insights";
 import { AppSelector } from "./app-selector";
 import { CrossDataOverview } from "./cross-data-overview";
+import { CrossInsightsPanel } from "./cross-insights-panel";
+import { OrgLayoutProvider } from "@/features/insights/context/org-layout-provider";
+import { AppMetricCard } from "./app-metric-card";
+import { AddInsightButton } from "./add-insight-button";
+import { LayoutEditToolbar } from "./layout-edit-toolbar";
+import { WidgetTag } from "./widget";
 import {
   ForgeSection,
   SpacetimeSection,
@@ -108,7 +114,6 @@ export function TrackingDashboard({
     dateRange,
     settings,
     selectedModules,
-    moduleOrder,
     setTrackingId,
     toggleOrganizationId,
     setDateRange,
@@ -117,7 +122,6 @@ export function TrackingDashboard({
     setChartType,
     resetSettings,
     setSelectedModules,
-    setModuleOrder,
   } = useDashboardStore();
 
   // Usando Tanstack Query para fetch dos dados
@@ -170,6 +174,7 @@ export function TrackingDashboard({
   const showTrackingFilters = selectedModules.includes("tracking");
 
   return (
+    <OrgLayoutProvider>
     <Tabs defaultValue="general">
       <div className="flex flex-col h-full w-full">
         <HeaderTracking title="Insights" />
@@ -182,7 +187,15 @@ export function TrackingDashboard({
             onReset={resetSettings}
             onRefresh={refresh}
             isLoading={isLoading}
+            filters={{
+              trackingId,
+              organizationIds,
+              tagIds,
+              dateRange,
+            }}
+            modules={selectedModules}
           />
+          <LayoutEditToolbar />
 
           {/* App Selector */}
           <AppSelector
@@ -398,12 +411,14 @@ export function TrackingDashboard({
               }
             />
 
-            {/* App-specific sections — drag & drop reorderable */}
+            <CrossInsightsPanel />
+
+            {/* App-specific sections + tags + métricas — drag & drop unificado */}
             <SortableDashboardSections
-              moduleOrder={moduleOrder}
               selectedModules={selectedModules}
-              onReorder={setModuleOrder}
               sections={{
+                tracking: null,
+                chat: null,
                 forge: appsInsights?.forge ? <ForgeSection data={appsInsights.forge} /> : null,
                 spacetime: appsInsights?.spacetime ? <SpacetimeSection data={appsInsights.spacetime} /> : null,
                 "nasa-planner": appsInsights?.nasaPlanner ? <NasaPlannerSection data={appsInsights.nasaPlanner} /> : null,
@@ -418,6 +433,26 @@ export function TrackingDashboard({
                 "space-station": appsInsights?.spaceStation ? <SpaceStationSection data={appsInsights.spaceStation} /> : null,
                 "nasa-route": appsInsights?.nasaRoute ? <NasaRouteSection data={appsInsights.nasaRoute} /> : null,
               }}
+              renderTagTile={(b) => (
+                <WidgetTag
+                  title={b.title ?? "Tag"}
+                  tagId={b.tagId}
+                  organizationId={organizationIds[0] ?? ""}
+                  id={b.id}
+                  organizationIds={organizationIds}
+                />
+              )}
+              renderAppMetric={(b) => (
+                <AppMetricCard
+                  blockId={b.id}
+                  appSlug={b.appSlug}
+                  metricKey={b.metricKey}
+                  label={b.label}
+                />
+              )}
+              renderAddAnchor={() => (
+                <AddInsightButton organizationIds={organizationIds} />
+              )}
             />
 
             <WidgetList organizationIds={organizationIds} />
@@ -561,5 +596,6 @@ export function TrackingDashboard({
         />
       </div>
     </Tabs>
+    </OrgLayoutProvider>
   );
 }

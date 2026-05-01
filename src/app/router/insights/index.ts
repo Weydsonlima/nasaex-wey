@@ -24,6 +24,7 @@ import { saveOrgLayout } from "./layout/save-org-layout";
 import { getAppMetric } from "./layout/get-app-metric";
 import { getPinnedBlocksForApp } from "./layout/get-pinned-blocks-for-app";
 import { getCrossInsights } from "./cross/get-cross-insights";
+import { generateTileNarrative } from "./cross/generate-tile-narrative";
 import { getWorkspacesReport } from "./reports/get-workspaces-report";
 import { getTrackingsReport } from "./reports/get-trackings-report";
 import { getAttendantsReport } from "./reports/get-attendants-report";
@@ -56,6 +57,7 @@ export const insightsRouter = {
   getAppMetric,
   getPinnedBlocksForApp,
   getCrossInsights,
+  generateTileNarrative,
   getWorkspacesReport,
   getTrackingsReport,
   getAttendantsReport,

@@ -48,7 +48,7 @@ export const getWorkspacesReport = base
               dueDate: true,
               closedAt: true,
               createdAt: true,
-              tags: { select: { id: true } },
+              tags: { select: { tagId: true } },
             },
           },
           _count: {

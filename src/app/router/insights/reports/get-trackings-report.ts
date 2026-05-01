@@ -89,7 +89,7 @@ export const getTrackingsReport = base
           where: {
             organizationId: org.id,
             trackingId: { in: trackingIds },
-            type: "INCOME",
+            type: "RECEIVABLE",
             ...(fromDate || toDate
               ? {
                   competenceDate: {

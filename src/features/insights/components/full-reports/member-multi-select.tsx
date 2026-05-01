@@ -30,7 +30,7 @@ function initials(name: string) {
 
 export function MemberMultiSelect({ value, onChange, className }: Props) {
   const { data, isLoading } = useQuery({
-    ...orpc.org.listMembersDetailed.queryOptions(),
+    ...orpc.orgs.listMembersDetailed.queryOptions(),
     staleTime: 5 * 60 * 1000,
   });
 

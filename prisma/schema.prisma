@@ -38,6 +38,8 @@ model User {
   forms                              Form[]
   leadFiles                          LeadFile[]
   insightShares                      InsightShares[]
+  savedInsightReports                SavedInsightReport[]
+  savedReportCompares                SavedReportCompare[]
   agendaResponsibles                 AgendaResponsible[]
   appointments                       Appointment[]
   trackingConsultants                TrackingConsultant[]
@@ -207,6 +209,10 @@ model Organization {
   activityLogs           OrgActivityLog[]
   systemActivityLogs     SystemActivityLog[]
   userPresences          UserPresence[]
+  userSessionRollups     UserSessionRollup[]
+  publicPageViews        PublicPageView[]
+  savedInsightReports    SavedInsightReport[]
+  savedReportCompares    SavedReportCompare[]
   workspaces             Workspace[]
   form                   Form[]
   workspaceFolders       WorkspaceFolder[]
@@ -825,10 +831,10 @@ model Action {
   workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   column       WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
 
-  participants     ActionsUserParticipant[]
-  responsibles     ActionsUserResponsible[]
-  subActions       SubActions[]
-  subActionGroups  SubActionGroup[]
+  participants    ActionsUserParticipant[]
+  responsibles    ActionsUserResponsible[]
+  subActions      SubActions[]
+  subActionGroups SubActionGroup[]
 
   attachments     Json           @default("[]") @map("attachments")
   links           Json           @default("[]") @map("links")
@@ -868,9 +874,9 @@ model Action {
   publicShares PublicActionShare[]
   reminders    ActionReminder[]
 
-  chatMessages   ActionChatMessage[]
-  chatReads      ActionChatRead[]
-  chatReminders  Reminder[]          @relation("ActionReminders")
+  chatMessages  ActionChatMessage[]
+  chatReads     ActionChatRead[]
+  chatReminders Reminder[]          @relation("ActionReminders")
 
   @@index([workspaceId])
   @@index([columnId])
@@ -1035,14 +1041,14 @@ model SubActions {
 }
 
 model SubActionGroup {
-  id        String       @id @default(cuid())
-  name      String
-  order     Int          @default(0)
-  isOpen    Boolean      @default(true) @map("is_open")
-  actionId  String       @map("action_id")
-  action    Action       @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  id         String       @id @default(cuid())
+  name       String
+  order      Int          @default(0)
+  isOpen     Boolean      @default(true) @map("is_open")
+  actionId   String       @map("action_id")
+  action     Action       @relation(fields: [actionId], references: [id], onDelete: Cascade)
   subActions SubActions[]
-  createdAt DateTime     @default(now()) @map("created_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
 
   @@index([actionId])
   @@map("sub_action_groups")
@@ -2352,16 +2358,22 @@ model SystemActivityLog {
   userEmail      String       @map("user_email")
   userImage      String?      @map("user_image")
   appSlug        String       @default("system") @map("app_slug")
+  subAppSlug     String?      @map("sub_app_slug")
+  featureKey     String?      @map("feature_key")
   action         String
   actionLabel    String       @map("action_label")
   resource       String?
   resourceId     String?      @map("resource_id")
+  companyId      String?      @map("company_id")
+  durationMs     Int?         @map("duration_ms")
   metadata       Json?
   createdAt      DateTime     @default(now()) @map("created_at")
 
   @@index([organizationId, createdAt])
   @@index([userId])
   @@index([appSlug])
+  @@index([companyId])
+  @@index([featureKey, createdAt])
   @@map("system_activity_log")
 }
 
@@ -2374,9 +2386,84 @@ model UserPresence {
   userEmail      String       @map("user_email")
   userImage      String?      @map("user_image")
   lastSeenAt     DateTime     @default(now()) @map("last_seen_at")
+  activeAppSlug  String?      @map("active_app_slug")
+  activePath     String?      @map("active_path")
+  activeResource String?      @map("active_resource")
 
   @@unique([userId, organizationId])
   @@map("user_presence")
+}
+
+// ─────────────────────────────────────────────
+// INSIGHTS — Atividade, Page Views, Relatórios
+// ─────────────────────────────────────────────
+
+model UserSessionRollup {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  day            DateTime     @db.Date
+  totalOnlineSec Int          @default(0) @map("total_online_sec")
+  totalActiveSec Int          @default(0) @map("total_active_sec")
+  byApp          Json         @default("{}") @map("by_app")
+  sessions       Json         @default("[]")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, userId, day])
+  @@index([userId, day])
+  @@map("user_session_rollup")
+}
+
+model PublicPageView {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  page           String
+  nick           String?
+  visitorId      String       @map("visitor_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, page, createdAt])
+  @@index([visitorId])
+  @@map("public_page_view")
+}
+
+model SavedInsightReport {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  createdBy      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  filters        Json         @default("{}")
+  modules        Json         @default("[]")
+  snapshot       Json         @default("{}")
+  aiNarrative    String?      @map("ai_narrative")
+  shareToken     String?      @unique @map("share_token")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@map("saved_insight_report")
+}
+
+model SavedReportCompare {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  createdBy      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  reportIds      String[]     @map("report_ids")
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@map("saved_report_compare")
 }
 
 // ─── Workspace Tags ───────────────────────────────────────────────────────────

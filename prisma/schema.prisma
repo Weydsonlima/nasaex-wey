@@ -393,6 +393,7 @@ model Tracking {
   workspaces          Workspace[]
   scripts             Script[]
   reminders           Reminder[]
+  paymentEntries      PaymentEntry[]
 
   @@map("tracking")
 }
@@ -3037,6 +3038,7 @@ model PaymentEntry {
   costCenterId String? @map("cost_center_id")
   contactId    String? @map("contact_id")
   accountId    String? @map("account_id")
+  trackingId   String? @map("tracking_id")
 
   // Parcelamento
   installmentTotal   Int?    @map("installment_total")
@@ -3056,6 +3058,7 @@ model PaymentEntry {
   costCenter   PaymentCostCenter?  @relation(fields: [costCenterId], references: [id])
   contact      PaymentContact?     @relation(fields: [contactId], references: [id])
   account      PaymentBankAccount? @relation(fields: [accountId], references: [id])
+  tracking     Tracking?           @relation(fields: [trackingId], references: [id], onDelete: SetNull)
   createdBy    User?               @relation("PaymentEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
@@ -3065,6 +3068,7 @@ model PaymentEntry {
   @@index([contactId])
   @@index([categoryId])
   @@index([installmentGroupId])
+  @@index([trackingId])
   @@map("payment_entries")
 }
 

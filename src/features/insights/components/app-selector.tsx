@@ -182,11 +182,12 @@ export function AppSelector({ selected, onChange }: AppSelectorProps) {
   const allSelected = selected.length === ALL_MODULES.length;
 
   const toggle = (id: AppModule) => {
-    const isOnlyThis = selected.length === 1 && selected[0] === id;
-    if (isOnlyThis) {
-      onChange(ALL_MODULES);
+    const isActive = selected.includes(id);
+    if (isActive) {
+      if (selected.length === 1) return;
+      onChange(selected.filter((m) => m !== id));
     } else {
-      onChange([id]);
+      onChange([...selected, id]);
     }
   };
 

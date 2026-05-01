@@ -88,7 +88,6 @@ export function SettingsPanel({
     moduleOrder,
     selectedModules,
     setModuleOrder,
-    setSelectedModules,
     resetModuleOrder,
   } = useDashboardStore();
 
@@ -108,16 +107,6 @@ export function SettingsPanel({
     setModuleOrder(arrayMove(moduleOrder, oldIndex, newIndex));
   };
 
-  const toggleModule = (id: AppModule) => {
-    const isOn = selectedModules.includes(id);
-    if (isOn) {
-      if (selectedModules.length === 1) return;
-      setSelectedModules(selectedModules.filter((m) => m !== id));
-    } else {
-      setSelectedModules([...selectedModules, id]);
-    }
-  };
-
   const handleResetAll = () => {
     onReset();
     resetModuleOrder();
@@ -134,7 +123,7 @@ export function SettingsPanel({
         <SheetHeader className="px-6 pt-6">
           <SheetTitle>Configurações do Dashboard</SheetTitle>
           <SheetDescription>
-            Reordene os apps por arrastar e escolha o que aparece no dashboard.
+            Reordene os apps arrastando-os. Para mostrar/esconder, use os filtros do topo.
           </SheetDescription>
         </SheetHeader>
 
@@ -144,7 +133,7 @@ export function SettingsPanel({
             <div>
               <h3 className="mb-1 text-sm font-medium">Apps no dashboard</h3>
               <p className="text-xs text-muted-foreground mb-3">
-                Arraste para reorganizar. Use o switch para esconder.
+                Arraste para reorganizar a ordem dos apps.
               </p>
               <DndContext
                 sensors={sensors}
@@ -167,8 +156,6 @@ export function SettingsPanel({
                           icon={def.icon}
                           color={def.color}
                           bg={def.bg}
-                          isOn={selectedModules.includes(moduleId)}
-                          onToggle={() => toggleModule(moduleId)}
                         />
                       );
                     })}
@@ -285,8 +272,6 @@ interface SortableModuleRowProps {
   icon: React.FC<{ className?: string }>;
   color: string;
   bg: string;
-  isOn: boolean;
-  onToggle: () => void;
 }
 
 function SortableModuleRow({
@@ -295,8 +280,6 @@ function SortableModuleRow({
   icon: Icon,
   color,
   bg,
-  isOn,
-  onToggle,
 }: SortableModuleRowProps) {
   const {
     attributes,
@@ -319,7 +302,6 @@ function SortableModuleRow({
       className={cn(
         "flex items-center gap-2 rounded-lg border bg-card px-2 py-2 transition-colors",
         isDragging && "opacity-50 z-10 shadow-lg",
-        !isOn && "opacity-60",
       )}
     >
       <button
@@ -340,7 +322,6 @@ function SortableModuleRow({
         <Icon className={cn("size-3.5", color)} />
       </div>
       <span className="flex-1 text-sm font-medium truncate">{label}</span>
-      <Switch checked={isOn} onCheckedChange={onToggle} />
     </div>
   );
 }

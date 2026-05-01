@@ -194,6 +194,66 @@ export function TrackingDashboard({
               dateRange,
             }}
             modules={selectedModules}
+            snapshotData={{
+              period: {
+                startDate: appsInput.startDate,
+                endDate: appsInput.endDate,
+              },
+              tracking: data?.summary
+                ? {
+                    totalLeads: data.summary.totalLeads,
+                    wonLeads: data.summary.wonLeads,
+                    activeLeads: data.summary.activeLeads,
+                    conversionRate: data.summary.conversionRate,
+                  }
+                : undefined,
+              chat: appsInsights?.chat
+                ? {
+                    totalConversations: appsInsights.chat.totalConversations,
+                    totalMessages: appsInsights.chat.totalMessages,
+                    attendedConversations:
+                      appsInsights.chat.attendedConversations,
+                    attendanceRate: appsInsights.chat.attendanceRate,
+                  }
+                : undefined,
+              forge: appsInsights?.forge
+                ? {
+                    totalProposals: appsInsights.forge.totalProposals,
+                    pagas: appsInsights.forge.pagas,
+                    revenueTotal: appsInsights.forge.revenueTotal,
+                  }
+                : undefined,
+              spacetime: appsInsights?.spacetime
+                ? {
+                    total: appsInsights.spacetime.total,
+                    confirmed: appsInsights.spacetime.confirmed,
+                    done: appsInsights.spacetime.done,
+                  }
+                : undefined,
+              nasaPlanner: appsInsights?.nasaPlanner
+                ? {
+                    total: appsInsights.nasaPlanner.total,
+                    published: appsInsights.nasaPlanner.published,
+                    starsSpent: appsInsights.nasaPlanner.starsSpent,
+                  }
+                : undefined,
+              metaAds:
+                metaInsights?.connected && metaInsights.data
+                  ? {
+                      spend: metaInsights.data.spend,
+                      leads: metaInsights.data.leads,
+                      cpl: metaInsights.data.cpl,
+                      roas: metaInsights.data.roas,
+                    }
+                  : undefined,
+              filters: {
+                trackingId,
+                organizationIds,
+                tagIds,
+                dateRange,
+              },
+              modules: selectedModules,
+            }}
           />
           <LayoutEditToolbar />
 

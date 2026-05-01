@@ -7,6 +7,7 @@ interface DashboardState {
   trackingId?: string;
   organizationIds: string[];
   tagIds: string[];
+  memberIds: string[];
   dateRange: DateRange;
   settings: DashboardSettings;
   selectedModules: AppModule[];
@@ -18,8 +19,10 @@ interface DashboardActions {
   setDateRange: (dateRange: DateRange) => void;
   setTagIds: (tagIds: string[]) => void;
   setOrganizationIds: (organizationIds: string[]) => void;
+  setMemberIds: (memberIds: string[]) => void;
   toggleOrganizationId: (organizationId: string) => void;
   toggleTagId: (tagId: string) => void;
+  toggleMemberId: (memberId: string) => void;
   toggleSection: (section: keyof DashboardSettings["visibleSections"]) => void;
   setChartType: (
     chart: keyof DashboardSettings["chartTypes"],
@@ -53,6 +56,7 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
       trackingId: undefined,
       organizationIds: [],
       tagIds: [],
+      memberIds: [],
       dateRange: { from: undefined, to: undefined },
       settings: defaultSettings,
       selectedModules: ALL_MODULES,
@@ -61,8 +65,16 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
       setTrackingId: (trackingId) => set({ trackingId }),
       setDateRange: (dateRange) => set({ dateRange }),
       setTagIds: (tagIds) => set({ tagIds }),
+      setMemberIds: (memberIds) => set({ memberIds }),
       setOrganizationIds: (organizationIds) =>
         set({ organizationIds, trackingId: undefined }),
+
+      toggleMemberId: (memberId) =>
+        set((state) => ({
+          memberIds: state.memberIds.includes(memberId)
+            ? state.memberIds.filter((id) => id !== memberId)
+            : [...state.memberIds, memberId],
+        })),
 
       toggleOrganizationId: (organizationId) => {
         if (organizationId === "ALL") {
@@ -138,6 +150,7 @@ export const useInsightsStore = create<DashboardState & DashboardActions>()(
         trackingId: state.trackingId,
         organizationIds: state.organizationIds,
         tagIds: state.tagIds,
+        memberIds: state.memberIds,
         dateRange: state.dateRange,
         selectedModules: state.selectedModules,
         moduleOrder: state.moduleOrder,

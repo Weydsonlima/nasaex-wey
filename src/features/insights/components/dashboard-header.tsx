@@ -44,6 +44,7 @@ interface DashboardHeaderProps {
     dateRange: DateRange;
   };
   modules?: AppModule[];
+  snapshotData?: Record<string, unknown>;
 }
 
 export function DashboardHeader({
@@ -55,6 +56,7 @@ export function DashboardHeader({
   isLoading,
   filters,
   modules,
+  snapshotData,
 }: DashboardHeaderProps) {
   const [saveOpen, setSaveOpen] = useState(false);
   const store = useDashboardStore();
@@ -145,7 +147,9 @@ export function DashboardHeader({
         defaultName={`Relatório ${new Date().toLocaleDateString("pt-BR")}`}
         filters={filters ?? store}
         modules={modules ?? []}
-        snapshot={{ filters: filters ?? store, modules: modules ?? [] }}
+        snapshot={
+          snapshotData ?? { filters: filters ?? store, modules: modules ?? [] }
+        }
       />
     </div>
   );

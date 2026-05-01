@@ -6,6 +6,7 @@ import { pusherServer } from "@/lib/pusher";
 import { createNotification } from "@/lib/notification-service";
 import z from "zod";
 import { assertActionAccess } from "./_helpers";
+import { logActivity } from "@/lib/activity-logger";
 
 export const createActionChatMessage = base
   .use(requiredAuthMiddleware)
@@ -121,6 +122,30 @@ export const createActionChatMessage = base
           }),
         ),
       );
+    }
+
+    const orgId = action.organizationId ?? context.org.id;
+    if (orgId) {
+      const hasLink = /(https?:\/\/|www\.)\S+/i.test(input.body);
+      await logActivity({
+        organizationId: orgId,
+        userId: context.user.id,
+        userName: context.user.name,
+        userEmail: context.user.email,
+        userImage: (context.user as any).image,
+        appSlug: "workspace",
+        subAppSlug: "workspace-actions",
+        featureKey: hasLink ? "workspace.action.chat.link.sent" : "workspace.action.chat.message.sent",
+        action: "workspace.action.chat.message.sent",
+        actionLabel: `Mandou mensagem no chat de "${action.title}"`,
+        resource: action.title,
+        resourceId: action.id,
+        metadata: {
+          messageId: message.id,
+          quoted: !!input.quotedMessageId,
+          recipientCount: participantUserIds.length - 1,
+        },
+      });
     }
 
     return { message };

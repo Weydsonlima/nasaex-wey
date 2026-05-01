@@ -77,6 +77,8 @@ model User {
   actionLikes            ActionLike[]
   publicActionShares     PublicActionShare[]    @relation("PublicActionShareSharer")
   actionReminders        ActionReminder[]       @relation("ActionReminderUser")
+  actionChatMessages     ActionChatMessage[]    @relation("ActionChatSender")
+  actionChatReads        ActionChatRead[]       @relation("ActionChatReader")
 
   profileCard                UserProfileCard?
   orgRoles                   OrgRole[]
@@ -823,9 +825,10 @@ model Action {
   workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   column       WorkspaceColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
 
-  participants ActionsUserParticipant[]
-  responsibles ActionsUserResponsible[]
-  subActions   SubActions[]
+  participants     ActionsUserParticipant[]
+  responsibles     ActionsUserResponsible[]
+  subActions       SubActions[]
+  subActionGroups  SubActionGroup[]
 
   attachments     Json           @default("[]") @map("attachments")
   links           Json           @default("[]") @map("links")
@@ -864,6 +867,10 @@ model Action {
   views        ActionView[]
   publicShares PublicActionShare[]
   reminders    ActionReminder[]
+
+  chatMessages   ActionChatMessage[]
+  chatReads      ActionChatRead[]
+  chatReminders  Reminder[]          @relation("ActionReminders")
 
   @@index([workspaceId])
   @@index([columnId])
@@ -953,6 +960,47 @@ model ActionReminder {
   @@map("action_reminders")
 }
 
+model ActionChatMessage {
+  id              String   @id @default(cuid())
+  actionId        String   @map("action_id")
+  body            String?
+  mediaUrl        String?  @map("media_url")
+  mediaType       String?  @map("media_type")
+  mimetype        String?
+  fileName        String?  @map("file_name")
+  quotedMessageId String?  @map("quoted_message_id")
+  senderId        String   @map("sender_id")
+  senderName      String?  @map("sender_name")
+  isEdited        Boolean  @default(false) @map("is_edited")
+  isDeleted       Boolean  @default(false) @map("is_deleted")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  action        Action              @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  sender        User                @relation("ActionChatSender", fields: [senderId], references: [id], onDelete: Cascade)
+  quotedMessage ActionChatMessage?  @relation("QuotedActionChat", fields: [quotedMessageId], references: [id], onDelete: SetNull)
+  quotes        ActionChatMessage[] @relation("QuotedActionChat")
+
+  @@index([actionId, createdAt])
+  @@index([senderId])
+  @@map("action_chat_messages")
+}
+
+model ActionChatRead {
+  id         String   @id @default(cuid())
+  actionId   String   @map("action_id")
+  userId     String   @map("user_id")
+  lastReadAt DateTime @default(now()) @map("last_read_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user   User   @relation("ActionChatReader", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([actionId, userId])
+  @@index([userId])
+  @@map("action_chat_reads")
+}
+
 model SubActionUserResponsible {
   id          String @id @default(cuid())
   userId      String @map("user_id")
@@ -973,13 +1021,31 @@ model SubActions {
   finishDate   DateTime?                  @map("finish_date")
   createdAt    DateTime                   @default(now()) @map("created_at")
   actionId     String                     @map("action_id")
+  groupId      String?                    @map("group_id")
+  order        Int                        @default(0)
   action       Action                     @relation(fields: [actionId], references: [id])
+  group        SubActionGroup?            @relation(fields: [groupId], references: [id], onDelete: SetNull)
   responsibles SubActionUserResponsible[]
 
   @@index([actionId])
+  @@index([groupId])
   @@index([isDone])
   @@index([finishDate])
   @@map("sub_action")
+}
+
+model SubActionGroup {
+  id        String       @id @default(cuid())
+  name      String
+  order     Int          @default(0)
+  isOpen    Boolean      @default(true) @map("is_open")
+  actionId  String       @map("action_id")
+  action    Action       @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  subActions SubActions[]
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([actionId])
+  @@map("sub_action_groups")
 }
 
 // ─────────────────────────────────────────────
@@ -1314,10 +1380,12 @@ model Reminder {
   leadId         String? @map("lead_id")
   conversationId String? @map("conversation_id")
   trackingId     String? @map("tracking_id")
+  actionId       String? @map("action_id")
 
   lead         Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
   conversation Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   tracking     Tracking?            @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+  action       Action?              @relation("ActionReminders", fields: [actionId], references: [id], onDelete: SetNull)
   createdBy    User                 @relation("ReminderCreatedBy", fields: [createdByUserId], references: [id])
   occurrences  ReminderOccurrence[]
 
@@ -1325,6 +1393,7 @@ model Reminder {
   @@index([conversationId])
   @@index([leadId])
   @@index([trackingId])
+  @@index([actionId, isActive])
   @@map("reminders")
 }
 

@@ -27,6 +27,7 @@ export const createReminder = base
         leadId: z.string().optional(),
         conversationId: z.string().optional(),
         trackingId: z.string().optional(),
+        actionId: z.string().optional(),
       })
       .refine(
         (data) =>
@@ -49,6 +50,7 @@ export const createReminder = base
       leadId,
       conversationId,
       trackingId,
+      actionId,
     } = input;
 
     // Calcula a primeira data de disparo
@@ -67,6 +69,7 @@ export const createReminder = base
         leadId: leadId ?? null,
         conversationId: conversationId ?? null,
         trackingId: trackingId ?? null,
+        actionId: actionId ?? null,
       },
     });
 

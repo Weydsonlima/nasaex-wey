@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   closestCenter,
@@ -35,6 +35,9 @@ export function SortableDashboardSections({
   onReorder,
   sections,
 }: SortableDashboardSectionsProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -58,6 +61,16 @@ export function SortableDashboardSections({
   };
 
   if (visibleIds.length === 0) return null;
+
+  if (!mounted) {
+    return (
+      <div className="space-y-8">
+        {visibleIds.map((id) => (
+          <div key={id}>{sections[id]}</div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <DndContext

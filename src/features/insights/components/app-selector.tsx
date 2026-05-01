@@ -182,11 +182,11 @@ export function AppSelector({ selected, onChange }: AppSelectorProps) {
   const allSelected = selected.length === ALL_MODULES.length;
 
   const toggle = (id: AppModule) => {
-    if (selected.includes(id)) {
-      if (selected.length === 1) return; // keep at least one
-      onChange(selected.filter((s) => s !== id));
+    const isOnlyThis = selected.length === 1 && selected[0] === id;
+    if (isOnlyThis) {
+      onChange(ALL_MODULES);
     } else {
-      onChange([...selected, id]);
+      onChange([id]);
     }
   };
 

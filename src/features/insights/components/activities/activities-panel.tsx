@@ -27,6 +27,7 @@ import { CompanyMultiSelect } from "./company-multi-select";
 import { NowPanel } from "./now-panel";
 import { StatsCards } from "./stats-cards";
 import { ActivityTable } from "./activity-table";
+import { DateRangeTimePicker } from "./date-range-time-picker";
 
 function initials(name: string) {
   return name
@@ -111,22 +112,45 @@ function OnlineBadge() {
 export function ActivitiesPanel() {
   const { isSingle } = useOrgRole();
 
-  const [period, setPeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - 30);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 0, 0);
+    return { from: start, to: end };
+  });
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
   const [selectedApp, setSelectedApp] = useState<string>("all");
   const [orgIds, setOrgIds] = useState<string[]>([]);
   const [logsLimit, setLogsLimit] = useState(50);
   const [activeTab, setActiveTab] = useState("geral");
 
-  const startDate = useMemo(() => {
-    const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
-    return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-  }, [period]);
+  const startDate = useMemo(
+    () =>
+      (dateRange.from ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).toISOString(),
+    [dateRange.from],
+  );
+  const endDate = useMemo(
+    () => (dateRange.to ?? new Date()).toISOString(),
+    [dateRange.to],
+  );
+
+  const statsPeriod: "7d" | "30d" | "90d" = useMemo(() => {
+    if (!dateRange.from) return "30d";
+    const diffDays = Math.round(
+      (Date.now() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (diffDays <= 7) return "7d";
+    if (diffDays <= 30) return "30d";
+    return "90d";
+  }, [dateRange.from]);
 
   const { data: stats } = useQuery({
     ...orpc.activity.getStats.queryOptions({
       input: {
-        period,
+        period: statsPeriod,
         ...(selectedApp !== "all" ? { appSlug: selectedApp } : {}),
       },
     }),
@@ -157,6 +181,7 @@ export function ActivitiesPanel() {
     if (selectedUserId !== "all") params.set("userId", selectedUserId);
     if (selectedApp !== "all") params.set("appSlug", selectedApp);
     params.set("from", startDate);
+    params.set("to", endDate);
     if (orgIds.length > 0) params.set("orgIds", orgIds.join(","));
     window.open(`/api/insights/activity/export?${params.toString()}`, "_blank");
   };
@@ -178,7 +203,7 @@ export function ActivitiesPanel() {
 
       <NowPanel orgIds={orgIds} />
 
-      <StatsCards orgIds={orgIds} from={startDate} />
+      <StatsCards orgIds={orgIds} from={startDate} to={endDate} />
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -187,16 +212,11 @@ export function ActivitiesPanel() {
 
         <CompanyMultiSelect value={orgIds} onChange={setOrgIds} />
 
-        <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-          <SelectTrigger className="h-8 text-xs w-28">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">Últimos 7 dias</SelectItem>
-            <SelectItem value="30d">Últimos 30 dias</SelectItem>
-            <SelectItem value="90d">Últimos 90 dias</SelectItem>
-          </SelectContent>
-        </Select>
+        <DateRangeTimePicker
+          from={dateRange.from}
+          to={dateRange.to}
+          onChange={setDateRange}
+        />
 
         <Select value={selectedUserId} onValueChange={setSelectedUserId}>
           <SelectTrigger className="h-8 text-xs w-40">
@@ -260,6 +280,7 @@ export function ActivitiesPanel() {
             userId={selectedUserId !== "all" ? selectedUserId : undefined}
             appSlug={selectedApp !== "all" ? selectedApp : undefined}
             startDate={startDate}
+            endDate={endDate}
             limit={logsLimit}
             onLoadMore={() => setLogsLimit((v) => v + 50)}
             onExport={handleExport}
@@ -271,6 +292,7 @@ export function ActivitiesPanel() {
             userId={selectedUserId !== "all" ? selectedUserId : undefined}
             appSlug="chat"
             startDate={startDate}
+            endDate={endDate}
             limit={logsLimit}
             onLoadMore={() => setLogsLimit((v) => v + 50)}
             onExport={handleExport}
@@ -282,6 +304,7 @@ export function ActivitiesPanel() {
             userId={selectedUserId !== "all" ? selectedUserId : undefined}
             appSlug="tracking"
             startDate={startDate}
+            endDate={endDate}
             limit={logsLimit}
             onLoadMore={() => setLogsLimit((v) => v + 50)}
             onExport={handleExport}

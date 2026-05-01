@@ -1,14 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Download } from "lucide-react";
+import { Clock, Download, ExternalLink } from "lucide-react";
 import { APP_LABELS } from "@/lib/activity-constants";
 import { cn } from "@/lib/utils";
+import { buildResourceUrl } from "@/features/insights/lib/build-resource-url";
 
 interface Props {
   userId?: string;
@@ -18,6 +20,10 @@ interface Props {
   limit: number;
   onLoadMore: () => void;
   onExport?: () => void;
+}
+
+function isLightUrl(href: string | null) {
+  return !!href && !href.startsWith("javascript:");
 }
 
 const ROLE_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -137,20 +143,21 @@ export function ActivityTable({
                 <th className="px-3 py-2 font-semibold">O que fez</th>
                 <th className="px-3 py-2 font-semibold whitespace-nowrap">Tempo</th>
                 <th className="px-3 py-2 font-semibold whitespace-nowrap">Data</th>
+                <th className="px-3 py-2 font-semibold whitespace-nowrap text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={6} className="px-3 py-3">
+                    <td colSpan={7} className="px-3 py-3">
                       <Skeleton className="h-5 w-full" />
                     </td>
                   </tr>
                 ))
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-3 py-12 text-center text-muted-foreground">
                     Nenhuma atividade encontrada para os filtros selecionados.
                   </td>
                 </tr>
@@ -160,6 +167,7 @@ export function ActivityTable({
                   const role = memberInfo?.role ?? "member";
                   const roleMeta = ROLE_META[role] ?? ROLE_META.member;
                   const appLabel = APP_LABELS[log.appSlug] ?? log.appSlug;
+                  const url = buildResourceUrl(log);
                   return (
                     <tr key={log.id} className="hover:bg-muted/10">
                       <td className="px-3 py-2 whitespace-nowrap">
@@ -202,6 +210,22 @@ export function ActivityTable({
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
                         {formatDate(log.createdAt)}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-right">
+                        {isLightUrl(url) ? (
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-[11px] gap-1 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                          >
+                            <Link href={url!}>
+                              <ExternalLink className="size-3" /> Abrir
+                            </Link>
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[10px]">—</span>
+                        )}
                       </td>
                     </tr>
                   );

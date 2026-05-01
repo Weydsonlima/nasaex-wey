@@ -59,6 +59,7 @@ export const getActivitySummary = base
           createdAt: true,
           durationMs: true,
         },
+        orderBy: { createdAt: "asc" },
       }),
       prisma.userPresence.findMany({
         where: { organizationId: { in: requestedOrgs } },
@@ -89,6 +90,35 @@ export const getActivitySummary = base
 
     const fiveMinAgo = Date.now() - 5 * 60 * 1000;
 
+    // ── Cálculo de "Tempo ativo" via janelas de log ───────────────────────────
+    // Cada log gera uma janela [t, t+SESSION_WINDOW_MS]. Janelas sobrepostas são
+    // mescladas (mesma sessão). A soma das janelas mescladas vira o tempo ativo.
+    // Funciona mesmo sem `durationMs` (que raramente é preenchido hoje).
+    const SESSION_WINDOW_MS = 5 * 60 * 1000;
+
+    function sumMergedWindows(timestamps: number[], explicitDurations: number[]): number {
+      if (timestamps.length === 0) return 0;
+      const items = timestamps
+        .map((t, i) => ({ t, d: explicitDurations[i] ?? 0 }))
+        .sort((a, b) => a.t - b.t);
+      let total = 0;
+      let winStart = items[0].t;
+      let winEnd = items[0].t + Math.max(SESSION_WINDOW_MS, items[0].d);
+      for (let i = 1; i < items.length; i++) {
+        const t = items[i].t;
+        const end = t + Math.max(SESSION_WINDOW_MS, items[i].d);
+        if (t <= winEnd) {
+          winEnd = Math.max(winEnd, end);
+        } else {
+          total += winEnd - winStart;
+          winStart = t;
+          winEnd = end;
+        }
+      }
+      total += winEnd - winStart;
+      return total;
+    }
+
     const byUser: Record<string, {
       userId: string;
       name: string;
@@ -98,7 +128,9 @@ export const getActivitySummary = base
       isOnlineNow: boolean;
       currentActivity: { appSlug: string | null; path: string | null; resource: string | null } | null;
       spacePoints: number;
-      byApp: Record<string, { actions: number; activeMs: number }>;
+      byApp: Record<string, { actions: number; activeMs: number; _times: number[]; _durs: number[] }>;
+      _times: number[];
+      _durs: number[];
     }> = {};
 
     for (const log of logs) {
@@ -113,15 +145,30 @@ export const getActivitySummary = base
           currentActivity: null,
           spacePoints: 0,
           byApp: {},
+          _times: [],
+          _durs: [],
         };
       }
       const u = byUser[log.userId];
       u.actions++;
+      const ts = log.createdAt.getTime();
       const dur = log.durationMs ?? 0;
-      u.activeMs += dur;
-      if (!u.byApp[log.appSlug]) u.byApp[log.appSlug] = { actions: 0, activeMs: 0 };
+      u._times.push(ts);
+      u._durs.push(dur);
+      if (!u.byApp[log.appSlug]) u.byApp[log.appSlug] = { actions: 0, activeMs: 0, _times: [], _durs: [] };
       u.byApp[log.appSlug].actions++;
-      u.byApp[log.appSlug].activeMs += dur;
+      u.byApp[log.appSlug]._times.push(ts);
+      u.byApp[log.appSlug]._durs.push(dur);
+    }
+
+    // Computa janelas mescladas por usuário e por app
+    for (const userId in byUser) {
+      const u = byUser[userId];
+      u.activeMs = sumMergedWindows(u._times, u._durs);
+      for (const slug in u.byApp) {
+        const ba = u.byApp[slug];
+        ba.activeMs = sumMergedWindows(ba._times, ba._durs);
+      }
     }
 
     for (const p of presence) {
@@ -144,20 +191,35 @@ export const getActivitySummary = base
       if (userId && byUser[userId]) byUser[userId].spacePoints += sp.points;
     }
 
-    const byAppMap: Record<string, { actions: number; activeMs: number; users: Set<string> }> = {};
+    const byAppMap: Record<string, { actions: number; activeMs: number; users: Set<string>; _times: number[]; _durs: number[] }> = {};
     for (const log of logs) {
-      if (!byAppMap[log.appSlug]) byAppMap[log.appSlug] = { actions: 0, activeMs: 0, users: new Set() };
+      if (!byAppMap[log.appSlug]) byAppMap[log.appSlug] = { actions: 0, activeMs: 0, users: new Set(), _times: [], _durs: [] };
       byAppMap[log.appSlug].actions++;
-      byAppMap[log.appSlug].activeMs += log.durationMs ?? 0;
+      byAppMap[log.appSlug]._times.push(log.createdAt.getTime());
+      byAppMap[log.appSlug]._durs.push(log.durationMs ?? 0);
       byAppMap[log.appSlug].users.add(log.userId);
     }
+    for (const slug in byAppMap) {
+      byAppMap[slug].activeMs = sumMergedWindows(byAppMap[slug]._times, byAppMap[slug]._durs);
+    }
+
+    const totalActiveMs = Object.values(byUser).reduce((s, u) => s + u.activeMs, 0);
 
     return {
-      totalActiveSec: Math.round(logs.reduce((s, l) => s + (l.durationMs ?? 0), 0) / 1000),
-      totalOnlineSec: 0,
+      totalActiveSec: Math.round(totalActiveMs / 1000),
+      totalOnlineSec: Math.round(totalActiveMs / 1000),
       spacePointsEarned: spTransactions.reduce((s, t) => s + t.points, 0),
       starsConsumed: stars.reduce((s, t) => s + Math.abs(t.amount), 0),
-      byUser: Object.values(byUser).sort((a, b) => b.actions - a.actions),
+      byUser: Object.values(byUser)
+        .map((u) => {
+          const { _times, _durs, byApp, ...rest } = u as any;
+          const cleanByApp: Record<string, { actions: number; activeMs: number }> = {};
+          for (const slug in byApp) {
+            cleanByApp[slug] = { actions: byApp[slug].actions, activeMs: byApp[slug].activeMs };
+          }
+          return { ...rest, byApp: cleanByApp };
+        })
+        .sort((a: any, b: any) => b.actions - a.actions),
       byApp: Object.entries(byAppMap)
         .map(([slug, v]) => ({
           appSlug: slug,

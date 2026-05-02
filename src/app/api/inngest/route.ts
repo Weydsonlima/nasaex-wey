@@ -20,6 +20,10 @@ import {
 } from "@/inngest/functions/crons/partner-tier-recalc";
 import { partnerPayoutCloseCycle } from "@/inngest/functions/crons/partner-payout-close-cycle";
 import { partnerGracePeriodMonitor } from "@/inngest/functions/crons/partner-grace-period-monitor";
+import { publishPostHandler } from "@/inngest/functions/nasa-planner/publish-post-handler";
+import { publishScheduledPosts } from "@/inngest/functions/nasa-planner/publish-scheduled-posts";
+import { refreshMetaTokens } from "@/inngest/functions/nasa-planner/refresh-meta-tokens";
+import { syncPostMetricsCron } from "@/inngest/functions/nasa-planner/sync-post-metrics-cron";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -34,6 +38,11 @@ export const { GET, POST, PUT } = serve({
     partnerTierRecalcOne,
     partnerPayoutCloseCycle,
     partnerGracePeriodMonitor,
+    // ── NASA Planner ──
+    publishPostHandler,
+    publishScheduledPosts,
+    refreshMetaTokens,
+    syncPostMetricsCron,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,

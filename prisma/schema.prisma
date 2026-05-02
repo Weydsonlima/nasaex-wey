@@ -1676,6 +1676,10 @@ model PlatformIntegration {
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
 
+  lastErrorMessage String?   @map("last_error_message")
+  lastErrorAt      DateTime? @map("last_error_at")
+  lastSyncAt       DateTime? @map("last_sync_at")
+
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, platform])
@@ -2219,6 +2223,23 @@ model NasaPlannerPost {
   campaignId     String?  @map("campaign_id")
   referenceLinks String[] @default([]) @map("reference_links")
 
+  logoKey       String? @map("logo_key")
+  videoKey      String? @map("video_key")
+  videoDuration Int?    @map("video_duration")
+  isAd          Boolean @default(false) @map("is_ad")
+
+  externalIgPostId String? @map("external_ig_post_id")
+  externalFbPostId String? @map("external_fb_post_id")
+
+  metricsImpressions Int?      @map("metrics_impressions")
+  metricsReach       Int?      @map("metrics_reach")
+  metricsLikes       Int?      @map("metrics_likes")
+  metricsComments    Int?      @map("metrics_comments")
+  metricsShares      Int?      @map("metrics_shares")
+  metricsVideoViews  Int?      @map("metrics_video_views")
+  metricsSyncedAt    DateTime? @map("metrics_synced_at")
+  metricsSyncError   String?   @map("metrics_sync_error")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -2240,6 +2261,8 @@ model NasaPlannerPostSlide {
   order  Int    @default(0)
 
   imageKey      String? @map("image_key")
+  videoKey      String? @map("video_key")
+  targetFormat  String? @default("1:1") @map("target_format")
   headline      String?
   subtext       String?
   overlayConfig Json    @default("{}") @map("overlay_config")

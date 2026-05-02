@@ -24,6 +24,7 @@ import { publishPostHandler } from "@/inngest/functions/nasa-planner/publish-pos
 import { publishScheduledPosts } from "@/inngest/functions/nasa-planner/publish-scheduled-posts";
 import { refreshMetaTokens } from "@/inngest/functions/nasa-planner/refresh-meta-tokens";
 import { syncPostMetricsCron } from "@/inngest/functions/nasa-planner/sync-post-metrics-cron";
+import { syncMetaAdsKpis } from "@/inngest/functions/crons/sync-meta-ads-kpis";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -43,6 +44,8 @@ export const { GET, POST, PUT } = serve({
     publishScheduledPosts,
     refreshMetaTokens,
     syncPostMetricsCron,
+    // ── Meta Ads ──
+    syncMetaAdsKpis,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,

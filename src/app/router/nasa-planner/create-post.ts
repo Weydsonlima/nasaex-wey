@@ -17,6 +17,7 @@ export const createPost = base
       campaignId: z.string().optional(),
       referenceLinks: z.array(z.string()).optional(),
       scheduledAt: z.string().optional(),
+      isAd: z.boolean().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
@@ -32,6 +33,7 @@ export const createPost = base
         campaignId: input.campaignId ?? null,
         referenceLinks: input.referenceLinks ?? [],
         scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
+        isAd: input.isAd ?? false,
       },
       include: { slides: true },
     });

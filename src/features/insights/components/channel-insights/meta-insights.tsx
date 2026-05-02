@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useDashboardFilters } from "@/features/insights/hooks/use-dashboard-store";
+import { AddToPlannerButton } from "@/features/insights/components/add-to-planner-button";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,7 @@ export function MetaInsights() {
           <span className="text-sm text-muted-foreground">Dados da conta de anúncios</span>
         </div>
         <div className="flex items-center gap-2">
+          <AddToPlannerButton context="Meta Ads Insights" suggestedTitle="Post baseado em Meta Insights" />
           <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={loading} className="h-8 w-8 p-0">
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
           </Button>

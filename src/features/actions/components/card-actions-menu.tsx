@@ -11,6 +11,7 @@ import {
   Building2Icon,
   Trash2Icon,
   FolderKanbanIcon,
+  CalendarPlusIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
 import { useDeleteAction } from "../hooks/use-tasks";
 import { ShareActionDialog } from "./share-action-dialog";
 import { MoveActionWorkspaceDialog } from "./move-action-workspace";
+import { ActionToPlannerDialog } from "@/features/workspace/components/action-to-planner-button";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +61,7 @@ export function CardActionsMenu({
 }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [moveWorkspaceOpen, setMoveWorkspaceOpen] = useState(false);
+  const [plannerOpen, setPlannerOpen] = useState(false);
   // const [historicOpen, setHistoricOpen] = useState(false);
   // const [isModalOpen, setIsModalOpen] = useState(false);
   const copyAction = useCopyAction();
@@ -182,6 +185,15 @@ export function CardActionsMenu({
             Duplicar ação
           </DropdownMenuItem>
 
+          {/* Add to Planner */}
+          <DropdownMenuItem
+            onClick={() => setPlannerOpen(true)}
+            className="gap-2 cursor-pointer text-violet-600 focus:text-violet-700 focus:bg-violet-50 dark:focus:bg-violet-950/30"
+          >
+            <CalendarPlusIcon className="size-3.5" />
+            Adicionar ao Planner
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
 
           {/* Share link */}
@@ -275,6 +287,12 @@ export function CardActionsMenu({
         currentWorkspaceId={workspaceId}
         open={moveWorkspaceOpen}
         onOpenChange={setMoveWorkspaceOpen}
+      />
+      <ActionToPlannerDialog
+        actionId={actionId}
+        actionTitle={actionTitle}
+        open={plannerOpen}
+        onOpenChange={setPlannerOpen}
       />
       {/* <HistoricSheet
         actionId={actionId}

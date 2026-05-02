@@ -21,6 +21,8 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useDashboardFilters } from "@/features/insights/hooks/use-dashboard-store";
+import { MetaAdsDrilldown } from "./meta-ads-drilldown";
+import { MetaAdsCampaignManager } from "./meta-ads-campaign-manager";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -266,6 +268,22 @@ export function MetaInsights() {
             sub="% do vídeo assistido em média"
             icon={TrendingUp} color="bg-orange-100 text-orange-600 dark:bg-orange-900/40" loading={loading} />
         </div>
+      </section>
+
+      {/* 🔍 Drill-down */}
+      <section className="space-y-4">
+        <SectionHeader icon="🔍" title="Drill-down de performance"
+          description="Detalhe por campanha, conjunto de anúncios ou anúncio individual"
+          color="border-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20" />
+        <MetaAdsDrilldown />
+      </section>
+
+      {/* 📣 Gerenciamento */}
+      <section className="space-y-4">
+        <SectionHeader icon="📣" title="Gerenciar campanhas"
+          description="Crie, pause, ative ou exclua campanhas Meta Ads diretamente do NASA"
+          color="border-fuchsia-500 bg-fuchsia-50/50 dark:bg-fuchsia-950/20" />
+        <MetaAdsCampaignManager />
       </section>
     </div>
   );

@@ -16,10 +16,14 @@ export const syncSnapshots = base
     z.object({
       level: z.enum(["account", "campaign", "adset", "ad"]).default("campaign"),
       datePreset: z.string().default("yesterday"),
+      adAccountId: z.string().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
-    const auth = await getMetaAuth(context.org.id);
+    const auth = await getMetaAuth(context.org.id, {
+      userId: context.user.id,
+      adAccountIdOverride: input.adAccountId,
+    });
     if (!auth) return { synced: 0, connected: false };
 
     const rows = await fetchAdsInsights(auth, {

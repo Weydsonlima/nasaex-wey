@@ -24,6 +24,7 @@ import { useDashboardFilters } from "@/features/insights/hooks/use-dashboard-sto
 import { AddToPlannerButton } from "@/features/insights/components/add-to-planner-button";
 import { MetaAdsDrilldown } from "./meta-ads-drilldown";
 import { MetaAdsCampaignManager } from "./meta-ads-campaign-manager";
+import { MetaAccountSwitcher } from "@/features/integrations/components/meta-account-switcher";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ export function MetaInsights() {
   return (
     <div className="space-y-6">
       {/* Header controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="border-[#0082FB]/40 text-[#0082FB] bg-[#0082FB]/5 gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#0082FB] animate-pulse" />
@@ -159,7 +160,8 @@ export function MetaInsights() {
           </Badge>
           <span className="text-sm text-muted-foreground">Dados da conta de anúncios</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <MetaAccountSwitcher />
           <AddToPlannerButton context="Meta Ads Insights" suggestedTitle="Post baseado em Meta Insights" />
           <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={loading} className="h-8 w-8 p-0">
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />

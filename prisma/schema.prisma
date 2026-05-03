@@ -108,6 +108,8 @@ model User {
   partnerTierHistoryTriggered   PartnerTierHistory[]  @relation("PartnerTierHistoryTrigger")
   partnerPayoutsMarkedPaid      PartnerPayout[]       @relation("PartnerPayoutPaidBy")
 
+  metaAccountAccess MemberMetaAccountAccess[]
+
   @@unique([email])
   @@map("user")
 }
@@ -302,6 +304,8 @@ model Organization {
   metaAdCampaigns     MetaAdCampaign[]
   metaAdSets          MetaAdSet[]
   metaAds             MetaAd[]
+
+  memberMetaAccountAccess MemberMetaAccountAccess[]
 
   @@unique([slug])
   @@map("organization")
@@ -2360,6 +2364,41 @@ model OrgPermission {
   @@unique([organizationId, role, appKey])
   @@index([organizationId])
   @@map("org_permission")
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║ 🚨🚨🚨 MIGRATION PENDENTE — DEV: APLICAR ANTES DE TESTAR EM RUNTIME 🚨🚨🚨 ║
+// ║                                                                          ║
+// ║  Tabela `member_meta_account_access` e enum `MetaAccountKind` ainda      ║
+// ║  NÃO foram aplicados no banco. Sem isso, as procedures de "multi-conta   ║
+// ║  Meta + permissões" quebram em runtime.                                  ║
+// ║                                                                          ║
+// ║  👉 Ver instruções completas: prisma/PENDING_MIGRATIONS.md               ║
+// ║                                                                          ║
+// ║  TL;DR (dev local):                                                      ║
+// ║     pnpm prisma db push && pnpm db:generate                              ║
+// ║                                                                          ║
+// ║  TL;DR (produção): rodar `prisma migrate deploy` quando histórico OK.    ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+enum MetaAccountKind {
+  AD_ACCOUNT
+  PAGE
+  IG_ACCOUNT
+}
+
+model MemberMetaAccountAccess {
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String          @map("user_id")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           MetaAccountKind
+  accountKey     String          @map("account_key") // act_xxx | page_id | ig_id
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  @@unique([organizationId, userId, kind, accountKey])
+  @@index([organizationId, userId])
+  @@map("member_meta_account_access")
 }
 
 model OrgActivityLog {

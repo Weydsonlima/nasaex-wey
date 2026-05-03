@@ -16,10 +16,14 @@ export const getInsightsDrilldown = base
       datePreset: z.enum(DATE_PRESETS).default("last_30d"),
       startDate: z.string().optional(),
       endDate: z.string().optional(),
+      adAccountId: z.string().optional(),
     }),
   )
   .handler(async ({ input, context }) => {
-    const auth = await getMetaAuth(context.org.id);
+    const auth = await getMetaAuth(context.org.id, {
+      userId: context.user.id,
+      adAccountIdOverride: input.adAccountId,
+    });
     if (!auth) return { connected: false, rows: [] as never[] };
 
     try {

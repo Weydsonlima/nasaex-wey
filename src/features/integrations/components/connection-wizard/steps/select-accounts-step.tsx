@@ -214,16 +214,23 @@ function Section({ title, count, children }: { title: string; count: number; chi
 
 function Row({ checked, onToggle, title, subtitle }: { checked: boolean; onToggle: () => void; title: string; subtitle?: string }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onToggle}
-      className="flex w-full items-center gap-3 rounded-lg border border-border/60 bg-card p-2.5 text-left transition hover:bg-accent"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-card p-2.5 text-left transition hover:bg-accent"
     >
       <Checkbox checked={checked} onCheckedChange={onToggle} className="pointer-events-none" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{title}</p>
         {subtitle && <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>}
       </div>
-    </button>
+    </div>
   );
 }

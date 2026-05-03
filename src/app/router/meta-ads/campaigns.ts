@@ -52,31 +52,45 @@ function rawToUpsert(orgId: string, adAccountId: string, raw: MetaCampaignRaw) {
 export const list = base
   .use(requiredAuthMiddleware)
   .use(requireOrgMiddleware)
-  .input(z.object({ sync: z.boolean().default(false) }).optional().default({ sync: false }))
+  .input(
+    z
+      .object({
+        sync: z.boolean().default(false),
+        adAccountId: z.string().optional(),
+      })
+      .optional()
+      .default({ sync: false }),
+  )
   .handler(async ({ input, context }) => {
     const orgId = context.org.id;
+    const userId = context.user.id;
 
-    if (input?.sync) {
-      const auth = await getMetaAuth(orgId);
-      if (auth) {
-        try {
-          const remote = await listMetaCampaigns(auth);
-          for (const raw of remote) {
-            const data = rawToUpsert(orgId, auth.adAccountId, raw);
-            await prisma.metaAdCampaign.upsert({
-              where: { metaCampaignId: raw.id },
-              create: data,
-              update: data,
-            });
-          }
-        } catch {
-          // tolera falha de sync e segue retornando o cache local
+    const auth = await getMetaAuth(orgId, {
+      userId,
+      adAccountIdOverride: input?.adAccountId,
+    });
+
+    if (input?.sync && auth) {
+      try {
+        const remote = await listMetaCampaigns(auth);
+        for (const raw of remote) {
+          const data = rawToUpsert(orgId, auth.adAccountId, raw);
+          await prisma.metaAdCampaign.upsert({
+            where: { metaCampaignId: raw.id },
+            create: data,
+            update: data,
+          });
         }
+      } catch {
+        // tolera falha de sync e segue retornando o cache local
       }
     }
 
     const campaigns = await prisma.metaAdCampaign.findMany({
-      where: { organizationId: orgId },
+      where: {
+        organizationId: orgId,
+        ...(auth ? { adAccountId: auth.adAccountId } : {}),
+      },
       orderBy: { updatedAt: "desc" },
     });
 
@@ -153,7 +167,7 @@ export const create = base
     }),
   )
   .handler(async ({ input, context }) => {
-    const auth = await getMetaAuth(context.org.id);
+    const auth = await getMetaAuth(context.org.id, { userId: context.user.id });
     if (!auth) throw new Error("Integração Meta não configurada");
 
     const created = await createMetaCampaign(auth, input);
@@ -194,7 +208,7 @@ export const update = base
     }),
   )
   .handler(async ({ input, context }) => {
-    const auth = await getMetaAuth(context.org.id);
+    const auth = await getMetaAuth(context.org.id, { userId: context.user.id });
     if (!auth) throw new Error("Integração Meta não configurada");
 
     const local = await prisma.metaAdCampaign.findFirst({
@@ -235,7 +249,7 @@ export const remove = base
   .use(requireOrgMiddleware)
   .input(z.object({ id: z.string() }))
   .handler(async ({ input, context }) => {
-    const auth = await getMetaAuth(context.org.id);
+    const auth = await getMetaAuth(context.org.id, { userId: context.user.id });
     if (!auth) throw new Error("Integração Meta não configurada");
 
     const local = await prisma.metaAdCampaign.findFirst({

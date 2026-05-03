@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Megaphone, Plus, RefreshCw, Trash2, PauseCircle, PlayCircle } from "lucide-react";
+import { MetaAccountSwitcher } from "@/features/integrations/components/meta-account-switcher";
 
 const OBJECTIVES = [
   { value: "OUTCOME_LEADS", label: "Leads" },
@@ -116,12 +117,13 @@ export function MetaAdsCampaignManager() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base flex items-center gap-2">
           <Megaphone className="size-4 text-[#0082FB]" />
           Gerenciar Campanhas Meta Ads
         </CardTitle>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <MetaAccountSwitcher />
           <Button
             size="sm"
             variant="outline"

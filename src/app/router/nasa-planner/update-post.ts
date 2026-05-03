@@ -41,6 +41,8 @@ export const updatePost = base
       isAd: z.boolean().optional(),
       clientOrgName: z.string().optional(),
       orgProjectId: z.string().nullable().optional(),
+      targetIgAccountId: z.string().nullable().optional(),
+      targetFbPageId: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ input, context }) => {

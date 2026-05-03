@@ -129,3 +129,20 @@ Quando subir pra prod:
 1. Garantir que histórico de migrations está alinhado (`migrate status` limpo).
 2. Rodar `pnpm migrate` (que é `prisma migrate deploy`) no pipeline de deploy.
 3. Sem `migrate dev` em prod — só `deploy`.
+
+---
+
+## Migration adicional — campos de publicação no `NasaPlannerPost` (2026-05-03)
+
+Para suportar publicação direta nas redes sociais a partir do Planner (escolher
+IG account / FB page + capturar erros), foram adicionados ao `NasaPlannerPost`:
+
+```sql
+ALTER TABLE "nasa_planner_posts"
+  ADD COLUMN "target_ig_account_id" TEXT,
+  ADD COLUMN "target_fb_page_id"    TEXT,
+  ADD COLUMN "publish_error"        TEXT;
+```
+
+Sem isso, o `update-post.ts`/`publish-post.ts` quebram ao tentar gravar a
+escolha do destino e qualquer erro retornado pela Graph API.

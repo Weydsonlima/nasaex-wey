@@ -50,6 +50,8 @@ import { VideoIcon } from "lucide-react";
 import { PostMediaUploader } from "../post-media-uploader";
 import { useNetworkConnectionStatus } from "../../hooks/use-network-status";
 import { PostMetricsRow } from "../post-metrics-row";
+import { PostPreview } from "../post-preview";
+import { PublishTargetPicker } from "../publish-target-picker";
 
 const POST_TYPE_OPTIONS = [
   { value: "STATIC", label: "Imagem" },
@@ -459,6 +461,7 @@ export function PostsTab({ plannerId }: { plannerId: string }) {
           </DialogHeader>
           {selectedPost && (
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              <PostPreview post={selectedPost as any} />
               {selectedPost.thumbnail ? (
                 <div className="relative group rounded-lg overflow-hidden aspect-square w-full max-w-xs mx-auto bg-muted">
                   <img
@@ -537,6 +540,16 @@ export function PostsTab({ plannerId }: { plannerId: string }) {
                   <BuildingIcon className="size-3.5" />{selectedPost.clientOrgName}
                 </p>
               )}
+
+              <PublishTargetPicker
+                targetNetworks={selectedPost.targetNetworks ?? []}
+                igAccountId={(selectedPost as any).targetIgAccountId}
+                fbPageId={(selectedPost as any).targetFbPageId}
+                disabled={updatePost.isPending || selectedPost.status === "PUBLISHED"}
+                onChange={(patch) =>
+                  updatePost.mutate({ postId: selectedPost.id, ...patch } as any)
+                }
+              />
 
               {/* Post para anúncio */}
               <div className="flex items-center justify-between rounded-lg border px-4 py-3">

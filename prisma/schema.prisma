@@ -2238,8 +2238,12 @@ model NasaPlannerPost {
   videoDuration Int?    @map("video_duration")
   isAd          Boolean @default(false) @map("is_ad")
 
+  targetIgAccountId String? @map("target_ig_account_id")
+  targetFbPageId    String? @map("target_fb_page_id")
+
   externalIgPostId String? @map("external_ig_post_id")
   externalFbPostId String? @map("external_fb_post_id")
+  publishError     String? @map("publish_error")
 
   metricsImpressions Int?      @map("metrics_impressions")
   metricsReach       Int?      @map("metrics_reach")

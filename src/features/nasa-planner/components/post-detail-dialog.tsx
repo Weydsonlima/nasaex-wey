@@ -38,6 +38,8 @@ import { ImageEditorDialog } from "./image-editor/image-editor-dialog";
 import { VideoEditorDialog } from "./video-editor/video-editor-dialog";
 import { PostMediaUploader } from "./post-media-uploader";
 import { PostMetaEditor } from "./post-meta-editor";
+import { PostPreview } from "./post-preview";
+import { PublishTargetPicker } from "./publish-target-picker";
 import type { MenuAction } from "./posts-calendar/types";
 import { useNetworkConnectionStatus } from "../hooks/use-network-status";
 
@@ -225,6 +227,9 @@ export function PostDetailDialog({ post, plannerId, open, onOpenChange, initialA
 
           {post && (
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {/* Preview do post (mockup IG) */}
+              <PostPreview post={post} />
+
               {/* Thumbnail */}
               {post.thumbnail ? (
                 <div className="relative group rounded-lg overflow-hidden aspect-square w-full max-w-xs mx-auto bg-muted">
@@ -292,6 +297,17 @@ export function PostDetailDialog({ post, plannerId, open, onOpenChange, initialA
                   <BuildingIcon className="size-3.5" />{post.clientOrgName}
                 </p>
               )}
+
+              {/* Onde publicar */}
+              <PublishTargetPicker
+                targetNetworks={post.targetNetworks ?? []}
+                igAccountId={post.targetIgAccountId}
+                fbPageId={post.targetFbPageId}
+                disabled={updatePost.isPending || post.status === "PUBLISHED"}
+                onChange={(patch) =>
+                  updatePost.mutate({ postId: post.id, ...patch } as any)
+                }
+              />
 
               {post.status === "PUBLISHED" && (post.externalIgPostId || post.externalFbPostId) && (
                 <div className="rounded-lg border bg-muted/30 p-3 space-y-2">

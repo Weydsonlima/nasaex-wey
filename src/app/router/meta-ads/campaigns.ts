@@ -11,7 +11,7 @@ import {
 } from "@/http/meta/ads-management";
 import { z } from "zod";
 import { getMetaAuth } from "./_helpers";
-import { MetaAdEntityStatus } from "@/generated/prisma/enums";
+import { MetaAdEntityStatus, MetaAdLevel } from "@/generated/prisma/enums";
 
 const STATUS_VALUES = [
   "ACTIVE", "PAUSED", "DELETED", "ARCHIVED",
@@ -79,7 +79,61 @@ export const list = base
       where: { organizationId: orgId },
       orderBy: { updatedAt: "desc" },
     });
-    return { campaigns };
+
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    since.setHours(0, 0, 0, 0);
+
+    const metaIds = campaigns.map((c) => c.metaCampaignId).filter(Boolean) as string[];
+    const snapshots = metaIds.length
+      ? await prisma.metaAdsKpiSnapshot.findMany({
+          where: {
+            organizationId: orgId,
+            level: MetaAdLevel.CAMPAIGN,
+            entityId: { in: metaIds },
+            date: { gte: since },
+          },
+          select: {
+            entityId: true,
+            spend: true,
+            impressions: true,
+            clicks: true,
+            conversions: true,
+            leads: true,
+            conversionValue: true,
+          },
+        })
+      : [];
+
+    const kpiByEntity: Record<string, {
+      spend: number; impressions: number; clicks: number;
+      conversions: number; leads: number; conversionValue: number;
+    }> = {};
+    for (const s of snapshots) {
+      const k = kpiByEntity[s.entityId] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, leads: 0, conversionValue: 0 };
+      k.spend += Number(s.spend ?? 0);
+      k.impressions += s.impressions ?? 0;
+      k.clicks += s.clicks ?? 0;
+      k.conversions += s.conversions ?? 0;
+      k.leads += s.leads ?? 0;
+      k.conversionValue += Number(s.conversionValue ?? 0);
+      kpiByEntity[s.entityId] = k;
+    }
+
+    const campaignsWithKpis = campaigns.map((c) => {
+      const k = (c.metaCampaignId && kpiByEntity[c.metaCampaignId]) || null;
+      const ctr = k && k.impressions > 0 ? (k.clicks / k.impressions) * 100 : 0;
+      const cpc = k && k.clicks > 0 ? k.spend / k.clicks : 0;
+      const cpm = k && k.impressions > 0 ? (k.spend / k.impressions) * 1000 : 0;
+      const cpa = k && k.conversions > 0 ? k.spend / k.conversions : 0;
+      const roas = k && k.spend > 0 ? k.conversionValue / k.spend : 0;
+      return {
+        ...c,
+        kpis: k ? { ...k, ctr, cpc, cpm, cpa, roas } : null,
+      };
+    });
+
+    return { campaigns: campaignsWithKpis };
   });
 
 export const create = base

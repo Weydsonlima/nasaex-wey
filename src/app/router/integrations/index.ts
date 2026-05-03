@@ -7,6 +7,9 @@ import { newNasaIntegration } from "./new-nasa-total";
 import { newNasaIntegrationPartial } from "./new-nasa-partial";
 import { setupMetaIntegration, getMetaIntegration } from "./setup-meta";
 import { listAvailableInstances } from "./list-available";
+import { oauthFinalize } from "./oauth-finalize";
+import { disconnectOAuth } from "./disconnect-oauth";
+import { getConnectionStatus } from "./get-connection-status";
 
 export const integrationsRouter = {
   create: createInstanceUazapi,
@@ -19,4 +22,7 @@ export const integrationsRouter = {
   setupMeta: setupMetaIntegration,
   getMeta: getMetaIntegration,
   listAvailable: listAvailableInstances,
+  oauthFinalize,
+  disconnectOAuth,
+  getConnectionStatus,
 };

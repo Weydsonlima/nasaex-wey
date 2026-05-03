@@ -48,6 +48,15 @@ const OBJECTIVES = [
 const fmtCurrency = (v: number | null | undefined) =>
   v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
 
+const fmtNum = (v: number | null | undefined) =>
+  v == null ? "—" : new Intl.NumberFormat("pt-BR").format(Number(v));
+
+const fmtPct = (v: number | null | undefined) =>
+  v == null ? "—" : `${Number(v).toFixed(2)}%`;
+
+const fmtX = (v: number | null | undefined) =>
+  v == null ? "—" : `${Number(v).toFixed(2)}x`;
+
 export function MetaAdsCampaignManager() {
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -142,22 +151,49 @@ export function MetaAdsCampaignManager() {
                 <tr className="border-b text-xs text-muted-foreground">
                   <th className="text-left py-2 px-2 font-medium">Nome</th>
                   <th className="text-left py-2 px-2 font-medium">Status</th>
-                  <th className="text-left py-2 px-2 font-medium">Objetivo</th>
-                  <th className="text-right py-2 px-2 font-medium">Orçamento diário</th>
+                  <th className="text-right py-2 px-2 font-medium">Orç./dia</th>
+                  <th className="text-right py-2 px-2 font-medium">Gasto 30d</th>
+                  <th className="text-right py-2 px-2 font-medium">Impr.</th>
+                  <th className="text-right py-2 px-2 font-medium">Cliques</th>
+                  <th className="text-right py-2 px-2 font-medium">CTR</th>
+                  <th className="text-right py-2 px-2 font-medium">CPC</th>
+                  <th className="text-right py-2 px-2 font-medium">CPM</th>
+                  <th className="text-right py-2 px-2 font-medium">Conv.</th>
+                  <th className="text-right py-2 px-2 font-medium">CPA</th>
+                  <th className="text-right py-2 px-2 font-medium">ROAS</th>
                   <th className="text-right py-2 px-2 font-medium">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {campaigns.map((c) => (
+                {campaigns.map((c) => {
+                  const k = (c as any).kpis as
+                    | { spend: number; impressions: number; clicks: number; conversions: number; ctr: number; cpc: number; cpm: number; cpa: number; roas: number }
+                    | null;
+                  return (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/40">
-                    <td className="py-2 px-2 max-w-[280px] truncate" title={c.name}>{c.name}</td>
+                    <td className="py-2 px-2 max-w-[220px] truncate" title={c.name}>
+                      <div className="font-medium">{c.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{c.objective ?? "—"}</div>
+                    </td>
                     <td className="py-2 px-2">
                       <Badge variant={c.status === "ACTIVE" ? "default" : "secondary"} className="text-xs">
                         {c.status}
                       </Badge>
                     </td>
-                    <td className="py-2 px-2 text-xs text-muted-foreground">{c.objective ?? "—"}</td>
-                    <td className="py-2 px-2 text-right">{fmtCurrency(c.dailyBudget as number | null)}</td>
+                    <td className="py-2 px-2 text-right text-xs">{fmtCurrency(c.dailyBudget as number | null)}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtCurrency(k.spend) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtNum(k.impressions) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtNum(k.clicks) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtPct(k.ctr) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtCurrency(k.cpc) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtCurrency(k.cpm) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtNum(k.conversions) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs">{k ? fmtCurrency(k.cpa) : "—"}</td>
+                    <td className="py-2 px-2 text-right text-xs font-medium">
+                      <span className={k && k.roas >= 2 ? "text-emerald-600" : k && k.roas >= 1 ? "text-amber-600" : "text-muted-foreground"}>
+                        {k ? fmtX(k.roas) : "—"}
+                      </span>
+                    </td>
                     <td className="py-2 px-2 text-right">
                       <div className="flex justify-end gap-1">
                         {c.status === "ACTIVE" ? (
@@ -193,7 +229,8 @@ export function MetaAdsCampaignManager() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

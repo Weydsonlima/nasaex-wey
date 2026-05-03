@@ -129,8 +129,7 @@ export function MetaInsights() {
     orpc.channelInsights.meta.queryOptions({ input: metaInput }),
   );
 
-  if (!isLoading && !data?.connected) return <NotConnected />;
-
+  const notConnected = !isLoading && !data?.connected;
   const d = data?.data;
   const loading = isLoading || isRefetching;
 
@@ -167,6 +166,25 @@ export function MetaInsights() {
           </Button>
         </div>
       </div>
+
+      {notConnected && (
+        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-amber-500/30 bg-amber-50/40 dark:bg-amber-950/20">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="size-5 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Meta Ads não conectado</p>
+              <p className="text-xs text-muted-foreground">
+                Conecte para puxar KPIs ao vivo. As campanhas e snapshots locais seguem visíveis abaixo.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline" className="gap-1.5 shrink-0">
+            <Link href="/integrations">
+              Conectar <ArrowRight className="size-3.5" />
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {/* 📊 Alcance e Entrega */}
       <section>

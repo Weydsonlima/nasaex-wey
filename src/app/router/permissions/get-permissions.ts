@@ -29,6 +29,7 @@ export const ALL_APPS = [
   { key: "space-points",          label: "Space Points",            icon: "🏅" },
   // Análise & Navegação
   { key: "insights",              label: "Insights",                icon: "📊" },
+  { key: "insights-layout",       label: "Insights · Layout",       icon: "🧩" },
   { key: "nasa-route",            label: "NASA Route",              icon: "🗺️" },
   // Infra
   { key: "integrations",          label: "Integrações",             icon: "🔌" },

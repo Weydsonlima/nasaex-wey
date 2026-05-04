@@ -109,6 +109,8 @@ model User {
   partnerTierHistoryTriggered   PartnerTierHistory[]  @relation("PartnerTierHistoryTrigger")
   partnerPayoutsMarkedPaid      PartnerPayout[]       @relation("PartnerPayoutPaidBy")
 
+  metaAccountAccess MemberMetaAccountAccess[]
+
   @@unique([email])
   @@map("user")
 }
@@ -297,6 +299,14 @@ model Organization {
   partnerReferral        PartnerReferral?
   partnerCommissions     PartnerCommission[]
   partnerLifetimeGranted Boolean             @default(false) @map("partner_lifetime_granted")
+
+  // ── Meta Ads ──
+  metaAdsKpiSnapshots MetaAdsKpiSnapshot[]
+  metaAdCampaigns     MetaAdCampaign[]
+  metaAdSets          MetaAdSet[]
+  metaAds             MetaAd[]
+
+  memberMetaAccountAccess MemberMetaAccountAccess[]
 
   @@unique([slug])
   @@map("organization")
@@ -1694,6 +1704,10 @@ model PlatformIntegration {
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
 
+  lastErrorMessage String?   @map("last_error_message")
+  lastErrorAt      DateTime? @map("last_error_at")
+  lastSyncAt       DateTime? @map("last_sync_at")
+
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, platform])
@@ -2237,6 +2251,27 @@ model NasaPlannerPost {
   campaignId     String?  @map("campaign_id")
   referenceLinks String[] @default([]) @map("reference_links")
 
+  logoKey       String? @map("logo_key")
+  videoKey      String? @map("video_key")
+  videoDuration Int?    @map("video_duration")
+  isAd          Boolean @default(false) @map("is_ad")
+
+  targetIgAccountId String? @map("target_ig_account_id")
+  targetFbPageId    String? @map("target_fb_page_id")
+
+  externalIgPostId String? @map("external_ig_post_id")
+  externalFbPostId String? @map("external_fb_post_id")
+  publishError     String? @map("publish_error")
+
+  metricsImpressions Int?      @map("metrics_impressions")
+  metricsReach       Int?      @map("metrics_reach")
+  metricsLikes       Int?      @map("metrics_likes")
+  metricsComments    Int?      @map("metrics_comments")
+  metricsShares      Int?      @map("metrics_shares")
+  metricsVideoViews  Int?      @map("metrics_video_views")
+  metricsSyncedAt    DateTime? @map("metrics_synced_at")
+  metricsSyncError   String?   @map("metrics_sync_error")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -2258,6 +2293,8 @@ model NasaPlannerPostSlide {
   order  Int    @default(0)
 
   imageKey      String? @map("image_key")
+  videoKey      String? @map("video_key")
+  targetFormat  String? @default("1:1") @map("target_format")
   headline      String?
   subtext       String?
   overlayConfig Json    @default("{}") @map("overlay_config")
@@ -2349,6 +2386,41 @@ model OrgPermission {
   @@unique([organizationId, role, appKey])
   @@index([organizationId])
   @@map("org_permission")
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║ 🚨🚨🚨 MIGRATION PENDENTE — DEV: APLICAR ANTES DE TESTAR EM RUNTIME 🚨🚨🚨 ║
+// ║                                                                          ║
+// ║  Tabela `member_meta_account_access` e enum `MetaAccountKind` ainda      ║
+// ║  NÃO foram aplicados no banco. Sem isso, as procedures de "multi-conta   ║
+// ║  Meta + permissões" quebram em runtime.                                  ║
+// ║                                                                          ║
+// ║  👉 Ver instruções completas: prisma/PENDING_MIGRATIONS.md               ║
+// ║                                                                          ║
+// ║  TL;DR (dev local):                                                      ║
+// ║     pnpm prisma db push && pnpm db:generate                              ║
+// ║                                                                          ║
+// ║  TL;DR (produção): rodar `prisma migrate deploy` quando histórico OK.    ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+enum MetaAccountKind {
+  AD_ACCOUNT
+  PAGE
+  IG_ACCOUNT
+}
+
+model MemberMetaAccountAccess {
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String          @map("user_id")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           MetaAccountKind
+  accountKey     String          @map("account_key") // act_xxx | page_id | ig_id
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  @@unique([organizationId, userId, kind, accountKey])
+  @@index([organizationId, userId])
+  @@map("member_meta_account_access")
 }
 
 model OrgActivityLog {
@@ -4797,4 +4869,176 @@ model PartnerProgramSettings {
   updatedAt                   DateTime @updatedAt @map("updated_at")
 
   @@map("partner_program_settings")
+}
+
+// ─────────────────────────────────────────────
+// META ADS — campanhas pagas (Insights + Ads Management)
+// ─────────────────────────────────────────────
+
+enum MetaAdEntityStatus {
+  ACTIVE
+  PAUSED
+  DELETED
+  ARCHIVED
+  PENDING_REVIEW
+  DISAPPROVED
+  PREAPPROVED
+  PENDING_BILLING_INFO
+  CAMPAIGN_PAUSED
+  ADSET_PAUSED
+  IN_PROCESS
+  WITH_ISSUES
+}
+
+enum MetaAdLevel {
+  ACCOUNT
+  CAMPAIGN
+  ADSET
+  AD
+}
+
+// Snapshot diário de KPIs Meta Ads (account/campaign/adset/ad).
+// Permite histórico/séries temporais e drill-down sem refazer chamadas à API.
+model MetaAdsKpiSnapshot {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  level          MetaAdLevel
+  entityId       String      @map("entity_id") // ID Meta da entidade (account/campaign/adset/ad)
+  entityName     String?     @map("entity_name")
+  date           DateTime    @db.Date
+  datePreset     String?     @map("date_preset")
+
+  // Core
+  reach       Int     @default(0)
+  impressions Int     @default(0)
+  frequency   Decimal @default(0) @db.Decimal(10, 4)
+  clicks      Int     @default(0)
+  ctr         Decimal @default(0) @db.Decimal(10, 4)
+  engagement  Int     @default(0)
+
+  // Custos (BRL)
+  spend Decimal @default(0) @db.Decimal(14, 2)
+  cpm   Decimal @default(0) @db.Decimal(14, 4)
+  cpc   Decimal @default(0) @db.Decimal(14, 4)
+  cpp   Decimal @default(0) @db.Decimal(14, 4)
+  cpl   Decimal @default(0) @db.Decimal(14, 4)
+  cpa   Decimal @default(0) @db.Decimal(14, 4)
+  cpv   Decimal @default(0) @db.Decimal(14, 4)
+
+  // Conversão
+  conversions     Int     @default(0)
+  leads           Int     @default(0)
+  conversionValue Decimal @default(0) @map("conversion_value") @db.Decimal(14, 2)
+  conversionRate  Decimal @default(0) @map("conversion_rate") @db.Decimal(10, 4)
+  roas            Decimal @default(0) @db.Decimal(14, 4)
+  roi             Decimal @default(0) @db.Decimal(14, 4)
+
+  // Vídeo
+  videoPlays        Int     @default(0) @map("video_plays")
+  videoP25          Int     @default(0) @map("video_p25")
+  videoP50          Int     @default(0) @map("video_p50")
+  videoP75          Int     @default(0) @map("video_p75")
+  videoP100         Int     @default(0) @map("video_p100")
+  videoAvgWatchTime Decimal @default(0) @map("video_avg_watch_time") @db.Decimal(10, 2)
+
+  raw       Json? // payload bruto Meta para debug
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, level, entityId, date])
+  @@index([organizationId, level, date])
+  @@index([organizationId, entityId])
+  @@map("meta_ads_kpi_snapshots")
+}
+
+// Espelho de campanhas Meta Ads gerenciadas via NASA.
+// Quando criada pelo backend NASA → metaCampaignId só é preenchido após sync com Meta.
+model MetaAdCampaign {
+  id                  String             @id @default(cuid())
+  organizationId      String             @map("organization_id")
+  metaCampaignId      String?            @unique @map("meta_campaign_id")
+  adAccountId         String             @map("ad_account_id")
+  name                String
+  objective           String?
+  status              MetaAdEntityStatus @default(PAUSED)
+  effectiveStatus     String?            @map("effective_status")
+  specialAdCategories String[]           @default([]) @map("special_ad_categories")
+  buyingType          String?            @map("buying_type")
+  dailyBudget         Decimal?           @map("daily_budget") @db.Decimal(14, 2)
+  lifetimeBudget      Decimal?           @map("lifetime_budget") @db.Decimal(14, 2)
+  bidStrategy         String?            @map("bid_strategy")
+  startTime           DateTime?          @map("start_time")
+  stopTime            DateTime?          @map("stop_time")
+  createdByUserId     String?            @map("created_by_user_id")
+  lastSyncedAt        DateTime?          @map("last_synced_at")
+  raw                 Json?
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  adsets       MetaAdSet[]
+  ads          MetaAd[]
+
+  @@index([organizationId])
+  @@index([adAccountId])
+  @@map("meta_ad_campaigns")
+}
+
+model MetaAdSet {
+  id               String             @id @default(cuid())
+  organizationId   String             @map("organization_id")
+  campaignId       String             @map("campaign_id")
+  metaAdsetId      String?            @unique @map("meta_adset_id")
+  name             String
+  status           MetaAdEntityStatus @default(PAUSED)
+  effectiveStatus  String?            @map("effective_status")
+  optimizationGoal String?            @map("optimization_goal")
+  billingEvent     String?            @map("billing_event")
+  bidAmount        Decimal?           @map("bid_amount") @db.Decimal(14, 4)
+  dailyBudget      Decimal?           @map("daily_budget") @db.Decimal(14, 2)
+  lifetimeBudget   Decimal?           @map("lifetime_budget") @db.Decimal(14, 2)
+  targeting        Json?
+  startTime        DateTime?          @map("start_time")
+  endTime          DateTime?          @map("end_time")
+  lastSyncedAt     DateTime?          @map("last_synced_at")
+  raw              Json?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign     MetaAdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads          MetaAd[]
+
+  @@index([organizationId])
+  @@index([campaignId])
+  @@map("meta_adsets")
+}
+
+model MetaAd {
+  id              String             @id @default(cuid())
+  organizationId  String             @map("organization_id")
+  campaignId      String             @map("campaign_id")
+  adsetId         String             @map("adset_id")
+  metaAdId        String?            @unique @map("meta_ad_id")
+  name            String
+  status          MetaAdEntityStatus @default(PAUSED)
+  effectiveStatus String?            @map("effective_status")
+  creativeId      String?            @map("creative_id")
+  creative        Json?
+  previewUrl      String?            @map("preview_url")
+  lastSyncedAt    DateTime?          @map("last_synced_at")
+  raw             Json?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign     MetaAdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  adset        MetaAdSet      @relation(fields: [adsetId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([campaignId])
+  @@index([adsetId])
+  @@map("meta_ads")
 }

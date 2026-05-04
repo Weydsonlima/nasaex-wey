@@ -40,7 +40,6 @@ import {
 import { cn } from "@/lib/utils";
 import { APP_LABELS } from "@/lib/activity-constants";
 
-// Role colors for chart bars
 const MEMBER_COLORS = [
   "#7C3AED",
   "#3B82F6",
@@ -176,7 +175,6 @@ function OnlineBadge() {
   );
 }
 
-// Custom tooltip for chart
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -200,7 +198,7 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
-export function HistoryTab() {
+export function ActivitiesPanel() {
   const { isSingle } = useOrgRole();
 
   const [period, setPeriod] = useState<"7d" | "30d" | "90d">("30d");
@@ -209,13 +207,11 @@ export function HistoryTab() {
   const [showChart, setShowChart] = useState(true);
   const [logsLimit, setLogsLimit] = useState(50);
 
-  // Date range from period — memoized so the query key stays stable between renders
   const startDate = useMemo(() => {
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
     return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   }, [period]);
 
-  // Stats query (for chart)
   const { data: stats, isLoading: statsLoading } = useQuery({
     ...orpc.activity.getStats.queryOptions({
       input: {
@@ -226,7 +222,6 @@ export function HistoryTab() {
     enabled: !isSingle,
   });
 
-  // Logs query
   const { data: logsData, isLoading: logsLoading } = useQuery({
     ...orpc.activity.getLogs.queryOptions({
       input: {
@@ -238,8 +233,8 @@ export function HistoryTab() {
       },
     }),
     enabled: !isSingle,
-    refetchInterval: 5_000, // refresh every 5s for near real-time
-    staleTime: 0, // always consider data stale
+    refetchInterval: 5_000,
+    staleTime: 0,
   });
 
   if (isSingle) {
@@ -263,9 +258,8 @@ export function HistoryTab() {
   const memberTotals = stats?.memberTotals ?? [];
   const logs = logsData?.logs ?? [];
 
-  // Chart data: member totals bar chart
   const chartData = memberTotals.map((m, i) => ({
-    name: m.name.split(" ")[0], // first name only for chart
+    name: m.name.split(" ")[0],
     fullName: m.name,
     total: m.total,
     color: MEMBER_COLORS[i % MEMBER_COLORS.length],
@@ -273,11 +267,10 @@ export function HistoryTab() {
 
   return (
     <div className="space-y-6 pb-8">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Activity className="size-6" /> Histórico de Atividades
+            <Activity className="size-6" /> Atividades
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Rastreamento completo de todas as ações realizadas pelos membros da
@@ -287,13 +280,11 @@ export function HistoryTab() {
         <OnlineBadge />
       </div>
 
-      {/* ── Filters ────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Filter className="size-3.5" /> Filtros:
         </div>
 
-        {/* Period */}
         <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
           <SelectTrigger className="h-8 text-xs w-28">
             <SelectValue />
@@ -305,7 +296,6 @@ export function HistoryTab() {
           </SelectContent>
         </Select>
 
-        {/* Member */}
         <Select value={selectedUserId} onValueChange={setSelectedUserId}>
           <SelectTrigger className="h-8 text-xs w-40">
             <SelectValue placeholder="Todos os membros" />
@@ -320,7 +310,6 @@ export function HistoryTab() {
           </SelectContent>
         </Select>
 
-        {/* App */}
         <Select value={selectedApp} onValueChange={setSelectedApp}>
           <SelectTrigger className="h-8 text-xs w-40">
             <SelectValue placeholder="Todos os apps" />
@@ -335,7 +324,6 @@ export function HistoryTab() {
           </SelectContent>
         </Select>
 
-        {/* Reset */}
         {(selectedUserId !== "all" || selectedApp !== "all") && (
           <Button
             variant="ghost"
@@ -351,7 +339,6 @@ export function HistoryTab() {
         )}
       </div>
 
-      {/* ── Chart ──────────────────────────────────────────────────────── */}
       <div className="rounded-xl border overflow-hidden">
         <button
           className="w-full flex items-center justify-between px-4 py-3 bg-muted/20 hover:bg-muted/30 transition-colors"
@@ -382,7 +369,6 @@ export function HistoryTab() {
               </div>
             ) : (
               <>
-                {/* Summary cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   {memberTotals.slice(0, 4).map((m, i) => (
                     <div
@@ -423,7 +409,6 @@ export function HistoryTab() {
                   ))}
                 </div>
 
-                {/* Bar chart */}
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart
                     data={chartData}
@@ -458,7 +443,6 @@ export function HistoryTab() {
         )}
       </div>
 
-      {/* ── Activity Feed ──────────────────────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -500,7 +484,6 @@ export function HistoryTab() {
                     key={log.id}
                     className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/10 transition-colors min-w-0"
                   >
-                    {/* Avatar */}
                     <Avatar className="size-7 shrink-0">
                       <AvatarImage
                         src={log.userImage ?? ""}
@@ -511,31 +494,24 @@ export function HistoryTab() {
                       </AvatarFallback>
                     </Avatar>
 
-                    {/* Nome */}
                     <span className="text-xs font-semibold shrink-0 max-w-[100px] truncate">
                       {log.userName}
                     </span>
 
-                    {/* Role */}
                     {memberInfo && <RoleBadge role={memberInfo.role} />}
 
-                    {/* Separator */}
                     <span className="text-muted-foreground/30 shrink-0">·</span>
 
-                    {/* App */}
                     <span className="text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground shrink-0 whitespace-nowrap">
                       {appLabel}
                     </span>
 
-                    {/* Separator */}
                     <span className="text-muted-foreground/30 shrink-0">·</span>
 
-                    {/* Ação */}
                     <span className="text-xs text-foreground/80 flex-1 truncate">
                       {log.actionLabel}
                     </span>
 
-                    {/* Data */}
                     <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0 ml-auto pl-2">
                       {formatDate(log.createdAt)}
                     </span>

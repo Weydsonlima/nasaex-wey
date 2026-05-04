@@ -46,6 +46,7 @@ import { orpc } from "@/lib/orpc";
 import { CustomizableChart } from "./customizable-chart";
 import { InsightReport } from "./insight-report";
 import { HeaderTracking } from "@/features/leads/components/header-tracking";
+import { InsightsTabsNav } from "./insights-tabs-nav";
 
 interface TrackingDashboardProps {
   initialData?: DashboardReport;
@@ -167,6 +168,7 @@ export function TrackingDashboard({
     <Tabs defaultValue="general">
       <div className="flex flex-col h-full w-full">
         <HeaderTracking title="Insights" />
+        <InsightsTabsNav />
         <div className="sm:sticky top-10 z-10 bg-background/95 backdrop-blur-sm border-b py-4 space-y-4 px-2 sm:px-6">
           <DashboardHeader
             settings={settings}

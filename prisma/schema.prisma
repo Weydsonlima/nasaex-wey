@@ -40,6 +40,7 @@ model User {
   insightShares                      InsightShares[]
   savedInsightReports                SavedInsightReport[]
   savedReportCompares                SavedReportCompare[]
+  insightLayoutsUpdated              OrganizationInsightLayout[] @relation("OrgInsightLayoutUpdater")
   agendaResponsibles                 AgendaResponsible[]
   appointments                       Appointment[]
   trackingConsultants                TrackingConsultant[]
@@ -214,6 +215,7 @@ model Organization {
   publicPageViews        PublicPageView[]
   savedInsightReports    SavedInsightReport[]
   savedReportCompares    SavedReportCompare[]
+  insightLayout          OrganizationInsightLayout?
   workspaces             Workspace[]
   form                   Form[]
   workspaceFolders       WorkspaceFolder[]
@@ -392,6 +394,7 @@ model Tracking {
   workspaces          Workspace[]
   scripts             Script[]
   reminders           Reminder[]
+  paymentEntries      PaymentEntry[]
 
   @@map("tracking")
 }
@@ -2484,6 +2487,19 @@ model SavedReportCompare {
   @@map("saved_report_compare")
 }
 
+model OrganizationInsightLayout {
+  id             String       @id @default(cuid())
+  organizationId String       @unique @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  blocks         Json         @default("[]")
+  updatedById    String?      @map("updated_by_id")
+  updatedBy      User?        @relation("OrgInsightLayoutUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("organization_insight_layout")
+}
+
 // ─── Workspace Tags ───────────────────────────────────────────────────────────
 
 model WorkspaceTag {
@@ -3040,6 +3056,7 @@ model PaymentEntry {
   costCenterId String? @map("cost_center_id")
   contactId    String? @map("contact_id")
   accountId    String? @map("account_id")
+  trackingId   String? @map("tracking_id")
 
   // Parcelamento
   installmentTotal   Int?    @map("installment_total")
@@ -3059,6 +3076,7 @@ model PaymentEntry {
   costCenter   PaymentCostCenter?  @relation(fields: [costCenterId], references: [id])
   contact      PaymentContact?     @relation(fields: [contactId], references: [id])
   account      PaymentBankAccount? @relation(fields: [accountId], references: [id])
+  tracking     Tracking?           @relation(fields: [trackingId], references: [id], onDelete: SetNull)
   createdBy    User?               @relation("PaymentEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
@@ -3068,6 +3086,7 @@ model PaymentEntry {
   @@index([contactId])
   @@index([categoryId])
   @@index([installmentGroupId])
+  @@index([trackingId])
   @@map("payment_entries")
 }
 

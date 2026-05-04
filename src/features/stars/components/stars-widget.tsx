@@ -146,8 +146,8 @@ export function StarsWidget() {
                   <span className="tabular-nums">
                     {consumed.toLocaleString("pt-BR")}
                   </span>
-                  <span className="text-muted-foreground font-normal">/</span>
-                  <span className="tabular-nums text-muted-foreground font-normal">
+                  <span className="text-muted-foreground font-normal hidden sm:inline">/</span>
+                  <span className="tabular-nums text-muted-foreground font-normal hidden sm:inline">
                     {planMonthlyStars.toLocaleString("pt-BR")}
                   </span>
                 </>
@@ -295,8 +295,9 @@ export function StarsWidget() {
         {hasPlan ? (
           <button
             onClick={() => setPlanOpen(true)}
+            title={planName}
             className={cn(
-              "h-8 px-2.5 rounded-lg border text-[10px] font-bold uppercase tracking-wide transition-all hover:opacity-80",
+              "flex items-center gap-1 h-8 px-2.5 rounded-lg border text-[10px] font-bold uppercase tracking-wide transition-all hover:opacity-80",
               planSlug === "earth"
                 ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 : planSlug === "explore"
@@ -304,14 +305,17 @@ export function StarsWidget() {
                   : "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
             )}
           >
+            <TrendingUp className="size-3 sm:hidden" />
             <span className="hidden sm:block">{planName}</span>
           </button>
         ) : (
           <button
             onClick={() => setPlanOpen(true)}
+            title="Adquirir um plano"
             className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-dashed border-[#7C3AED]/50 bg-[#7C3AED]/5 text-[#7C3AED] text-xs font-semibold hover:bg-[#7C3AED]/10 transition-all"
           >
             <Sparkles className="size-3.5 shrink-0" />
+            <span className="sm:hidden">Plano</span>
             <span className="hidden sm:block">Adquirir um plano</span>
           </button>
         )}

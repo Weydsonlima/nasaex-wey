@@ -89,7 +89,7 @@ export function TagsFilter({ workspaceId, variant = "popover" }: Props) {
         <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">
           Filtrar por etiqueta
         </p>
-        <div className="space-y-0.5">
+        <div className="space-y-0.5 max-h-72 overflow-y-auto scroll-cols-tracking">
           {tags.map((tag: any) => {
             const active = filters.tagIds.includes(tag.id);
             return (

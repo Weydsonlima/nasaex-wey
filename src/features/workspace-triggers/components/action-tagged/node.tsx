@@ -164,7 +164,7 @@ export const WsActionTaggedNode = memo((props: NodeProps<Node<Data>>) => {
                           <CommandEmpty>
                             Nenhuma etiqueta encontrada.
                           </CommandEmpty>
-                          <CommandGroup>
+                          <CommandGroup className="max-h-72 overflow-y-auto scroll-cols-tracking">
                             {tags.map((tag) => {
                               const isSelected = selected.includes(tag.id);
                               return (

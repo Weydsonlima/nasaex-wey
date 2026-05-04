@@ -6,8 +6,13 @@ import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import { pusherServer } from "@/lib/pusher";
 import { awardPoints } from "@/app/router/space-point/utils";
+<<<<<<< feature/W-nasa-router-fluxo-de-aquisicao-de-cursos-20260503
 import { canEnrollFree } from "../utils";
 import { executeCoursePurchaseInTx } from "../helpers/purchase-helpers";
+=======
+import { canEnrollFree, PLATFORM_FEE_PCT } from "../utils";
+import { logActivity } from "@/lib/activity-logger";
+>>>>>>> main
 
 /**
  * Compra de curso pelo aluno (paga com STARs da org dele).
@@ -176,6 +181,22 @@ export const purchaseCourse = base
       courseTitle: course.title,
       paidStars: priceStars,
       payoutStars,
+    });
+
+    await logActivity({
+      organizationId: buyerOrgId,
+      userId,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-route",
+      subAppSlug: "nasa-route-courses",
+      featureKey: "route.course.purchased",
+      action: "route.course.purchased",
+      actionLabel: `Comprou o curso "${course.title}"`,
+      resource: course.title,
+      resourceId: course.id,
+      metadata: { paidStars: priceStars, planName: plan.name },
     });
 
     return {

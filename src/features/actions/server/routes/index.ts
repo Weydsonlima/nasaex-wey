@@ -26,6 +26,9 @@ import { addParticipant } from "./add-participant";
 import { removeParticipant } from "./remove-participant";
 import { getWorkspaceCalendar } from "./get-workspace-calendar";
 import { actionChatRoutes } from "./chat";
+import { toggleFavoriteGlobal } from "./toggle-favorite-global";
+import { toggleFavoritePersonal } from "./toggle-favorite-personal";
+import { listFavorites } from "./list-favorites";
 
 export const actionRoutes = {
   getAnalytics,
@@ -55,4 +58,7 @@ export const actionRoutes = {
   removeParticipant,
   getWorkspaceCalendar,
   chat: actionChatRoutes,
+  toggleFavoriteGlobal,
+  toggleFavoritePersonal,
+  listFavorites,
 };

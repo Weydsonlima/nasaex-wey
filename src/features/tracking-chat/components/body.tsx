@@ -40,9 +40,10 @@ interface BodyProps {
   messageSelected: MarkedMessage | undefined;
   onSelectMessage: (message: MarkedMessage) => void;
   conversationId?: string;
+  trackingId?: string;
 }
 
-export function Body({ messageSelected, onSelectMessage, conversationId: conversationIdProp }: BodyProps) {
+export function Body({ messageSelected, onSelectMessage, conversationId: conversationIdProp, trackingId }: BodyProps) {
   const params = useParams<{ conversationId: string }>();
   const conversationId = conversationIdProp ?? params.conversationId;
   const [saveToNBoxMessage, setSaveToNBoxMessage] = useState<Message | null>(null);
@@ -448,6 +449,7 @@ export function Body({ messageSelected, onSelectMessage, conversationId: convers
                     onSaveToNBox={(msg) => setSaveToNBoxMessage(msg)}
                     messageSelected={messageSelected}
                     conversationId={conversationId}
+                    trackingId={trackingId}
                   />
                 ))}
               </div>

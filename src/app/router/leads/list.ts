@@ -14,12 +14,15 @@ export const listLead = base
 
   .handler(async ({ errors, context }) => {
     try {
-      const { org } = context;
+      const { org, user } = context;
 
       const leads = await prisma.lead.findMany({
         where: {
           tracking: {
             organizationId: org.id,
+            participants: {
+              some: { userId: user.id },
+            },
           },
         },
         select: {

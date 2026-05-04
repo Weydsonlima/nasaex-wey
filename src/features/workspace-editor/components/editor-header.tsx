@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAtomValue } from "jotai";
-import { SaveIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, SaveIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -32,9 +32,19 @@ import {
 } from "../hooks/use-workspace-workflows";
 
 export const WsEditorHeader = ({ workflowId }: { workflowId: string }) => {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   return (
     <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4 bg-background">
-      <WsEditorBreadcrumbs workflowId={workflowId} />
+      <div className="flex items-center gap-2 min-w-0">
+        <Button asChild size="sm" variant="ghost" className="gap-1.5">
+          <Link href={`/workspaces/${workspaceId}`}>
+            <ArrowLeftIcon className="size-4" />
+            Voltar ao workspace
+          </Link>
+        </Button>
+        <span className="text-muted-foreground/50">|</span>
+        <WsEditorBreadcrumbs workflowId={workflowId} />
+      </div>
       <div className="flex items-center gap-2">
         <WsEditorOptions workflowId={workflowId} />
         <WsEditorSaveButton workflowId={workflowId} />
@@ -50,9 +60,7 @@ const WsEditorBreadcrumbs = ({ workflowId }: { workflowId: string }) => {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href={`/workspaces/${workspaceId}/automations`}>
-              Automações
-            </Link>
+            <Link href={`/workspaces/${workspaceId}`}>Automações</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
@@ -175,7 +183,7 @@ const WsEditorOptions = ({ workflowId }: { workflowId: string }) => {
                   {
                     onSuccess: () => {
                       setOpen(false);
-                      router.push(`/workspaces/${workspaceId}/automations`);
+                      router.push(`/workspaces/${workspaceId}`);
                     },
                   },
                 )

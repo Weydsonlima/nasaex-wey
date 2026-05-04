@@ -254,6 +254,7 @@ export function ViewActionModal({ actionId, open, onOpenChange }: Props) {
                 actionId={action.id}
                 workspaceId={action.workspaceId}
                 isFavorited={action.isFavorited}
+                isFavoritedByMe={(action as any).isFavoritedByMe}
                 isArchived={action.isArchived}
                 createdBy={action.createdBy}
                 onClose={() => onOpenChange(false)}

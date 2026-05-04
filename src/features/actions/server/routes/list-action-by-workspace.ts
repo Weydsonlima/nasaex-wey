@@ -109,6 +109,11 @@ export const listActionByWorkspace = base
           isArchived: true,
           isFavorited: true,
           workspaceId: true,
+          favorites: {
+            where: { userId: context.user.id },
+            select: { id: true },
+            take: 1,
+          },
           column: {
             select: {
               id: true,
@@ -141,8 +146,13 @@ export const listActionByWorkspace = base
 
     const lastPage = Math.ceil(total / input.limit);
 
+    const actionsWithFlag = actions.map(({ favorites, ...rest }) => ({
+      ...rest,
+      isFavoritedByMe: favorites.length > 0,
+    }));
+
     return {
-      actions,
+      actions: actionsWithFlag,
       total,
       page: input.page,
       limit: input.limit,

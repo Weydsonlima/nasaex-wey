@@ -1,7 +1,12 @@
 import { orpc } from "@/lib/orpc";
 import { pusherClient } from "@/lib/pusher";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
 import { conversationProps, InfiniteConversations } from "../types";
 import { toast } from "sonner";
 import {
@@ -134,6 +139,60 @@ export function useInfinityConversation(
     currentConversationId,
     reopenLead,
   ]);
+}
+
+/**
+ * Hook utilitário de listagem de conversas com infinite scroll.
+ * Segue exatamente o mesmo padrão do ConversationsList.
+ * Usado exclusivamente no ForwardMessageDialog.
+ */
+export function useConversationListInfinite({
+  trackingId,
+  search = "",
+  enabled = true,
+}: {
+  trackingId: string;
+  search?: string;
+  enabled?: boolean;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const infiniteOptions = orpc.conversation.list.infiniteOptions({
+    input: (pageParam: string | undefined) => ({
+      trackingId,
+      search,
+      cursor: pageParam,
+      limit: 30,
+      statusId: null,
+    }),
+    queryKey: ["conversations.list.forward", trackingId, search],
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      ...infiniteOptions,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      enabled: enabled && !!trackingId,
+    });
+
+  const items = useMemo(
+    () => data?.pages.flatMap((p) => p.items) ?? [],
+    [data],
+  );
+
+  const isNearBottom = (el: HTMLDivElement) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el || !hasNextPage || isFetchingNextPage) return;
+    if (isNearBottom(el)) fetchNextPage();
+  };
+
+  return { items, isLoading, isFetchingNextPage, scrollRef, handleScroll };
 }
 
 export function useCreateConversation({ trackingId }: { trackingId: string }) {

@@ -95,6 +95,12 @@ export const listActionByColumn = base
         isDone: true,
         isArchived: true,
         priority: true,
+        isFavorited: true,
+        favorites: {
+          where: { userId: context.user.id },
+          select: { id: true },
+          take: 1,
+        },
         user: {
           select: {
             id: true,
@@ -140,5 +146,10 @@ export const listActionByColumn = base
       nextCursor = nextItem!.id;
     }
 
-    return { action, nextCursor };
+    const actionWithFlag = action.map(({ favorites, ...rest }) => ({
+      ...rest,
+      isFavoritedByMe: favorites.length > 0,
+    }));
+
+    return { action: actionWithFlag, nextCursor };
   });

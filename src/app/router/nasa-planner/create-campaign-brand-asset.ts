@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import { awardPoints } from "@/app/router/space-point/utils";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const createCampaignBrandAsset = base
   .use(requiredAuthMiddleware)
@@ -36,6 +37,21 @@ export const createCampaignBrandAsset = base
     });
 
     await awardPoints(context.user.id, context.org.id, "upload_brand_asset");
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-assets",
+      featureKey: "planner.campaign.asset.uploaded",
+      action: "planner.campaign.asset.uploaded",
+      actionLabel: `Adicionou material de marca (${input.assetType}): "${input.name}"`,
+      resourceId: asset.id,
+      metadata: { assetType: input.assetType },
+    });
 
     return { asset };
   });

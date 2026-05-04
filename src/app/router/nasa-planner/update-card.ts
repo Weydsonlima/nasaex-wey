@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const updateCard = base
   .use(requiredAuthMiddleware)
@@ -38,6 +39,23 @@ export const updateCard = base
           ? { dueDate: dueDate ? new Date(dueDate) : null }
           : {}),
       },
+    });
+
+    const completed = data.status === "COMPLETED";
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      action: completed ? "planner.card.completed" : "planner.card.updated",
+      actionLabel: completed
+        ? `Concluiu o card "${card.title}"`
+        : `Atualizou o card "${card.title}"`,
+      resource: card.title,
+      resourceId: card.id,
+      metadata: { status: data.status, priority: data.priority },
     });
 
     return { card };

@@ -14,6 +14,7 @@ import {
   publishFacebookPagePhoto,
 } from "@/http/meta/publish-feed-post";
 import { publishInstagramReel } from "@/http/meta/publish-reel";
+import { logActivity } from "@/lib/activity-logger";
 
 type MetaPage = { id: string; name?: string; access_token?: string };
 type MetaIgAccount = { id: string; username?: string; page_id?: string };
@@ -173,6 +174,24 @@ export const publishPost = base
         ...(publishResults.facebook && { externalFbPostId: publishResults.facebook }),
       },
       include: { slides: { orderBy: { order: "asc" } } },
+    });
+
+    const succeeded = finalStatus === NasaPlannerPostStatus.PUBLISHED;
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: succeeded ? "planner.post.published" : "planner.post.publish.failed",
+      action: succeeded ? "planner.post.published" : "planner.post.publish.failed",
+      actionLabel: succeeded
+        ? `Publicou um post${networks.length > 0 ? ` (${networks.join(", ")})` : ""}`
+        : `Falha ao publicar um post${publishError ? `: ${publishError}` : ""}`,
+      resourceId: updated.id,
+      metadata: { networks, publishResults, publishError },
     });
 
     return {

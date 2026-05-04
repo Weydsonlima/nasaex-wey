@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const addSlidesBatch = base
   .use(requiredAuthMiddleware)
@@ -37,6 +38,21 @@ export const addSlidesBatch = base
         data: { thumbnail: input.imageKeys[0] },
       });
     }
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.slides.added",
+      action: "planner.post.slides.added",
+      actionLabel: `Adicionou ${input.imageKeys.length} ${input.imageKeys.length === 1 ? "slide" : "slides"} ao post`,
+      resourceId: input.postId,
+      metadata: { count: input.imageKeys.length },
+    });
 
     return { added: input.imageKeys.length };
   });

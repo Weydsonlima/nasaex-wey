@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const removePostMedia = base
   .use(requiredAuthMiddleware)
@@ -34,6 +35,21 @@ export const removePostMedia = base
         data: { videoKey: null as any, videoDuration: null as any },
       });
     }
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.media.removed",
+      action: "planner.post.media.removed",
+      actionLabel: input.type === "image" ? "Removeu a imagem do post" : "Removeu o vídeo do post",
+      resourceId: input.postId,
+      metadata: { type: input.type },
+    });
 
     return { success: true };
   });

@@ -10,6 +10,7 @@ import { S3 } from "@/lib/s3-client";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import Replicate from "replicate";
+import { logActivity } from "@/lib/activity-logger";
 
 const STARS_IMG2IMG = 1; // Replicate SDXL ~$0.002 × 1.5 ÷ 0.15 ≈ 1 STAR
 
@@ -111,6 +112,21 @@ export const generateImageFromReference = base
         data: { thumbnail: key },
       });
     }
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-ai",
+      featureKey: "planner.ai.image.from.reference",
+      action: "planner.ai.image.from.reference",
+      actionLabel: `Gerou imagem com IA a partir de referência (img2img) — ${STARS_IMG2IMG}★`,
+      resourceId: input.postId,
+      metadata: { strength: input.strength, starsSpent: STARS_IMG2IMG },
+    });
 
     return { slide, imageKey: key, starsSpent: STARS_IMG2IMG, balanceAfter: debit.newBalance };
   });

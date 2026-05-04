@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const removePostSlide = base
   .use(requiredAuthMiddleware)
@@ -35,6 +36,21 @@ export const removePostSlide = base
     await prisma.nasaPlannerPost.update({
       where: { id: input.postId },
       data: { thumbnail: newThumb },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.slide.removed",
+      action: "planner.post.slide.removed",
+      actionLabel: "Removeu um slide do post",
+      resourceId: input.postId,
+      metadata: { slideId: input.slideId, remaining: remaining.length },
     });
 
     return { success: true };

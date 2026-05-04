@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const updatePlanner = base
   .use(requiredAuthMiddleware)
@@ -41,6 +42,20 @@ export const updatePlanner = base
     const planner = await prisma.nasaPlanner.update({
       where: { id: plannerId, organizationId: context.org.id },
       data,
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      action: "planner.updated",
+      actionLabel: `Atualizou o planner "${planner.name}"`,
+      resource: planner.name,
+      resourceId: planner.id,
+      metadata: { fields: Object.keys(data) },
     });
 
     return { planner };

@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const uploadPostImage = base
   .use(requiredAuthMiddleware)
@@ -42,6 +43,21 @@ export const uploadPostImage = base
         data: { thumbnail: input.imageKey },
       });
     }
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.image.uploaded",
+      action: "planner.post.image.uploaded",
+      actionLabel: "Enviou uma imagem para o post",
+      resourceId: post.id,
+      metadata: { slideOrder: input.slideOrder },
+    });
 
     return { success: true };
   });

@@ -29,7 +29,12 @@ interface Props {
   disabled?: boolean;
 }
 
-export function TagsField({ actionId, workspaceId, tags = [], disabled }: Props) {
+export function TagsField({
+  actionId,
+  workspaceId,
+  tags = [],
+  disabled,
+}: Props) {
   const [open, setOpen] = useState(false);
   const { tags: availableTags } = useListTags(workspaceId);
   const addTag = useAddTagToAction();
@@ -52,7 +57,11 @@ export function TagsField({ actionId, workspaceId, tags = [], disabled }: Props)
           <Badge
             key={tag.id}
             className="h-5 px-1.5 text-[10px] gap-1 cursor-default pr-0.5"
-            style={{ backgroundColor: tag.color + "33", color: tag.color, borderColor: tag.color + "66" }}
+            style={{
+              backgroundColor: tag.color + "33",
+              color: tag.color,
+              borderColor: tag.color + "66",
+            }}
             variant="outline"
           >
             {tag.name}
@@ -83,7 +92,10 @@ export function TagsField({ actionId, workspaceId, tags = [], disabled }: Props)
               <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">
                 Selecionar etiquetas
               </p>
-              <div className="space-y-0.5">
+              <div
+                className="space-y-0.5 min-h-0 max-h-52 overflow-y-auto scroll-cols-tracking"
+                onWheel={(e) => e.stopPropagation()}
+              >
                 {availableTags.map((tag: Tag) => {
                   const isActive = assignedTagIds.has(tag.id);
                   return (
@@ -98,7 +110,9 @@ export function TagsField({ actionId, workspaceId, tags = [], disabled }: Props)
                       />
                       <span className="flex-1 text-xs">{tag.name}</span>
                       {isActive && (
-                        <span className="size-3.5 text-primary text-xs font-bold">✓</span>
+                        <span className="size-3.5 text-primary text-xs font-bold">
+                          ✓
+                        </span>
                       )}
                     </button>
                   );

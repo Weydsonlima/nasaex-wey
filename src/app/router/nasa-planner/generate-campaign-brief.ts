@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
@@ -23,7 +24,7 @@ export const generateCampaignBrief = base
       projectPositioning: z.string().optional(),
     }),
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, context }) => {
     const brandCtx = [
       input.clientName ? `Cliente: ${input.clientName}` : "",
       input.projectDescription ? `Descrição: ${input.projectDescription}` : "",
@@ -82,7 +83,22 @@ Responda em português, de forma clara, direta e prática. Máximo 250 palavras.
         if (!resp.ok) continue;
         const data = await resp.json().catch(() => null);
         const txt: string | undefined = data?.choices?.[0]?.message?.content ?? (typeof data === "string" ? data : undefined);
-        if (txt?.trim()) return { description: txt.trim() };
+        if (txt?.trim()) {
+          await logActivity({
+            organizationId: context.org.id,
+            userId: context.user.id,
+            userName: context.user.name,
+            userEmail: context.user.email,
+            userImage: (context.user as any).image,
+            appSlug: "nasa-planner",
+            subAppSlug: "planner-ai",
+            featureKey: "planner.ai.brief.generated",
+            action: "planner.ai.brief.generated",
+            actionLabel: `Gerou briefing de campanha (${input.campaignType})`,
+            metadata: { campaignType: input.campaignType, model },
+          });
+          return { description: txt.trim() };
+        }
       } catch { continue; }
     }
 

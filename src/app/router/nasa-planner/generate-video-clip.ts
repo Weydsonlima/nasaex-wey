@@ -9,6 +9,7 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { S3 } from "@/lib/s3-client";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { logActivity } from "@/lib/activity-logger";
 
 const STARS_VIDEO_FALAI = 3;   // fal.ai kling 5s ~$0.04 = R$0.23 × 1.5 ÷ 0.15
 const STARS_VIDEO_RUNWAY = 15; // RunwayML 5s ~$0.25 = R$1.43 × 1.5 ÷ 0.15
@@ -124,6 +125,21 @@ export const generateVideoClip = base
     const slideCount = await prisma.nasaPlannerPostSlide.count({ where: { postId: input.postId } });
     const slide = await prisma.nasaPlannerPostSlide.create({
       data: { postId: input.postId, videoKey: key, order: slideCount + 1 },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-ai",
+      featureKey: "planner.ai.video.generated",
+      action: "planner.ai.video.generated",
+      actionLabel: `Gerou clipe de vídeo com IA (${input.provider}, ${input.duration}s) — ${starsNeeded}★`,
+      resourceId: input.postId,
+      metadata: { provider: input.provider, duration: input.duration, starsSpent: starsNeeded },
     });
 
     return { slide, videoKey: key, starsSpent: starsNeeded, balanceAfter };

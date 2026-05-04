@@ -5,6 +5,7 @@ import { awardPoints } from "@/app/router/space-point/utils";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const createCampaignTask = base
   .use(requiredAuthMiddleware)
@@ -74,6 +75,21 @@ export const createCampaignTask = base
     });
 
     awardPoints(context.user.id, context.org.id, "create_campaign_task").catch(() => {});
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-tasks",
+      featureKey: "planner.campaign.task.created",
+      action: "planner.campaign.task.created",
+      actionLabel: `Criou uma tarefa: "${input.title}"`,
+      resourceId: task.id,
+      metadata: { priority: input.priority },
+    });
 
     return { task, linkedActionId };
   });

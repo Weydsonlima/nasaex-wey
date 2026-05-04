@@ -6,6 +6,7 @@ import { StarTransactionType } from "@/generated/prisma/enums";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 const STARS_MERGE_FFMPEG = 1;
 
@@ -41,6 +42,21 @@ export const saveEditedVideo = base
         type: "REEL",
         ...(input.videoDuration !== undefined && { videoDuration: input.videoDuration }),
       },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.video.edited",
+      action: "planner.post.video.edited",
+      actionLabel: `Salvou vídeo editado no post — ${STARS_MERGE_FFMPEG}★`,
+      resourceId: input.postId,
+      metadata: { videoDuration: input.videoDuration, starsSpent: STARS_MERGE_FFMPEG },
     });
 
     return { post: updated, starsSpent: STARS_MERGE_FFMPEG, balanceAfter };

@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 const slideSchema = z.object({
   id: z.string().optional(),
@@ -77,6 +78,40 @@ export const updatePost = base
     const post = await prisma.nasaPlannerPost.findFirst({
       where: { id: postId, organizationId: context.org.id },
       include: { slides: { orderBy: { order: "asc" } } },
+    });
+
+    let actionLabel = "Editou um post";
+    let action = "planner.post.updated";
+    if (input.status === "SCHEDULED" && scheduledAt) {
+      actionLabel = `Agendou um post para ${new Date(scheduledAt).toLocaleDateString("pt-BR")}`;
+      action = "planner.post.scheduled";
+    } else if (input.status === "PUBLISHED") {
+      actionLabel = "Publicou um post";
+      action = "planner.post.published";
+    } else if (input.status === "PENDING_APPROVAL") {
+      actionLabel = "Enviou um post para aprovação";
+      action = "planner.post.submitted";
+    } else if (input.status === "DRAFT") {
+      actionLabel = "Voltou um post para rascunho";
+      action = "planner.post.drafted";
+    }
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: action,
+      action,
+      actionLabel,
+      resourceId: postId,
+      metadata: {
+        status: input.status,
+        ...(scheduledAt ? { scheduledAt } : {}),
+      },
     });
 
     return { post };

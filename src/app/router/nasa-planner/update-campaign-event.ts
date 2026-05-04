@@ -3,6 +3,7 @@ import { base } from "@/app/middlewares/base";
 import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const updateCampaignEvent = base
   .use(requiredAuthMiddleware)
@@ -34,6 +35,21 @@ export const updateCampaignEvent = base
         ...rest,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
       },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-events",
+      featureKey: "planner.campaign.event.updated",
+      action: "planner.campaign.event.updated",
+      actionLabel: `Atualizou um evento de campanha: "${updated.title}"`,
+      resourceId: updated.id,
+      metadata: { status: input.status },
     });
 
     return { event: updated };

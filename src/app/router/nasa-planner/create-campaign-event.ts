@@ -5,6 +5,7 @@ import { awardPoints } from "@/app/router/space-point/utils";
 import { Prisma } from "@/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const createCampaignEvent = base
   .use(requiredAuthMiddleware)
@@ -118,6 +119,21 @@ export const createCampaignEvent = base
     });
 
     awardPoints(context.user.id, context.org.id, "create_campaign_event").catch(() => {});
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-events",
+      featureKey: "planner.campaign.event.created",
+      action: "planner.campaign.event.created",
+      actionLabel: `Criou um evento de campanha: "${data.title}"`,
+      resourceId: event.id,
+      metadata: { eventType: data.eventType, scheduledAt: data.scheduledAt },
+    });
 
     return { event, linkedActionId, linkedAppointmentId };
   });

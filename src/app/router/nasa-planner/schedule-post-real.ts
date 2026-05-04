@@ -8,6 +8,7 @@ import { z } from "zod";
 import { NasaPlannerPostStatus, StarTransactionType } from "@/generated/prisma/enums";
 import { STARS_SCHEDULE } from "./_helpers/ai-provider";
 import { inngest } from "@/inngest/client";
+import { logActivity } from "@/lib/activity-logger";
 
 export const schedulePostReal = base
   .use(requiredAuthMiddleware)
@@ -53,6 +54,21 @@ export const schedulePostReal = base
         scheduledAt: scheduledDate.toISOString(),
       },
       ts: scheduledDate.getTime(),
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.scheduled.real",
+      action: "planner.post.scheduled.real",
+      actionLabel: `Agendou publicação real do post para ${scheduledDate.toLocaleString("pt-BR")}`,
+      resourceId: post.id,
+      metadata: { scheduledAt: scheduledDate.toISOString(), starsSpent: STARS_SCHEDULE },
     });
 
     return { post: updated, balanceAfter: debit.newBalance };

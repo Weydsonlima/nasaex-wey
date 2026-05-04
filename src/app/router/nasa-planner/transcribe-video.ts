@@ -8,6 +8,7 @@ import { S3 } from "@/lib/s3-client";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import OpenAI from "openai";
 import { toFile } from "openai";
+import { logActivity } from "@/lib/activity-logger";
 
 export const transcribeVideo = base
   .use(requiredAuthMiddleware)
@@ -50,6 +51,20 @@ export const transcribeVideo = base
       model: "whisper-1",
       response_format: "text",
       language: "pt",
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-ai",
+      featureKey: "planner.ai.video.transcribed",
+      action: "planner.ai.video.transcribed",
+      actionLabel: "Transcreveu áudio do vídeo (IA)",
+      resourceId: input.postId,
     });
 
     return { transcript: transcription as unknown as string };

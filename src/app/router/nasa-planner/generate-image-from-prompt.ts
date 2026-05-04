@@ -9,6 +9,7 @@ import { StarTransactionType } from "@/generated/prisma/enums";
 import {
   selectImageProvider, generateImage, STARS_IMAGE_STANDARD, STARS_IMAGE_HD, STARS_IMAGE_POLLINATIONS,
 } from "./_helpers/ai-provider";
+import { logActivity } from "@/lib/activity-logger";
 
 export const generateImageFromPrompt = base
   .use(requiredAuthMiddleware)
@@ -65,6 +66,21 @@ export const generateImageFromPrompt = base
     await prisma.nasaPlannerPost.update({
       where: { id: post.id },
       data: { thumbnail: imageKey, starsSpent: { increment: starsToDebit } },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-ai",
+      featureKey: "planner.ai.image.generated",
+      action: "planner.ai.image.generated",
+      actionLabel: `Gerou imagem com IA (${providerInfo.provider}) — ${starsToDebit}★`,
+      resourceId: post.id,
+      metadata: { provider: providerInfo.provider, quality: input.quality, starsSpent: starsToDebit },
     });
 
     return { imageKey, starsSpent: starsToDebit, balanceAfter: debit.newBalance, provider: providerInfo.provider };

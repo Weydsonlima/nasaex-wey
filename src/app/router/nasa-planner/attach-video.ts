@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const attachVideo = base
   .use(requiredAuthMiddleware)
@@ -28,6 +29,21 @@ export const attachVideo = base
         ...(input.videoDuration !== undefined && { videoDuration: input.videoDuration }),
         type: "REEL",
       },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.video.attached",
+      action: "planner.post.video.attached",
+      actionLabel: "Anexou um vídeo ao post (Reel)",
+      resourceId: input.postId,
+      metadata: { videoDuration: input.videoDuration },
     });
 
     return { post: updated };

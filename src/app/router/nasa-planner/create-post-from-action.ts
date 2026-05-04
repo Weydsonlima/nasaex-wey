@@ -4,6 +4,7 @@ import { requireOrgMiddleware } from "@/app/middlewares/org";
 import prisma from "@/lib/prisma";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity-logger";
 
 export const createPostFromAction = base
   .use(requiredAuthMiddleware)
@@ -35,6 +36,21 @@ export const createPostFromAction = base
         targetNetworks: input.targetNetworks ?? [],
         referenceLinks: [],
       },
+    });
+
+    await logActivity({
+      organizationId: context.org.id,
+      userId: context.user.id,
+      userName: context.user.name,
+      userEmail: context.user.email,
+      userImage: (context.user as any).image,
+      appSlug: "nasa-planner",
+      subAppSlug: "planner-posts",
+      featureKey: "planner.post.created.from.action",
+      action: "planner.post.created.from.action",
+      actionLabel: `Criou um post a partir do card "${action.title}"`,
+      resourceId: post.id,
+      metadata: { actionId: input.actionId, type: input.type },
     });
 
     return { post };

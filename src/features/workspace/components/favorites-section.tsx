@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { StarIcon, ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import {
+  StarIcon,
+  PinIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+} from "lucide-react";
 import { useFavoritedActions } from "@/features/actions/hooks/use-tasks";
 import { ViewActionModal } from "@/features/actions/components/view-action-modal";
 import { CardActionsMenu } from "@/features/actions/components/card-actions-menu";
@@ -60,7 +65,6 @@ export function FavoritesSection({ workspaceId }: Props) {
           className="flex items-center gap-1.5 mb-2 group"
           onClick={() => setCollapsed((v) => !v)}
         >
-          <StarIcon className="size-3.5 fill-yellow-400 text-yellow-400" />
           <span className="text-xs font-semibold text-foreground/80">
             Meus Favoritos
           </span>
@@ -83,11 +87,17 @@ export function FavoritesSection({ workspaceId }: Props) {
                   <Skeleton key={i} className="shrink-0 w-56 h-28 rounded-xl" />
                 ))
               : actions.map((action: any) => {
-                  const priorityLabel = PRIORITY_LABEL[action.priority as ActionPriority];
-                  const priorityColor = PRIORITY_COLOR[action.priority as ActionPriority];
-                  const doneSubActions = (action.subActions ?? []).filter((s: any) => s.isDone).length;
+                  const priorityLabel =
+                    PRIORITY_LABEL[action.priority as ActionPriority];
+                  const priorityColor =
+                    PRIORITY_COLOR[action.priority as ActionPriority];
+                  const doneSubActions = (action.subActions ?? []).filter(
+                    (s: any) => s.isDone,
+                  ).length;
                   const totalSubActions = (action.subActions ?? []).length;
-                  const dueDateInfo = action.dueDate ? formatDueDate(new Date(action.dueDate)) : null;
+                  const dueDateInfo = action.dueDate
+                    ? formatDueDate(new Date(action.dueDate))
+                    : null;
                   const tags = action.tags ?? [];
 
                   return (
@@ -101,9 +111,20 @@ export function FavoritesSection({ workspaceId }: Props) {
                       )}
                       onClick={() => setOpenActionId(action.id)}
                     >
-                      {/* Favorite star badge */}
-                      <div className="absolute top-2 left-2 z-10">
-                        <StarIcon className="size-3.5 fill-yellow-400 text-yellow-400 drop-shadow" />
+                      {/* Favorite kind badge */}
+                      <div
+                        className="absolute top-2 left-2 z-10 flex items-center gap-1"
+                        title={
+                          action.favoriteKind === "global"
+                            ? "Fixado para o workspace"
+                            : "Seu favorito"
+                        }
+                      >
+                        {action.favoriteKind === "global" ? (
+                          <PinIcon className="size-3.5 fill-violet-500 text-violet-500 drop-shadow" />
+                        ) : (
+                          <StarIcon className="size-3.5 fill-yellow-400 text-yellow-400 drop-shadow" />
+                        )}
                       </div>
 
                       {/* 3-dot menu */}
@@ -114,7 +135,8 @@ export function FavoritesSection({ workspaceId }: Props) {
                         <CardActionsMenu
                           actionId={action.id}
                           workspaceId={action.workspaceId}
-                          isFavorited
+                          isFavorited={action.isFavorited}
+                          isFavoritedByMe={action.isFavoritedByMe}
                           isArchived={action.isArchived}
                           createdBy={action.createdBy}
                           className="size-6"
@@ -157,7 +179,8 @@ export function FavoritesSection({ workspaceId }: Props) {
                         <p
                           className={cn(
                             "text-xs font-semibold leading-snug line-clamp-2",
-                            action.isDone && "line-through text-muted-foreground",
+                            action.isDone &&
+                              "line-through text-muted-foreground",
                           )}
                         >
                           {action.title}
@@ -170,7 +193,8 @@ export function FavoritesSection({ workspaceId }: Props) {
                               <span
                                 className={cn(
                                   "flex items-center gap-0.5 text-[10px]",
-                                  doneSubActions === totalSubActions && "text-emerald-500",
+                                  doneSubActions === totalSubActions &&
+                                    "text-emerald-500",
                                 )}
                               >
                                 <ListTodoIcon className="size-3 shrink-0" />
@@ -181,26 +205,38 @@ export function FavoritesSection({ workspaceId }: Props) {
                               <span
                                 className={cn(
                                   "flex items-center gap-0.5 text-[10px]",
-                                  dueDateInfo.overdue && "text-red-500 font-medium",
-                                  dueDateInfo.today && "text-orange-500 font-medium",
+                                  dueDateInfo.overdue &&
+                                    "text-red-500 font-medium",
+                                  dueDateInfo.today &&
+                                    "text-orange-500 font-medium",
                                 )}
                               >
                                 <CalendarIcon className="size-3 shrink-0" />
-                                <span className="capitalize">{dueDateInfo.label}</span>
+                                <span className="capitalize">
+                                  {dueDateInfo.label}
+                                </span>
                               </span>
                             )}
                           </div>
 
                           {(action.participants ?? []).length > 0 && (
                             <div className="flex -space-x-1 shrink-0">
-                              {(action.participants ?? []).slice(0, 2).map((p: any) => (
-                                <Avatar className="size-4 ring-1 ring-background" key={p.user.id}>
-                                  <AvatarImage src={p.user.image || ""} alt={p.user.name} />
-                                  <AvatarFallback className="text-[7px] font-bold">
-                                    {p.user.name[0].toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                              ))}
+                              {(action.participants ?? [])
+                                .slice(0, 2)
+                                .map((p: any) => (
+                                  <Avatar
+                                    className="size-4 ring-1 ring-background"
+                                    key={p.user.id}
+                                  >
+                                    <AvatarImage
+                                      src={p.user.image || ""}
+                                      alt={p.user.name}
+                                    />
+                                    <AvatarFallback className="text-[7px] font-bold">
+                                      {p.user.name[0].toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ))}
                             </div>
                           )}
                         </div>

@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StarsWidget } from "@/features/stars";
 import { SpacePointWidget } from "@/features/space-point";
-import { LinkSpacehomeButton } from "@/features/space-page/components/link-space-page-button";
 
 interface HeaderTrackingProps {
   title?: string;

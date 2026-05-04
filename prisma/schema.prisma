@@ -78,6 +78,7 @@ model User {
   connectionsAsConnected UserConnection[]       @relation("UserConnectionsAsConnected")
   nasaPages              NasaPage[]
   actionLikes            ActionLike[]
+  actionFavorites        ActionFavorite[]
   publicActionShares     PublicActionShare[]    @relation("PublicActionShareSharer")
   actionReminders        ActionReminder[]       @relation("ActionReminderUser")
   actionChatMessages     ActionChatMessage[]    @relation("ActionChatSender")
@@ -854,6 +855,7 @@ model Action {
   youtubeUrl      String?        @map("youtube_url")
   coverImage      String?        @map("cover_image")
   isArchived      Boolean        @default(false) @map("is_archived")
+  /// Favorito global do workspace — só admin/owner/moderador da org alternam.
   isFavorited     Boolean        @default(false) @map("is_favorited")
   history         Json           @default("[]") @map("history")
   tags            ActionTag[]
@@ -883,6 +885,7 @@ model Action {
   guestDraftToken String? @unique @map("guest_draft_token")
 
   likes        ActionLike[]
+  favorites    ActionFavorite[]
   views        ActionView[]
   publicShares PublicActionShare[]
   reminders    ActionReminder[]
@@ -923,6 +926,21 @@ model ActionLike {
   @@index([actionId])
   @@index([userId])
   @@map("action_likes")
+}
+
+model ActionFavorite {
+  id        String   @id @default(cuid())
+  actionId  String   @map("action_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  action Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([actionId, userId])
+  @@index([userId])
+  @@index([actionId])
+  @@map("action_favorites")
 }
 
 model ActionView {

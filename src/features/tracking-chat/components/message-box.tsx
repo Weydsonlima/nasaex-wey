@@ -28,18 +28,21 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { ImageViewerDialog } from "./image-viewer-dialog";
 import { BodyMessage } from "./body-message";
+import { ForwardMessageDialog } from "./forward-message-dialog";
 
 export function MessageBox({
   message,
   onSelectMessage,
   onSaveToNBox,
   conversationId,
+  trackingId,
 }: {
   message: Message;
   messageSelected: MarkedMessage | undefined;
   onSelectMessage: (message: MarkedMessage) => void;
   onSaveToNBox?: (message: Message) => void;
   conversationId: string;
+  trackingId?: string;
 }) {
   const isOwn = message.fromMe;
   const token = useMessageStore((state) => state.token);
@@ -49,6 +52,7 @@ export function MessageBox({
 
   const [open, setOpen] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [forwardOpen, setForwardOpen] = useState(false);
 
   const IconStatus = IconsStatus[message.status as MessageStatus];
 
@@ -74,12 +78,22 @@ export function MessageBox({
 
   return (
     <>
+      {trackingId && token && (
+        <ForwardMessageDialog
+          open={forwardOpen}
+          onOpenChange={setForwardOpen}
+          message={message}
+          trackingId={trackingId}
+          token={token}
+        />
+      )}
       <SelectedMessageOptions
         message={message}
         onSelectMessage={onSelectMessage}
         onDeleteMessage={onDeleteMessage}
         onCopyMessage={copyMessage}
         onSaveToNBox={onSaveToNBox ? () => onSaveToNBox(message) : undefined}
+        onForwardMessage={trackingId && message.body ? () => setForwardOpen(true) : undefined}
         onChange={setOpen}
         disabled={showImageViewer}
       >
@@ -198,6 +212,7 @@ export function MessageBox({
                   onSelectMessage={onSelectMessage}
                   onDeleteMessage={onDeleteMessage}
                   onCopyMessage={copyMessage}
+                  onForwardMessage={trackingId && message.body ? () => setForwardOpen(true) : undefined}
                   onChange={setOpen}
                 >
                   <Button

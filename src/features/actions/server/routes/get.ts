@@ -105,6 +105,11 @@ export const getAction = base
             avatar: true,
           },
         },
+        favorites: {
+          where: { userId: context.user.id },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
 
@@ -138,7 +143,8 @@ export const getAction = base
     const hasAccess = isParticipant || isWorkspaceOwner || canSeeByOrg;
 
     if (!hasAccess) {
-      return { action, hasAccess };
+      const { favorites: _f, ...rest } = action;
+      return { action: { ...rest, isFavoritedByMe: false }, hasAccess };
     }
 
     const activityLogs = await prisma.orgActivityLog.findMany({
@@ -163,5 +169,9 @@ export const getAction = base
       },
     });
 
-    return { action: { ...action, activityLogs }, hasAccess };
+    const { favorites, ...rest } = action;
+    return {
+      action: { ...rest, isFavoritedByMe: favorites.length > 0, activityLogs },
+      hasAccess,
+    };
   });

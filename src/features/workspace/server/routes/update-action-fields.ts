@@ -17,7 +17,6 @@ export const updateActionFields = base
       youtubeUrl: z.string().nullable().optional(),
       coverImage: z.string().nullable().optional(),
       isArchived: z.boolean().optional(),
-      isFavorited: z.boolean().optional(),
     }),
   )
   .handler(async ({ input, context }) => {

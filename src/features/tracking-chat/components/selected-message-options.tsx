@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MarkedMessage, Message } from "../types";
-import { ArchiveIcon, CopyIcon, PencilIcon, SendIcon, Trash2Icon } from "lucide-react";
+import { ArchiveIcon, CopyIcon, ForwardIcon, PencilIcon, SendIcon, Trash2Icon } from "lucide-react";
 import { useMessageStore } from "../context/use-message";
 import { differenceInMinutes } from "date-fns";
 import { MessageStatus } from "@/generated/prisma/enums";
@@ -25,6 +25,7 @@ interface Props {
   onDeleteMessage: () => void;
   onCopyMessage: () => void;
   onSaveToNBox?: () => void;
+  onForwardMessage?: () => void;
   onChange: (open: boolean) => void;
   disabled?: boolean;
 }
@@ -36,6 +37,7 @@ export function SelectedMessageOptions({
   onDeleteMessage,
   onCopyMessage,
   onSaveToNBox,
+  onForwardMessage,
   onChange,
   disabled,
 }: Props) {
@@ -70,6 +72,14 @@ export function SelectedMessageOptions({
           >
             Copiar <CopyIcon className="size-4" />
           </ContextMenuItem>
+          {onForwardMessage && (
+            <ContextMenuItem
+              className="flex w-full justify-between"
+              onClick={onForwardMessage}
+            >
+              Encaminhar <ForwardIcon className="size-4" />
+            </ContextMenuItem>
+          )}
           {onSaveToNBox && (
             <ContextMenuItem
               className="flex w-full justify-between"
@@ -112,6 +122,7 @@ export function SelectedMessageDropdown({
   onDeleteMessage,
   onCopyMessage,
   onSaveToNBox,
+  onForwardMessage,
   onChange,
 }: Props) {
   const startEditing = useMessageStore((state) => state.startEditing);
@@ -143,6 +154,14 @@ export function SelectedMessageDropdown({
           >
             Copiar <CopyIcon className="size-4" />
           </DropdownMenuItem>
+          {onForwardMessage && (
+            <DropdownMenuItem
+              className="flex w-full justify-between"
+              onClick={onForwardMessage}
+            >
+              Encaminhar <ForwardIcon className="size-4" />
+            </DropdownMenuItem>
+          )}
           {onSaveToNBox && (
             <DropdownMenuItem
               className="flex w-full justify-between"

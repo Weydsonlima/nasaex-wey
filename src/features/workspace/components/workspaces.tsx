@@ -32,7 +32,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { CalendarDaysIcon, FolderKanbanIcon } from "lucide-react";
+import { CalendarDaysIcon, FolderKanbanIcon, PlusIcon } from "lucide-react";
 import { PatternsSection } from "@/features/admin/components/patterns-section";
 import { Button } from "@/components/ui/button";
 import { WorkspaceCalendarModal } from "./workspace-calendar-modal";
@@ -43,26 +43,33 @@ export const WorkspaceHeader = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-row items-center justify-between gap-x-4">
         <EntityHeader
           title="Workspace"
           description="Aqui está uma visão geral deste espaço de trabalho!"
-          newButtonLabel="Novo workspace"
-          onNew={() => setOpen(true)}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 shrink-0"
-          onClick={() => setCalendarOpen(true)}
-        >
-          <CalendarDaysIcon className="size-4" />
-          Calendário Workspace
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setCalendarOpen(true)}
+          >
+            <CalendarDaysIcon className="size-4" />
+            Calendário Workspace
+          </Button>
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <PlusIcon className="size-4" />
+            Novo workspace
+          </Button>
+        </div>
       </div>
 
       <CreateWorkspaceModal open={open} onOpenChange={setOpen} />
-      <WorkspaceCalendarModal open={calendarOpen} onOpenChange={setCalendarOpen} />
+      <WorkspaceCalendarModal
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+      />
     </>
   );
 };
@@ -150,7 +157,7 @@ export const Workspaces = () => {
 
   return (
     <>
-      <div className="flex flex-col pt-2">
+      <div className="flex flex-col pt-2 gap-2">
         {workspaces.length === 0 && (
           <Empty>
             <EmptyHeader>
@@ -170,8 +177,14 @@ export const Workspaces = () => {
 
         {workspaces.map((workspace) => {
           return (
-            <Item key={workspace.id} className="bg-muted/30 hover:bg-muted/60 transition-colors">
-              <Link href={`/workspaces/${workspace.id}`} className="flex flex-1 items-center gap-3 min-w-0">
+            <Item
+              key={workspace.id}
+              className="bg-muted/30 hover:bg-muted/60 transition-colors"
+            >
+              <Link
+                href={`/workspaces/${workspace.id}`}
+                className="flex flex-1 items-center gap-3 min-w-0"
+              >
                 <ItemMedia>{workspace.icon}</ItemMedia>
                 <ItemContent>
                   <ItemTitle>{workspace.name}</ItemTitle>

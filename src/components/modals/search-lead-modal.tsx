@@ -196,7 +196,7 @@ export function SearchLeadModal({ open, onOpenChange }: SearchLeadModalProps) {
           )}
         </div>
 
-        <div className="min-h-[400px] space-y-1">
+        <div className="min-h-100 space-y-1">
           {isLoading ? (
             Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
               <Skeleton key={index} className="h-12 w-full" />

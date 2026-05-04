@@ -18,6 +18,7 @@ import {
   ListTodoIcon,
   PaperclipIcon,
   StarIcon,
+  PinIcon,
   CircleIcon,
   CircleCheckIcon,
 } from "lucide-react";
@@ -139,15 +140,27 @@ export function KanbanCard({ action, isOverlay }: Props) {
                 actionId={action.id}
                 workspaceId={action.workspaceId}
                 isFavorited={(action as any).isFavorited}
+                isFavoritedByMe={(action as any).isFavoritedByMe}
                 isArchived={(action as any).isArchived}
                 className="size-7 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm"
               />
             </div>
 
-            {/* Favorite star */}
-            {(action as any).isFavorited && (
-              <div className="absolute top-2 left-2">
-                <StarIcon className="size-4 fill-yellow-400 text-yellow-400 drop-shadow" />
+            {/* Favorite indicators: pin (global, visible to all) + star (personal) */}
+            {((action as any).isFavorited || (action as any).isFavoritedByMe) && (
+              <div className="absolute top-2 left-2 flex items-center gap-1">
+                {(action as any).isFavorited && (
+                  <PinIcon
+                    className="size-4 fill-violet-500 text-violet-500 drop-shadow"
+                    aria-label="Fixado para o workspace"
+                  />
+                )}
+                {(action as any).isFavoritedByMe && (
+                  <StarIcon
+                    className="size-4 fill-yellow-400 text-yellow-400 drop-shadow"
+                    aria-label="Seu favorito"
+                  />
+                )}
               </div>
             )}
           </div>
@@ -299,11 +312,13 @@ export function KanbanCard({ action, isOverlay }: Props) {
         </div>
       </div>
 
-      <ViewActionModal
-        actionId={action.id}
-        open={open}
-        onOpenChange={setOpen}
-      />
+      {open && (
+        <ViewActionModal
+          actionId={action.id}
+          open={open}
+          onOpenChange={setOpen}
+        />
+      )}
     </>
   );
 }

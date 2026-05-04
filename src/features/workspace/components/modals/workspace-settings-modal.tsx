@@ -13,11 +13,8 @@ import {
   Users,
   AlertTriangle,
   TagIcon,
-  WorkflowIcon,
   ZapIcon,
 } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/features/workspace/hooks/use-workspace";
 import { useQueryState } from "nuqs";
 import { ToastProvider } from "@/contexts/toast-context";
@@ -123,14 +120,6 @@ export function WorkspaceSettingsModal({
                   value="automations"
                   className="mt-0 focus-visible:outline-none"
                 >
-                  <div className="mb-4 flex items-center justify-end">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/workspaces/${workspaceId}/automations`}>
-                        <WorkflowIcon className="size-4 mr-2" />
-                        Automações avançadas (workflows)
-                      </Link>
-                    </Button>
-                  </div>
                   <AutomationsTab workspaceId={workspaceId} />
                 </TabsContent>
                 <TabsContent

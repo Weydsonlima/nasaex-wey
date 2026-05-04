@@ -428,20 +428,15 @@ export const useListRecentActions = (limit = 10) => {
 
 export const useFavoritedActions = (workspaceId: string) => {
   const { data, isLoading } = useQuery(
-    orpc.action.listByWorkspace.queryOptions({
-      input: {
-        workspaceId,
-        limit: 20,
-        page: 1,
-        isFavorited: true,
-        isArchived: false,
-      },
+    orpc.action.listFavorites.queryOptions({
+      input: { workspaceId, limit: 100 },
       enabled: !!workspaceId,
     }),
   );
 
   return {
-    actions: data?.actions ?? [],
+    actions: data?.items ?? [],
+    total: data?.total ?? 0,
     isLoading,
   };
 };
@@ -506,6 +501,71 @@ export const usePromoteSubAction = (actionId: string) => {
           orpc.action.listByWorkspace.queryOptions({
             input: { workspaceId: data.action.workspaceId },
           }),
+        );
+      },
+    }),
+  );
+};
+
+export const useReorderSubActions = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.reorderSubActions.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useCreateSubActionGroup = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.createSubActionGroup.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useUpdateSubActionGroup = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.updateSubActionGroup.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useDeleteSubActionGroup = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.deleteSubActionGroup.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
+        );
+      },
+    }),
+  );
+};
+
+export const useReorderSubActionGroups = (actionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    orpc.action.reorderSubActionGroups.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          orpc.action.get.queryOptions({ input: { actionId } }),
         );
       },
     }),

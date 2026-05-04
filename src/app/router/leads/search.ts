@@ -46,9 +46,30 @@ export const searchLeads = base
       const { page, limit, statusId, trackingId, search, orderBy, order } =
         input;
 
+      if (trackingId) {
+        const isMember = await prisma.trackingParticipant.findUnique({
+          where: {
+            userId_trackingId: {
+              userId: context.user.id,
+              trackingId,
+            },
+          },
+          select: { id: true },
+        });
+
+        if (!isMember) {
+          throw errors.FORBIDDEN({
+            message: "Você não é membro deste tracking",
+          });
+        }
+      }
+
       const where: any = {
         tracking: {
           organizationId: context.org.id,
+          participants: {
+            some: { userId: context.user.id },
+          },
         },
       };
 

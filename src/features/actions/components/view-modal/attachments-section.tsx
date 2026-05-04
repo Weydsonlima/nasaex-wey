@@ -112,7 +112,6 @@ export function AttachmentsSection({
   const [adding, setAdding] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
-  // Image preview state
   const [preview, setPreview] = useState<{ src: string; name: string } | null>(
     null,
   );
@@ -131,11 +130,6 @@ export function AttachmentsSection({
     }
   };
 
-  /**
-   * Eye button handler:
-   * - image → open ImagePreviewDialog
-   * - anything else → open in new tab
-   */
   const handlePreview = (att: Attachment) => {
     const resolvedUrl = useConstructUrl(att.url);
     if (isImageFile(att.name)) {

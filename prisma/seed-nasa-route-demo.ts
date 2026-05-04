@@ -22,14 +22,15 @@ const prisma = new PrismaClient({ adapter } as any);
 const DEMO_PASSWORD = "senha123";
 
 const DEMO_CREATOR_USER = {
-  id:    "demo-nasa-route-creator",
-  name:  "Estúdio NASA Route Demo",
+  id: "demo-nasa-route-creator",
+  name: "Estúdio NASA Route Demo",
   email: "criador@nasaroute.demo",
-  image: "https://api.dicebear.com/9.x/pixel-art/svg?seed=nasaroute&backgroundColor=8b5cf6",
+  image:
+    "https://api.dicebear.com/9.x/pixel-art/svg?seed=nasaroute&backgroundColor=8b5cf6",
 };
 
 const DEMO_CREATOR_ORG = {
-  id:   "demo-nasa-route-creator-org",
+  id: "demo-nasa-route-creator-org",
   name: "Academia Estelar",
   slug: "academia-estelar",
 };
@@ -96,8 +97,8 @@ type CourseSeed = {
   priceStars: number;
   rewardSpOnComplete: number;
   categorySlug: string;
-  lessons?: LessonSeed[];           // aulas soltas (sem módulo)
-  modules?: ModuleSeed[];           // módulos opcionais
+  lessons?: LessonSeed[]; // aulas soltas (sem módulo)
+  modules?: ModuleSeed[]; // módulos opcionais
 };
 
 const COURSES: CourseSeed[] = [
@@ -227,8 +228,13 @@ const COURSES: CourseSeed[] = [
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
-function detectVideoProvider(url: string): { provider: string | null; videoId: string | null } {
-  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/);
+function detectVideoProvider(url: string): {
+  provider: string | null;
+  videoId: string | null;
+} {
+  const yt = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/,
+  );
   if (yt) return { provider: "youtube", videoId: yt[1]! };
 
   const vimeo =
@@ -246,43 +252,45 @@ async function main() {
   // 1) Criador demo (User + Account)
   const pwHash = await hashPassword(DEMO_PASSWORD);
   const creatorUser = await prisma.user.upsert({
-    where:  { email: DEMO_CREATOR_USER.email },
+    where: { email: DEMO_CREATOR_USER.email },
     create: {
-      id:            DEMO_CREATOR_USER.id,
-      name:          DEMO_CREATOR_USER.name,
-      email:         DEMO_CREATOR_USER.email,
+      id: DEMO_CREATOR_USER.id,
+      name: DEMO_CREATOR_USER.name,
+      email: DEMO_CREATOR_USER.email,
       emailVerified: true,
-      image:         DEMO_CREATOR_USER.image,
-      isActive:      true,
+      image: DEMO_CREATOR_USER.image,
+      isActive: true,
     },
     update: {
-      name:  DEMO_CREATOR_USER.name,
+      name: DEMO_CREATOR_USER.name,
       image: DEMO_CREATOR_USER.image,
     },
   });
 
   await prisma.account.upsert({
-    where:  { id: `account-${creatorUser.id}` },
+    where: { id: `account-${creatorUser.id}` },
     create: {
-      id:         `account-${creatorUser.id}`,
-      accountId:  creatorUser.email,
+      id: `account-${creatorUser.id}`,
+      accountId: creatorUser.email,
       providerId: "credential",
-      userId:     creatorUser.id,
-      password:   pwHash,
-      createdAt:  new Date(),
-      updatedAt:  new Date(),
+      userId: creatorUser.id,
+      password: pwHash,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     update: { password: pwHash },
   });
-  console.log(`✓ Usuário criador: ${creatorUser.email} (senha: ${DEMO_PASSWORD})`);
+  console.log(
+    `✓ Usuário criador: ${creatorUser.email} (senha: ${DEMO_PASSWORD})`,
+  );
 
   // 2) Organização criadora demo
   const creatorOrg = await prisma.organization.upsert({
-    where:  { slug: DEMO_CREATOR_ORG.slug },
+    where: { slug: DEMO_CREATOR_ORG.slug },
     create: {
-      id:        DEMO_CREATOR_ORG.id,
-      name:      DEMO_CREATOR_ORG.name,
-      slug:      DEMO_CREATOR_ORG.slug,
+      id: DEMO_CREATOR_ORG.id,
+      name: DEMO_CREATOR_ORG.name,
+      slug: DEMO_CREATOR_ORG.slug,
       createdAt: new Date(),
     },
     update: { name: DEMO_CREATOR_ORG.name },
@@ -290,28 +298,35 @@ async function main() {
 
   // Membership owner do criador
   await prisma.member.upsert({
-    where:  { userId_organizationId: { userId: creatorUser.id, organizationId: creatorOrg.id } },
+    where: {
+      userId_organizationId: {
+        userId: creatorUser.id,
+        organizationId: creatorOrg.id,
+      },
+    },
     create: {
-      id:             `member-${creatorUser.id}-${creatorOrg.id}`,
+      id: `member-${creatorUser.id}-${creatorOrg.id}`,
       organizationId: creatorOrg.id,
-      userId:         creatorUser.id,
-      role:           "owner",
-      createdAt:      new Date(),
+      userId: creatorUser.id,
+      role: "owner",
+      createdAt: new Date(),
     },
     update: { role: "owner" },
   });
-  console.log(`✓ Organização criadora: ${creatorOrg.name} (slug: ${creatorOrg.slug})`);
+  console.log(
+    `✓ Organização criadora: ${creatorOrg.name} (slug: ${creatorOrg.slug})`,
+  );
 
   // 3) Categorias
   for (const c of CATEGORIES) {
     await prisma.nasaRouteCategory.upsert({
-      where:  { slug: c.slug },
+      where: { slug: c.slug },
       create: c,
       update: {
-        name:        c.name,
+        name: c.name,
         description: c.description,
-        iconKey:     c.iconKey,
-        order:       c.order,
+        iconKey: c.iconKey,
+        order: c.order,
       },
     });
   }
@@ -320,42 +335,44 @@ async function main() {
   // 4) Cursos + Módulos + Aulas
   let totalLessons = 0;
   for (const c of COURSES) {
-    const cat = await prisma.nasaRouteCategory.findUnique({ where: { slug: c.categorySlug } });
+    const cat = await prisma.nasaRouteCategory.findUnique({
+      where: { slug: c.categorySlug },
+    });
 
     const course = await prisma.nasaRouteCourse.upsert({
       where: {
         creatorOrgId_slug: { creatorOrgId: creatorOrg.id, slug: c.slug },
       },
       create: {
-        slug:               c.slug,
-        title:              c.title,
-        subtitle:           c.subtitle,
-        description:        c.description,
-        coverUrl:           c.coverUrl,
-        trailerUrl:         c.trailerUrl,
-        level:              c.level,
-        format:             c.format,
-        durationMin:        c.durationMin,
-        priceStars:         c.priceStars,
+        slug: c.slug,
+        title: c.title,
+        subtitle: c.subtitle,
+        description: c.description,
+        coverUrl: c.coverUrl,
+        trailerUrl: c.trailerUrl,
+        level: c.level,
+        format: c.format,
+        durationMin: c.durationMin,
+        priceStars: c.priceStars,
         rewardSpOnComplete: c.rewardSpOnComplete,
-        creatorOrgId:       creatorOrg.id,
-        creatorUserId:      creatorUser.id,
-        categoryId:         cat?.id,
-        isPublished:        true,
-        publishedAt:        new Date(),
+        creatorOrgId: creatorOrg.id,
+        creatorUserId: creatorUser.id,
+        categoryId: cat?.id,
+        isPublished: true,
+        publishedAt: new Date(),
       },
       update: {
-        title:              c.title,
-        subtitle:           c.subtitle,
-        description:        c.description,
-        trailerUrl:         c.trailerUrl,
-        level:              c.level,
-        format:             c.format,
-        durationMin:        c.durationMin,
-        priceStars:         c.priceStars,
+        title: c.title,
+        subtitle: c.subtitle,
+        description: c.description,
+        trailerUrl: c.trailerUrl,
+        level: c.level,
+        format: c.format,
+        durationMin: c.durationMin,
+        priceStars: c.priceStars,
         rewardSpOnComplete: c.rewardSpOnComplete,
-        categoryId:         cat?.id,
-        isPublished:        true,
+        categoryId: cat?.id,
+        isPublished: true,
       },
     });
 
@@ -370,17 +387,17 @@ async function main() {
       const { provider, videoId } = detectVideoProvider(l.videoUrl);
       await prisma.nasaRouteLesson.create({
         data: {
-          courseId:      course.id,
-          moduleId:      null,
-          order:         order++,
-          title:         l.title,
-          summary:       l.summary,
-          videoUrl:      l.videoUrl,
+          courseId: course.id,
+          moduleId: null,
+          order: order++,
+          title: l.title,
+          summary: l.summary,
+          videoUrl: l.videoUrl,
           videoProvider: provider,
           videoId,
-          durationMin:   l.durationMin,
+          durationMin: l.durationMin,
           isFreePreview: l.isFreePreview ?? false,
-          awardSp:       l.awardSp ?? 10,
+          awardSp: l.awardSp ?? 10,
         },
       });
       totalLessons++;
@@ -392,9 +409,9 @@ async function main() {
       const mod = await prisma.nasaRouteModule.create({
         data: {
           courseId: course.id,
-          order:    moduleOrder++,
-          title:    m.title,
-          summary:  m.summary,
+          order: moduleOrder++,
+          title: m.title,
+          summary: m.summary,
         },
       });
 
@@ -402,17 +419,17 @@ async function main() {
         const { provider, videoId } = detectVideoProvider(l.videoUrl);
         await prisma.nasaRouteLesson.create({
           data: {
-            courseId:      course.id,
-            moduleId:      mod.id,
-            order:         order++,
-            title:         l.title,
-            summary:       l.summary,
-            videoUrl:      l.videoUrl,
+            courseId: course.id,
+            moduleId: mod.id,
+            order: order++,
+            title: l.title,
+            summary: l.summary,
+            videoUrl: l.videoUrl,
             videoProvider: provider,
             videoId,
-            durationMin:   l.durationMin,
+            durationMin: l.durationMin,
             isFreePreview: l.isFreePreview ?? false,
-            awardSp:       l.awardSp ?? 10,
+            awardSp: l.awardSp ?? 10,
           },
         });
         totalLessons++;
@@ -424,7 +441,7 @@ async function main() {
   console.log("\n🎉 Seed NASA Route concluído.");
   console.log(`   • Criador : ${DEMO_CREATOR_USER.email} / ${DEMO_PASSWORD}`);
   console.log(`   • Org     : /c/${DEMO_CREATOR_ORG.slug}`);
-  console.log(`   • Cursos  : ${COURSES.map(c => c.slug).join(", ")}\n`);
+  console.log(`   • Cursos  : ${COURSES.map((c) => c.slug).join(", ")}\n`);
 }
 
 main()

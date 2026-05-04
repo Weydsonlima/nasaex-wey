@@ -9,8 +9,6 @@
  * 100% idempotente — usa upsert por slug.
  */
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
-import { faker } from "@faker-js/faker";
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { DEFAULT_RULES } from "@/app/router/space-point/defaults";

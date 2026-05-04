@@ -20,6 +20,7 @@ import {
 } from "@/inngest/functions/crons/partner-tier-recalc";
 import { partnerPayoutCloseCycle } from "@/inngest/functions/crons/partner-payout-close-cycle";
 import { partnerGracePeriodMonitor } from "@/inngest/functions/crons/partner-grace-period-monitor";
+import { coursePublicPurchasePaid } from "@/inngest/functions/course-public-purchase-paid";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -34,6 +35,8 @@ export const { GET, POST, PUT } = serve({
     partnerTierRecalcOne,
     partnerPayoutCloseCycle,
     partnerGracePeriodMonitor,
+    // ── NASA Router (checkout público de curso) ──
+    coursePublicPurchasePaid,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,

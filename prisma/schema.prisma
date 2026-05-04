@@ -92,6 +92,8 @@ model User {
   nasaRouteFreeAccess        NasaRouteFreeAccess[]  @relation("NasaRouteFreeAccessUser")
   nasaRouteFreeAccessGranted NasaRouteFreeAccess[]  @relation("NasaRouteFreeAccessGrantor")
   nasaRouteCertificates      NasaRouteCertificate[]
+  pendingCoursePurchasesRedeemed PendingCoursePurchase[] @relation("PendingCoursePurchaseRedeemer")
+  routerPaymentSettingsUpdated   RouterPaymentSettings[] @relation("RouterPaymentSettingsUpdater")
   remindersCreated           Reminder[]             @relation("ReminderCreatedBy")
 
   // ── NASA Partner ──
@@ -171,6 +173,9 @@ model Organization {
   // ── STARS ──────────────────────────────────
   planId               String?   @map("plan_id")
   starsBalance         Int       @default(0) @map("stars_balance")
+  starsBonusBalance    Int       @default(0) @map("stars_bonus_balance")
+  // Saldo de bônus (welcome, promoções) — não pode pagar curso no NASA Router,
+  // mas pode ser consumido por integrações (Planner IA, Command IA, APP_CHARGE/SETUP).
   starsCycleStart      DateTime? @map("stars_cycle_start")
   starsAlertConfig     Json      @default("{}") @map("stars_alert_config")
   starDistributionMode String    @default("org") @map("star_distribution_mode")
@@ -1917,6 +1922,7 @@ enum StarTransactionType {
   REFUND // estorno
   COURSE_PURCHASE // débito ao comprar curso NASA Route
   COURSE_PAYOUT // crédito ao criador por venda de curso NASA Route
+  WELCOME_BONUS // bônus único de boas-vindas — credita em starsBonusBalance
 }
 
 model StarTransaction {
@@ -4126,16 +4132,17 @@ model NasaRouteCourse {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  creatorOrg   Organization           @relation("NasaRouteCreatorOrg", fields: [creatorOrgId], references: [id], onDelete: Cascade)
-  creatorUser  User                   @relation("NasaRouteCreatorUser", fields: [creatorUserId], references: [id], onDelete: Restrict)
-  category     NasaRouteCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  modules      NasaRouteModule[]
-  lessons      NasaRouteLesson[]
-  enrollments  NasaRouteEnrollment[]
-  progress     NasaRouteProgress[]
-  freeAccess   NasaRouteFreeAccess[]
-  plans        NasaRoutePlan[]
-  certificates NasaRouteCertificate[]
+  creatorOrg       Organization            @relation("NasaRouteCreatorOrg", fields: [creatorOrgId], references: [id], onDelete: Cascade)
+  creatorUser      User                    @relation("NasaRouteCreatorUser", fields: [creatorUserId], references: [id], onDelete: Restrict)
+  category         NasaRouteCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  modules          NasaRouteModule[]
+  lessons          NasaRouteLesson[]
+  enrollments      NasaRouteEnrollment[]
+  progress         NasaRouteProgress[]
+  freeAccess       NasaRouteFreeAccess[]
+  plans            NasaRoutePlan[]
+  certificates     NasaRouteCertificate[]
+  pendingPurchases PendingCoursePurchase[]
 
   @@unique([creatorOrgId, slug])
   @@index([creatorOrgId])
@@ -4259,10 +4266,11 @@ model NasaRoutePlan {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  course      NasaRouteCourse           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons     NasaRoutePlanLesson[]
-  attachments NasaRoutePlanAttachment[]
-  enrollments NasaRouteEnrollment[]
+  course           NasaRouteCourse           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons          NasaRoutePlanLesson[]
+  attachments      NasaRoutePlanAttachment[]
+  enrollments      NasaRouteEnrollment[]
+  pendingPurchases PendingCoursePurchase[]
 
   @@index([courseId, order])
   @@map("nasa_route_plan")
@@ -4320,6 +4328,63 @@ model NasaRouteCertificate {
   @@index([userId])
   @@index([courseId])
   @@map("nasa_route_certificate")
+}
+
+// ─────────────────────────────────────────────
+// NASA Route — Checkout público (compra sem conta)
+// ─────────────────────────────────────────────
+
+enum PendingCoursePurchaseStatus {
+  PENDING
+  PAID
+  REDEEMED
+  EXPIRED
+  REFUNDED
+  CANCELLED
+}
+
+// Compra de curso iniciada por usuário sem conta. Após pagamento confirmado
+// pelo Stripe, gera signupToken enviado por e-mail; o resgate cria User+Org
+// e matricula o aluno no curso.
+model PendingCoursePurchase {
+  id                    String                      @id @default(cuid())
+  email                 String
+  courseId              String                      @map("course_id")
+  planId                String?                     @map("plan_id")
+  priceStars            Int                         @map("price_stars")
+  amountBrlCents        Int                         @map("amount_brl_cents")
+  starPriceBrlSnapshot  Decimal                     @map("star_price_brl_snapshot") @db.Decimal(10, 4)
+  stripeSessionId       String?                     @map("stripe_session_id")
+  stripePaymentIntentId String?                     @map("stripe_payment_intent_id")
+  signupToken           String?                     @unique @map("signup_token")
+  tokenExpiresAt        DateTime?                   @map("token_expires_at")
+  status                PendingCoursePurchaseStatus @default(PENDING)
+  createdAt             DateTime                    @default(now()) @map("created_at")
+  paidAt                DateTime?                   @map("paid_at")
+  redeemedAt            DateTime?                   @map("redeemed_at")
+  redeemedByUserId      String?                     @map("redeemed_by_user_id")
+  redeemedEnrollmentId  String?                     @map("redeemed_enrollment_id")
+
+  course         NasaRouteCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  plan           NasaRoutePlan?  @relation(fields: [planId], references: [id], onDelete: SetNull)
+  redeemedByUser User?           @relation("PendingCoursePurchaseRedeemer", fields: [redeemedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([status])
+  @@index([stripeSessionId])
+  @@map("pending_course_purchase")
+}
+
+// Configurações globais de pricing do NASA Route. Singleton (id="singleton").
+model RouterPaymentSettings {
+  id           String   @id
+  starPriceBrl Decimal  @default(0.15) @map("star_price_brl") @db.Decimal(10, 4)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedById  String?  @map("updated_by_id")
+
+  updatedBy User? @relation("RouterPaymentSettingsUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("router_payment_settings")
 }
 
 // ─────────────────────────────────────────────

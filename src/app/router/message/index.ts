@@ -7,6 +7,7 @@ import { createButtonsMessage } from "./create-with-buttons";
 import { deleteMessageHandler } from "./delet-message";
 import { editMessageHandler } from "./edit";
 import { markReadMessageHandler } from "./mark-read";
+import { forwardMessageHandler } from "./forward";
 
 export const messageRouter = {
   list: listMessage,
@@ -18,4 +19,5 @@ export const messageRouter = {
   delete: deleteMessageHandler,
   edit: editMessageHandler,
   markRead: markReadMessageHandler,
+  forward: forwardMessageHandler,
 };

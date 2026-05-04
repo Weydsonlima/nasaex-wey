@@ -19,6 +19,11 @@ import {
   dueDatePlus,
   type AsaasEnv,
 } from "@/lib/asaas";
+import {
+  getDiscountRateForTier,
+  getProgramSettings,
+} from "@/lib/partner-service";
+import { PartnerStatus, Prisma } from "@/generated/prisma/client";
 
 const ORIGIN = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
@@ -53,6 +58,44 @@ export const createGatewayCheckout = base
       where: { id: input.packageId },
     });
 
+    // ── Aplicar desconto se for parceiro ACTIVE (snapshot pricing) ─────────────
+    const originalBrl = Number(pkg.priceBrl);
+    let paidBrl = originalBrl;
+    let partnerDiscountSnapshot: {
+      partnerId: string;
+      tier: string;
+      ratePercent: number;
+      originalBrl: number;
+      paidBrl: number;
+      savingsBrl: number;
+    } | null = null;
+
+    const partnerRow = await prisma.partner.findUnique({
+      where: { userId: user.id },
+    });
+    if (
+      partnerRow &&
+      partnerRow.status === PartnerStatus.ACTIVE &&
+      partnerRow.tier
+    ) {
+      const settings = await getProgramSettings();
+      const ratePercent = getDiscountRateForTier(partnerRow.tier, settings);
+      if (ratePercent > 0) {
+        const computedPaid =
+          Math.round(originalBrl * (1 - ratePercent / 100) * 100) / 100;
+        const savings = Math.round((originalBrl - computedPaid) * 100) / 100;
+        paidBrl = computedPaid;
+        partnerDiscountSnapshot = {
+          partnerId: partnerRow.id,
+          tier: partnerRow.tier,
+          ratePercent,
+          originalBrl,
+          paidBrl: computedPaid,
+          savingsBrl: savings,
+        };
+      }
+    }
+
     // ── Auto-select gateway ────────────────────────────────────────────────────
     //  pix / boleto  → Asaas (required)
     //  credit_card   → Stripe preferred, fallback Asaas
@@ -81,17 +124,24 @@ export const createGatewayCheckout = base
     }
 
     // ── Create StarsPayment record ─────────────────────────────────────────────
+    const paymentMetadata: Record<string, unknown> = {
+      paymentMethod: input.paymentMethod,
+    };
+    if (partnerDiscountSnapshot) {
+      paymentMetadata.partnerDiscount = partnerDiscountSnapshot;
+    }
+
     const payment = await prisma.starsPayment.create({
       data: {
         userId:         user.id,
         organizationId: orgId,
         packageId:      pkg.id,
         starsAmount:    pkg.stars,
-        amountBrl:      pkg.priceBrl,
+        amountBrl:      paidBrl,
         provider:       gw.provider,
         gatewayId:      gw.id,
         status:         "pending",
-        metadata:       { paymentMethod: input.paymentMethod },
+        metadata:       paymentMetadata as Prisma.InputJsonValue,
       },
     });
 
@@ -110,10 +160,12 @@ export const createGatewayCheckout = base
         line_items: [{
           price_data: {
             currency:     "brl",
-            unit_amount:  Math.round(Number(pkg.priceBrl) * 100),
+            unit_amount:  Math.round(paidBrl * 100),
             product_data: {
               name:        `${pkg.stars} Stars — ${pkg.label}`,
-              description: "NASA.ex Platform Credits",
+              description: partnerDiscountSnapshot
+                ? `NASA.ex Platform Credits — Desconto Parceiro ${partnerDiscountSnapshot.ratePercent}%`
+                : "NASA.ex Platform Credits",
             },
           },
           quantity: 1,
@@ -162,16 +214,23 @@ export const createGatewayCheckout = base
       const charge = await createCharge(gw.secretKey, env, {
         customerId:         customer.id,
         billingType,
-        value:              Number(pkg.priceBrl),
+        value:              paidBrl,
         dueDate:            dueDatePlus(3),
-        description:        `${pkg.stars} Stars — ${pkg.label} — NASA.ex`,
+        description:        partnerDiscountSnapshot
+          ? `${pkg.stars} Stars — ${pkg.label} — NASA.ex (Parceiro ${partnerDiscountSnapshot.ratePercent}% off)`
+          : `${pkg.stars} Stars — ${pkg.label} — NASA.ex`,
         externalReference:  payment.id,
         callbackSuccessUrl: successUrl,
       });
 
+      const updatedMetadata: Record<string, unknown> = {
+        ...paymentMetadata,
+        asaasCustomerId: customer.id,
+      };
+
       await prisma.starsPayment.update({
         where: { id: payment.id },
-        data:  { externalId: charge.id, metadata: { asaasCustomerId: customer.id, paymentMethod: input.paymentMethod } },
+        data:  { externalId: charge.id, metadata: updatedMetadata as Prisma.InputJsonValue },
       });
 
       // 3. For PIX: fetch QR code inline for best UX

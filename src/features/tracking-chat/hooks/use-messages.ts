@@ -664,6 +664,60 @@ export function useMutationMarkReadMessage() {
   );
 }
 
+// ── Forward message ───────────────────────────────────────────────────────────
+
+export function useForwardMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    orpc.message.forward.mutationOptions({
+      onMutate: async ({ body, conversationIds }) => {
+        await queryClient.cancelQueries({ queryKey: ["conversations.list"] });
+
+        const previousLists = queryClient.getQueriesData({
+          queryKey: ["conversations.list"],
+        });
+
+        queryClient.setQueriesData(
+          { queryKey: ["conversations.list"] },
+          (old: any) => {
+            if (!old?.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page: any) => ({
+                ...page,
+                items: page.items.map((item: any) =>
+                  conversationIds.includes(item.id)
+                    ? {
+                        ...item,
+                        lastMessage: { body, createdAt: new Date() },
+                        lastMessageAt: new Date(),
+                      }
+                    : item,
+                ),
+              })),
+            };
+          },
+        );
+
+        return { previousLists };
+      },
+      onError: (_err, _vars, context) => {
+        if (context?.previousLists) {
+          context.previousLists.forEach(([key, oldData]) => {
+            queryClient.setQueryData(key, oldData);
+          });
+        }
+        toast.error("Erro ao encaminhar mensagem");
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["conversations.list"] });
+        toast.success("Mensagem encaminhada!");
+      },
+    }),
+  );
+}
+
 // ── Buttons / List message ────────────────────────────────────────────────────
 
 export function useMutationButtonsMessage({

@@ -53,6 +53,7 @@ export default function Page() {
         <Body
           messageSelected={messageSelected}
           onSelectMessage={setMessageSelected}
+          trackingId={data.conversation.trackingId}
         />
         <Footer
           messageSelected={messageSelected}

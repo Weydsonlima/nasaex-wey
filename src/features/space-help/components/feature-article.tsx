@@ -6,8 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { youtubeEmbedUrl } from "../lib/youtube";
 import { StepScreenshot } from "./step-screenshot";
 import { ChevronRight, Play } from "lucide-react";
-import { useIsModerator } from "../hooks/use-is-moderator";
-import { YoutubeLinkForm } from "./admin/youtube-link-form";
 import type { StepAnnotation } from "../types";
 
 interface Props {
@@ -16,8 +14,7 @@ interface Props {
 }
 
 export function FeatureArticle({ categorySlug, featureSlug }: Props) {
-  const isMod = useIsModerator();
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     ...orpc.spaceHelp.getFeature.queryOptions({
       input: { categorySlug, featureSlug },
     }),
@@ -71,17 +68,8 @@ export function FeatureArticle({ categorySlug, featureSlug }: Props) {
       {!embed && feature.youtubeUrl && (
         <div className="mt-6 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-600 dark:text-amber-400">
           <Play className="size-4" />
-          URL de YouTube inválida — peça a um moderador para corrigir.
+          URL de vídeo inválida — peça a um moderador para corrigir.
         </div>
-      )}
-
-      {isMod && (
-        <YoutubeLinkForm
-          target="feature"
-          id={feature.id}
-          currentUrl={feature.youtubeUrl}
-          onSaved={() => refetch()}
-        />
       )}
 
       <ol className="mt-10 space-y-12">
@@ -103,6 +91,7 @@ export function FeatureArticle({ categorySlug, featureSlug }: Props) {
                 src={step.screenshotUrl ?? null}
                 alt={step.title}
                 annotations={step.annotations as StepAnnotation[] | null}
+                showPlaceholder={false}
               />
             </div>
           </li>

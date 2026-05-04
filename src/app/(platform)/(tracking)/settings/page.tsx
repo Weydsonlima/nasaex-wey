@@ -1,6 +1,7 @@
 "use client";
 
 import { ModeToggle } from "@/components/mode-toggle";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -20,10 +21,10 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { useEffect, useRef, useState } from "react";
-import { Camera, ChevronDownIcon, Loader2 } from "lucide-react";
+import { Camera, ChevronDownIcon, CopyIcon, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { countries } from "@/types/some";
 import { normalizePhone, phoneMask } from "@/utils/format-phone";
@@ -85,6 +86,11 @@ export default function Page() {
       toast.error(err.message ?? "Erro ao atualizar perfil.");
     },
   });
+
+  // Link de indicação (qualquer usuário autenticado tem direito ao próprio).
+  const { data: referralLink, isLoading: isLoadingLink } = useQuery(
+    orpc.partner.getMyLink.queryOptions(),
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -297,6 +303,86 @@ export default function Page() {
           className="w-64"
           disabled
         />
+      </div>
+
+      <Separator />
+
+      {/* ── User ID ── */}
+      <div className="flex items-center justify-between py-6">
+        <div>
+          <h2 className="font-medium">User ID</h2>
+          <span className="text-xs text-muted-foreground">
+            Seu identificador único na plataforma
+          </span>
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-violet-500/5 border border-violet-200 dark:border-violet-800 min-h-[52px] w-72">
+          {isPending ? (
+            <div className="flex-1 flex items-center justify-center">
+              <span className="text-xs text-muted-foreground animate-pulse">
+                Carregando...
+              </span>
+            </div>
+          ) : (
+            <>
+              <code className="font-mono font-semibold text-xs text-violet-600 dark:text-violet-400 flex-1 text-center select-all truncate">
+                {session?.user?.id ?? "—"}
+              </code>
+              {session?.user?.id && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-100 dark:hover:bg-violet-900/30"
+                  onClick={() => {
+                    navigator.clipboard.writeText(session.user.id);
+                    toast.success("ID copiado!");
+                  }}
+                >
+                  <CopyIcon className="size-3.5" />
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Acesse com meu link ── */}
+      <div className="flex items-center justify-between py-6">
+        <div>
+          <h2 className="font-medium">Acesse com meu link</h2>
+          <span className="text-xs text-muted-foreground">
+            Compartilhe e ganhe comissão por cada empresa cadastrada
+          </span>
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-violet-500/5 border border-violet-200 dark:border-violet-800 min-h-[52px] w-72">
+          {isLoadingLink || !referralLink ? (
+            <div className="flex-1 flex items-center justify-center">
+              <span className="text-xs text-muted-foreground animate-pulse">
+                Gerando link...
+              </span>
+            </div>
+          ) : (
+            <>
+              <code className="font-mono font-semibold text-xs text-violet-600 dark:text-violet-400 flex-1 select-all truncate">
+                {referralLink.url}
+              </code>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-100 dark:hover:bg-violet-900/30"
+                onClick={() => {
+                  navigator.clipboard.writeText(referralLink.url);
+                  toast.success("Link copiado!");
+                }}
+              >
+                <CopyIcon className="size-3.5" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <Separator />

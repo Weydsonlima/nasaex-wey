@@ -49,6 +49,7 @@ import { pagesRouter } from "./pages";
 import { inviteLinksRouter } from "./invite-links";
 import { workspaceWorkflowRoutes } from "./workspace-workflow";
 import { reminderRouter } from "./reminder";
+import { partnerRouter } from "./partner";
 
 export const router = {
   tracking: trackingRoutes,
@@ -101,4 +102,5 @@ export const router = {
   inviteLinks: inviteLinksRouter,
   workspaceWorkflow: workspaceWorkflowRoutes,
   reminder: reminderRouter,
+  partner: partnerRouter,
 };

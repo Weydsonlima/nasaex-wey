@@ -428,20 +428,15 @@ export const useListRecentActions = (limit = 10) => {
 
 export const useFavoritedActions = (workspaceId: string) => {
   const { data, isLoading } = useQuery(
-    orpc.action.listByWorkspace.queryOptions({
-      input: {
-        workspaceId,
-        limit: 20,
-        page: 1,
-        isFavorited: true,
-        isArchived: false,
-      },
+    orpc.action.listFavorites.queryOptions({
+      input: { workspaceId, limit: 100 },
       enabled: !!workspaceId,
     }),
   );
 
   return {
-    actions: data?.actions ?? [],
+    actions: data?.items ?? [],
+    total: data?.total ?? 0,
     isLoading,
   };
 };

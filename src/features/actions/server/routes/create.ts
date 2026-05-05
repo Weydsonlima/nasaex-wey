@@ -6,6 +6,10 @@ import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { generatePublicSlug } from "@/features/public-calendar/utils/slug";
 import { logActivity } from "@/lib/activity-logger";
+import {
+  hasActionCreatedWorkflow,
+  sendWorkspaceWorkflowEvent,
+} from "@/inngest/utils";
 
 const EVENT_CATEGORY_VALUES = [
   "WORKSHOP",
@@ -33,6 +37,7 @@ export const createAction = base
       workspaceId: z.string().min(1, "Workspace é obrigatório"),
       columnId: z.string().min(1, "Coluna é obrigatória"),
       orgProjectId: z.string().optional(),
+      participantIds: z.array(z.string()).optional(),
       // ─── Calendário Público ──────────────────────────────────────────
       isPublic: z.boolean().optional(),
       eventCategory: z.enum(EVENT_CATEGORY_VALUES).nullable().optional(),
@@ -79,8 +84,6 @@ export const createAction = base
       publishedAt = new Date();
     }
 
-    console.log("[CREATE TASK]", input);
-
     const action = await prisma.action.create({
       data: {
         title: input.title,
@@ -102,12 +105,27 @@ export const createAction = base
         address: input.address ?? undefined,
         registrationUrl: input.registrationUrl ?? undefined,
         participants: {
-          create: {
-            userId: context.user.id,
-          },
+          create: Array.from(
+            new Set([context.user.id, ...(input.participantIds ?? [])]),
+          ).map((userId) => ({ userId })),
         },
       },
     });
+
+    try {
+      if (await hasActionCreatedWorkflow(action.workspaceId)) {
+        await sendWorkspaceWorkflowEvent({
+          trigger: "WS_ACTION_CREATED",
+          workspaceId: action.workspaceId,
+          actionId: action.id,
+        });
+      }
+    } catch (err) {
+      console.error(
+        "[workspace-workflow] failed to emit action.created",
+        err,
+      );
+    }
 
     const orgId = context.session.activeOrganizationId;
     if (orgId) {
@@ -119,12 +137,17 @@ export const createAction = base
         userImage: (context.user as any).image,
         appSlug: "workspace",
         subAppSlug: "workspace-actions",
-        featureKey: input.isPublic ? "workspace.action.created.public" : "workspace.action.created",
+        featureKey: input.isPublic
+          ? "workspace.action.created.public"
+          : "workspace.action.created",
         action: "workspace.action.created",
         actionLabel: `Criou a ação "${action.title}"`,
         resource: action.title,
         resourceId: action.id,
-        metadata: { priority: input.priority, isPublic: input.isPublic ?? false },
+        metadata: {
+          priority: input.priority,
+          isPublic: input.isPublic ?? false,
+        },
       });
     }
 

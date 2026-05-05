@@ -43,7 +43,6 @@ const step2Schema = z.object({
   companyNiche: z.string().min(1, "Nicho é obrigatório"),
   companyCep: z
     .string()
-    .min(1, "CEP é obrigatório")
     .regex(/^\d{5}-\d{3}$/, "CEP inválido (formato: 00000-000)"),
 });
 
@@ -89,7 +88,9 @@ export function FormCreateOrg() {
   }, [name, isSlugManuallyEdited, form1]);
 
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    form1.setValue("slug", createSlug(e.target.value), { shouldValidate: true });
+    form1.setValue("slug", createSlug(e.target.value), {
+      shouldValidate: true,
+    });
     setIsSlugManuallyEdited(true);
   };
 
@@ -103,14 +104,19 @@ export function FormCreateOrg() {
 
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
-    const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
+    const formatted =
+      raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
     form2.setValue("companyCep", formatted, { shouldValidate: true });
   };
 
   const onStep1Next = async (data: Step1Data) => {
-    const { data: checkData } = await authClient.organization.checkSlug({ slug: data.slug });
+    const { data: checkData } = await authClient.organization.checkSlug({
+      slug: data.slug,
+    });
     if (!checkData?.status) {
-      form1.setError("slug", { message: "Este slug já está em uso. Por favor, escolha outro." });
+      form1.setError("slug", {
+        message: "Este slug já está em uso. Por favor, escolha outro.",
+      });
       return;
     }
     setStep1Data(data);
@@ -122,7 +128,10 @@ export function FormCreateOrg() {
     setIsSubmitting(true);
 
     try {
-      const metadata = { name: step1Data.name, createdAt: new Date().toISOString() };
+      const metadata = {
+        name: step1Data.name,
+        createdAt: new Date().toISOString(),
+      };
 
       const { data: org, error } = await authClient.organization.create({
         name: step1Data.name,
@@ -197,7 +206,9 @@ export function FormCreateOrg() {
                     disabled={isSubmitting}
                   />
                   {form1.formState.errors.name && (
-                    <FieldError>{form1.formState.errors.name.message}</FieldError>
+                    <FieldError>
+                      {form1.formState.errors.name.message}
+                    </FieldError>
                   )}
                 </Field>
 
@@ -222,7 +233,9 @@ export function FormCreateOrg() {
                     </Button>
                   </div>
                   {form1.formState.errors.slug && (
-                    <FieldError>{form1.formState.errors.slug.message}</FieldError>
+                    <FieldError>
+                      {form1.formState.errors.slug.message}
+                    </FieldError>
                   )}
                 </Field>
 
@@ -263,7 +276,9 @@ export function FormCreateOrg() {
             <FieldSet>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="companyNiche">Nicho da empresa</FieldLabel>
+                  <FieldLabel htmlFor="companyNiche">
+                    Nicho da empresa
+                  </FieldLabel>
                   <Input
                     id="companyNiche"
                     placeholder="Ex: Agência de Marketing, E-commerce, Saúde…"
@@ -271,7 +286,9 @@ export function FormCreateOrg() {
                     disabled={isSubmitting}
                   />
                   {form2.formState.errors.companyNiche && (
-                    <FieldError>{form2.formState.errors.companyNiche.message}</FieldError>
+                    <FieldError>
+                      {form2.formState.errors.companyNiche.message}
+                    </FieldError>
                   )}
                 </Field>
 
@@ -286,7 +303,9 @@ export function FormCreateOrg() {
                     maxLength={9}
                   />
                   {form2.formState.errors.companyCep && (
-                    <FieldError>{form2.formState.errors.companyCep.message}</FieldError>
+                    <FieldError>
+                      {form2.formState.errors.companyCep.message}
+                    </FieldError>
                   )}
                 </Field>
               </FieldGroup>

@@ -33,6 +33,23 @@ import { DatePicker } from "./data-picker";
 import dayjs from "dayjs";
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { CheckIcon, UserPlusIcon, XIcon } from "lucide-react";
+import { useWorkspaceMembers } from "@/features/workspace/hooks/use-workspace";
+import { authClient } from "@/lib/auth-client";
 
 interface Props {
   open: boolean;
@@ -41,6 +58,15 @@ interface Props {
   defaultColumnId?: string;
   presetPublic?: boolean;
 }
+
+type WorkspaceMemberOption = {
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    email: string;
+  };
+};
 
 const formSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -52,6 +78,7 @@ const formSchema = z.object({
   columnId: z.string().min(1, "Coluna é obrigatória"),
   orgProjectId: z.string().optional(),
   isPublic: z.boolean().optional(),
+  participantIds: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -74,6 +101,7 @@ export const CreateActionModal = ({
       dueDate: dayjs().add(1, "day").startOf("day").toDate(),
       columnId: defaultColumnId ?? "",
       isPublic: presetPublic ?? false,
+      participantIds: [],
     },
   });
 
@@ -85,6 +113,13 @@ export const CreateActionModal = ({
   const projects = projectsData?.projects ?? [];
 
   const columns = data.columns;
+
+  const { data: session } = authClient.useSession();
+  const currentUserId = session?.user?.id;
+  const { members } = useWorkspaceMembers(workspaceId);
+  const selectableMembers = (members as WorkspaceMemberOption[]).filter(
+    (m) => m.user.id !== currentUserId,
+  );
 
   useEffect(() => {
     if (columns.length > 0 && !form.getValues("columnId")) {
@@ -250,6 +285,112 @@ export const CreateActionModal = ({
                     </SelectContent>
                   </Select>
                 )}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel>Participantes (opcional)</FieldLabel>
+              <Controller
+                control={form.control}
+                name="participantIds"
+                render={({ field }) => {
+                  const selected = field.value ?? [];
+                  const toggle = (userId: string) => {
+                    const next = selected.includes(userId)
+                      ? selected.filter((id) => id !== userId)
+                      : [...selected, userId];
+                    field.onChange(next);
+                  };
+                  const selectedMembers = selectableMembers.filter((m) =>
+                    selected.includes(m.user.id),
+                  );
+                  return (
+                    <div className="space-y-2">
+                      {selectedMembers.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedMembers.map((m) => (
+                            <div
+                              key={m.user.id}
+                              className="flex items-center gap-1.5 rounded-full border bg-muted/50 pl-1 pr-2 py-0.5"
+                            >
+                              <Avatar className="size-5">
+                                <AvatarImage src={m.user.image ?? undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {m.user.name?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs">{m.user.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggle(m.user.id)}
+                                disabled={isPending}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <XIcon className="size-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start gap-2 font-normal"
+                            disabled={isPending}
+                          >
+                            <UserPlusIcon className="size-3.5" />
+                            <span className="text-muted-foreground">
+                              {selected.length === 0
+                                ? "Adicionar participantes"
+                                : `${selected.length} participante${selected.length > 1 ? "s" : ""} selecionado${selected.length > 1 ? "s" : ""}`}
+                            </span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[--radix-popover-trigger-width] p-0"
+                          align="start"
+                        >
+                          <Command>
+                            <CommandInput placeholder="Buscar membro..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum membro encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {selectableMembers.map((m) => {
+                                  const checked = selected.includes(m.user.id);
+                                  return (
+                                    <CommandItem
+                                      key={m.user.id}
+                                      value={m.user.name ?? m.user.id}
+                                      onSelect={() => toggle(m.user.id)}
+                                    >
+                                      <Avatar className="size-5 mr-2">
+                                        <AvatarImage
+                                          src={m.user.image ?? undefined}
+                                        />
+                                        <AvatarFallback className="text-[10px]">
+                                          {m.user.name?.charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="flex-1 truncate">
+                                        {m.user.name}
+                                      </span>
+                                      {checked && (
+                                        <CheckIcon className="size-3.5 text-primary shrink-0" />
+                                      )}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  );
+                }}
               />
             </Field>
 

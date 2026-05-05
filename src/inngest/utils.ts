@@ -119,6 +119,24 @@ export const hasTaggedWorkflow = async (
   return !!node;
 };
 
+/**
+ * Verifica se há algum workflow ativo no workspace com um nó de gatilho
+ * "ação criada". Usado para evitar disparar eventos Inngest sem ouvintes.
+ */
+export const hasActionCreatedWorkflow = async (workspaceId: string) => {
+  const node = await prisma.node.findFirst({
+    where: {
+      type: NodeType.WS_ACTION_CREATED,
+      workflow: {
+        workspaceId,
+        isActive: true,
+      },
+    },
+    select: { id: true },
+  });
+  return !!node;
+};
+
 export const sendWorkspaceWorkflowEvent = async (data: {
   trigger: WorkspaceWorkflowTrigger;
   workspaceId: string;

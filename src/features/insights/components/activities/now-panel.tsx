@@ -40,12 +40,12 @@ export function NowPanel({ orgIds }: Props) {
   });
 
   const grouped = useMemo(() => {
-    const map: Record<string, typeof data extends { now: infer T } ? T : never> =
-      {} as any;
+    type NowItem = NonNullable<typeof data>["now"][number];
+    const map: Record<string, NowItem[]> = {};
     for (const u of data?.now ?? []) {
       const slug = u.activeAppSlug ?? "system";
-      if (!map[slug]) map[slug] = [] as any;
-      (map[slug] as any[]).push(u);
+      if (!map[slug]) map[slug] = [];
+      map[slug].push(u);
     }
     return map;
   }, [data]);

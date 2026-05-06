@@ -7,10 +7,9 @@ import { ORPCError } from "@orpc/server";
 import { StarTransactionType } from "@/generated/prisma/enums";
 import { pusherServer } from "@/lib/pusher";
 import { awardPoints } from "@/app/router/space-point/utils";
-import { canEnrollFree, PLATFORM_FEE_PCT } from "../utils";
+import { canEnrollFree } from "../utils";
+import { executeCoursePurchaseInTx } from "../helpers/purchase-helpers";
 import { logActivity } from "@/lib/activity-logger";
-import { createSubscriptionInTx } from "../helpers/subscription-helpers";
-import type { SubscriptionPeriod } from "@/features/nasa-route/lib/formats";
 
 /**
  * Compra de curso pelo aluno (paga com STARs da org dele).

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/pt-br";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -268,6 +268,10 @@ interface MonthGridProps {
   onCursorChange: (cursor: Dayjs) => void;
   onSelect: (action: WorkspaceCalendarAction) => void;
   selectedId?: string | null;
+  /** Click em área vazia da célula. Recebe o dia clicado. */
+  onCreateForDate?: (date: Dayjs) => void;
+  /** Quando informado, mostra ícone de "+" no hover da célula. */
+  showCreateOnHover?: boolean;
 }
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -407,6 +411,8 @@ export function WorkspaceCalendarMonthGrid({
   onCursorChange,
   onSelect,
   selectedId,
+  onCreateForDate,
+  showCreateOnHover,
 }: MonthGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const todayCellRef = useRef<HTMLDivElement>(null);
@@ -557,8 +563,16 @@ export function WorkspaceCalendarMonthGrid({
             <div
               key={dayKey}
               ref={isToday ? todayCellRef : undefined}
+              onClick={(e) => {
+                // Só dispara em click na área vazia da célula — clicks em
+                // cards / popovers / "+" param via stopPropagation neles.
+                if (onCreateForDate && e.target === e.currentTarget) {
+                  onCreateForDate(day);
+                }
+              }}
               className={cn(
-                "relative overflow-hidden rounded-lg",
+                "group relative overflow-hidden rounded-lg",
+                onCreateForDate && "cursor-pointer",
                 isToday
                   ? "bg-primary/15 ring-1 ring-primary/40"
                   : isOutside
@@ -582,6 +596,21 @@ export function WorkspaceCalendarMonthGrid({
               >
                 {day.date()}
               </div>
+
+              {/* Botão "+" pra criar evento (visível no hover) */}
+              {showCreateOnHover && onCreateForDate && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateForDate(day);
+                  }}
+                  title={`Criar evento em ${day.format("DD/MM/YYYY")}`}
+                  className="absolute right-[5px] top-[5px] z-20 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-0 shadow-sm transition-opacity hover:scale-110 group-hover:opacity-100"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              )}
 
               {(holiday || mobilization) && (
                 <div className="absolute left-0 right-0 top-[28px] z-20 flex flex-col gap-0.5 px-[5px]">

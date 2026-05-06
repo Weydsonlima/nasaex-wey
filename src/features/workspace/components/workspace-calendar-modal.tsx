@@ -19,9 +19,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 import { useWorkspaceCalendar } from "@/features/actions/hooks/use-tasks";
 import { ViewActionModal } from "@/features/actions/components/view-action-modal";
+import { CreateActionModal } from "@/features/actions/components/create-action-modal";
 import { cn } from "@/lib/utils";
 import {
   WorkspaceCalendarMonthGrid,
@@ -67,6 +76,21 @@ export function WorkspaceCalendarModal({ open, onOpenChange }: Props) {
   const [showOnlyPending, setShowOnlyPending] = useState(false);
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Estado pra criar evento via click numa data (gateway de workspace)
+  const [createForDate, setCreateForDate] = useState<Dayjs | null>(null);
+  const [createWorkspaceId, setCreateWorkspaceId] = useState<string | null>(
+    null,
+  );
+
+  const { data: allWorkspacesData } = useQuery({
+    ...orpc.workspace.list.queryOptions({ input: {} }),
+    enabled: open,
+  });
+  const allWorkspaces = useMemo(() => {
+    const list = (allWorkspacesData as { workspaces?: Array<{ id: string; name: string }> })?.workspaces;
+    return list ?? [];
+  }, [allWorkspacesData]);
 
   const startDate = cursor.startOf("month").format("YYYY-MM-DD");
   const endDate = cursor.endOf("month").format("YYYY-MM-DD");
@@ -327,6 +351,14 @@ export function WorkspaceCalendarModal({ open, onOpenChange }: Props) {
                     onCursorChange={setCursor}
                     onSelect={(a) => setSelectedActionId(a.id)}
                     selectedId={selectedActionId}
+                    onCreateForDate={(d) => {
+                      setCreateForDate(d);
+                      // Atalho: 1 workspace só → pula picker
+                      if (allWorkspaces.length === 1) {
+                        setCreateWorkspaceId(allWorkspaces[0].id);
+                      }
+                    }}
+                    showCreateOnHover
                   />
                 )}
               </div>
@@ -352,6 +384,88 @@ export function WorkspaceCalendarModal({ open, onOpenChange }: Props) {
           onOpenChange={(v) => {
             if (!v) setSelectedActionId(null);
           }}
+        />
+      )}
+
+      {/* Workspace picker — quando há múltiplos workspaces e o user clicou
+          numa data sem ter selecionado workspace ainda. */}
+      {createForDate && !createWorkspaceId && allWorkspaces.length > 1 && (
+        <Dialog
+          open
+          onOpenChange={(v) => {
+            if (!v) {
+              setCreateForDate(null);
+              setCreateWorkspaceId(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                Criar evento em{" "}
+                {createForDate.format("DD [de] MMMM [de] YYYY")}
+              </DialogTitle>
+              <DialogDescription>
+                Em qual workspace você quer criar este evento?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+              {allWorkspaces.map((ws) => (
+                <button
+                  key={ws.id}
+                  type="button"
+                  onClick={() => setCreateWorkspaceId(ws.id)}
+                  className="flex w-full items-center gap-3 rounded-md border bg-background hover:bg-muted/50 transition-colors p-3 text-left"
+                >
+                  <div
+                    className="size-3 rounded-full shrink-0"
+                    style={{
+                      backgroundColor:
+                        workspaceColorMap[ws.id] ?? "#7c3aed",
+                    }}
+                  />
+                  <span className="text-sm font-medium">{ws.name}</span>
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Empty state — sem workspaces */}
+      {createForDate && allWorkspaces.length === 0 && (
+        <Dialog
+          open
+          onOpenChange={() => {
+            setCreateForDate(null);
+            setCreateWorkspaceId(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Sem workspaces</DialogTitle>
+              <DialogDescription>
+                Você precisa criar pelo menos um workspace antes de criar
+                eventos no calendário.
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Create action modal — pre-filled com data e workspace */}
+      {createForDate && createWorkspaceId && (
+        <CreateActionModal
+          open
+          onOpenChange={(v) => {
+            if (!v) {
+              setCreateForDate(null);
+              setCreateWorkspaceId(null);
+            }
+          }}
+          workspaceId={createWorkspaceId}
+          defaultStartDate={createForDate.startOf("day").toDate()}
+          defaultDueDate={createForDate.endOf("day").toDate()}
         />
       )}
     </>

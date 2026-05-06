@@ -65,6 +65,10 @@ interface Props {
   // do action recém-criado pra fluxos como abrir ViewActionModal e
   // destacar a seção de Visualização Pública.
   onCreated?: (actionId: string) => void;
+  /** Override do startDate default (hoje 00h). Útil ao criar a partir do calendário. */
+  defaultStartDate?: Date;
+  /** Override do dueDate default (amanhã 00h). Útil ao criar a partir do calendário. */
+  defaultDueDate?: Date;
 }
 
 type WorkspaceMemberOption = {
@@ -100,6 +104,8 @@ export const CreateActionModal = ({
   presetTitle,
   presetStartDate,
   onCreated,
+  defaultStartDate,
+  defaultDueDate,
 }: Props) => {
   const initialStart = presetStartDate
     ? dayjs(presetStartDate).startOf("day").toDate()
@@ -117,6 +123,12 @@ export const CreateActionModal = ({
       description: "",
       startDate: initialStart,
       dueDate: initialDue,
+      startDate: defaultStartDate ?? dayjs().startOf("day").toDate(),
+      dueDate:
+        defaultDueDate ??
+        (defaultStartDate
+          ? dayjs(defaultStartDate).endOf("day").toDate()
+          : dayjs().add(1, "day").startOf("day").toDate()),
       columnId: defaultColumnId ?? "",
       isPublic: presetPublic ?? false,
       participantIds: [],
@@ -140,6 +152,18 @@ export const CreateActionModal = ({
       );
     }
   }, [presetStartDate, form]);
+  // Re-sincroniza datas se o prop mudar (cada click numa data abre o modal
+  // com defaults novos).
+  useEffect(() => {
+    if (open && defaultStartDate) {
+      form.setValue("startDate", defaultStartDate);
+      form.setValue(
+        "dueDate",
+        defaultDueDate ?? dayjs(defaultStartDate).endOf("day").toDate(),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultStartDate?.getTime(), defaultDueDate?.getTime()]);
 
   const createAction = useCreateTask();
   const { data } = useSuspenseColumnsByWorkspace(workspaceId);

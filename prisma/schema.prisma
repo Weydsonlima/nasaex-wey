@@ -454,11 +454,12 @@ model WinLossReason {
 }
 
 model TrackingConsultant {
-  id         String  @id @default(cuid())
-  trackingId String  @map("tracking_id")
-  userId     String  @map("user_id")
-  maxFlow    Int     @default(0) @map("max_flow")
-  isActive   Boolean @default(true)
+  id             String    @id @default(cuid())
+  trackingId     String    @map("tracking_id")
+  userId         String    @map("user_id")
+  maxFlow        Int       @default(0) @map("max_flow")
+  isActive       Boolean   @default(true)
+  lastAssignedAt DateTime? @map("last_assigned_at")
 
   tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { orpc } from "@/lib/orpc";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import { TagsChart } from "@/features/insights/components/charts/tags-chart";
 import { BarChart3, Building2, CalendarIcon, TrendingUp } from "lucide-react";
 import { ErrorState } from "./error-state";
 import { HeaderSkeleton, KPISkeleton } from "./skeletron";
-import { useState, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   Popover,
   PopoverContent,
@@ -30,7 +30,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import type { DateRange } from "@/features/insights/types";
 
 // ─── Skeletons ──────────────────────────────────────────────────────────────
 
@@ -43,36 +42,56 @@ export default function PublicInsightReportPage() {
   const organizationId = params.organizationId;
   const slug = params["insight-slug"];
 
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: undefined,
-    to: undefined,
-  });
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const urlStartDate = searchParams.get("startDate") ?? undefined;
+  const urlEndDate = searchParams.get("endDate") ?? undefined;
+
+  const dateRange = {
+    from: urlStartDate ? new Date(urlStartDate) : undefined,
+    to: urlEndDate ? new Date(urlEndDate) : undefined,
+  };
 
   const { data, isLoading, isError, refetch } = useQuery(
     orpc.insights.publicOrganizationDashboard.queryOptions({
       input: {
         organizationId,
         slug,
-        startDate: dateRange.from?.toISOString(),
-        endDate: dateRange.to?.toISOString(),
+        startDate: urlStartDate,
+        endDate: urlEndDate,
       },
+      placeholderData: keepPreviousData,
     }),
   );
 
+  const initialized = useRef(false);
+
   useEffect(() => {
-    if (data?.share?.appliedFilters) {
+    if (data?.share?.appliedFilters && !initialized.current && !urlStartDate && !urlEndDate) {
+      initialized.current = true;
       const { startDate, endDate } = data.share.appliedFilters as {
         startDate?: string;
         endDate?: string;
       };
       if (startDate || endDate) {
-        setDateRange({
-          from: startDate ? new Date(startDate) : undefined,
-          to: endDate ? new Date(endDate) : undefined,
-        });
+        const params = new URLSearchParams(searchParams.toString());
+        if (startDate) params.set("startDate", startDate);
+        if (endDate) params.set("endDate", endDate);
+        router.replace(`${pathname}?${params.toString()}`);
       }
     }
   }, [data?.share?.appliedFilters]);
+
+  const handleDateChange = (range: { from?: Date; to?: Date } | undefined) => {
+    const next = new URLSearchParams(searchParams.toString());
+    if (range?.from) next.set("startDate", range.from.toISOString());
+    else next.delete("startDate");
+    if (range?.to) next.set("endDate", range.to.toISOString());
+    else next.delete("endDate");
+    router.replace(`${pathname}?${next.toString()}`);
+  };
 
   if (isError) {
     return <ErrorState onRetry={() => refetch()} />;
@@ -202,18 +221,14 @@ export default function PublicInsightReportPage() {
                     mode="range"
                     defaultMonth={dateRange.from}
                     selected={{ from: dateRange.from, to: dateRange.to }}
-                    onSelect={(range) =>
-                      setDateRange({ from: range?.from, to: range?.to })
-                    }
+                    onSelect={(range) => handleDateChange(range)}
                     numberOfMonths={2}
                   />
                   <div className="flex items-center justify-between border-t p-3">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        setDateRange({ from: undefined, to: undefined })
-                      }
+                      onClick={() => handleDateChange(undefined)}
                     >
                       Limpar
                     </Button>
@@ -225,7 +240,7 @@ export default function PublicInsightReportPage() {
                           const now = new Date();
                           const thirtyDaysAgo = new Date(now);
                           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                          setDateRange({ from: thirtyDaysAgo, to: now });
+                          handleDateChange({ from: thirtyDaysAgo, to: now });
                         }}
                       >
                         Últimos 30 dias
@@ -237,7 +252,7 @@ export default function PublicInsightReportPage() {
                           const now = new Date();
                           const ninetyDaysAgo = new Date(now);
                           ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-                          setDateRange({ from: ninetyDaysAgo, to: now });
+                          handleDateChange({ from: ninetyDaysAgo, to: now });
                         }}
                       >
                         Últimos 90 dias

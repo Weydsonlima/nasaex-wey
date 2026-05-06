@@ -30,6 +30,7 @@ export const editMessageHandler = base
           conversationId: true,
           conversation: {
             select: {
+              id: true,
               leadId: true,
               trackingId: true,
               tracking: { select: { organizationId: true, name: true } },

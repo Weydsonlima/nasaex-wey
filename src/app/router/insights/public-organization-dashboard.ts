@@ -28,7 +28,7 @@ export const publicOrganizationDashboard = base
       } = input;
 
       // Validate the share exists and belongs to the organization
-      const share = await prisma.insightShares.findFirst({
+      const share = await prisma.insightShares.findUnique({
         where: {
           token: slug,
           organizationId,

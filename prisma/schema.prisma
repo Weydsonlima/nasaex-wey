@@ -191,6 +191,10 @@ model Organization {
   // "equal"  = dividido igualmente entre usuários ativos
   // "custom" = orçamento personalizado por usuário
 
+  // Intervalo (segundos) entre heartbeats do HeartbeatProvider. Owner/master
+  // pode alternar entre 60 (padrão, menos tráfego) e 30 (granularidade maior).
+  heartbeatIntervalSeconds Int @default(60) @map("heartbeat_interval_seconds")
+
   members                Member[]
   invitations            Invitation[]
   inviteLinks            OrganizationInviteLink[]

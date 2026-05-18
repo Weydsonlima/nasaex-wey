@@ -102,6 +102,25 @@ interface RemotePlayer {
   _imgEl?:          HTMLImageElement;
 }
 
+/**
+ * Zona semântica dentro de um WorldEvent (palco, hall, estande, portal).
+ * Persistido em `WorldEvent.zones: Json` no banco.
+ */
+export interface WorldEventZone {
+  name: string;
+  kind: "stage" | "hall" | "booth" | "portal";
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Pra kind=stage: nome da sala LiveKit (ex: "event:abc:stage"). */
+  sfuRoomId?: string;
+  /** Pra kind=portal: destino (slug do evento ou nick da station). */
+  destination?: string;
+  /** Label visual (opcional). */
+  label?: string;
+}
+
 /** Hash 32-bit estável para gerar chaves de textura a partir de URLs (evita duplicar load). */
 function hashString(s: string): string {
   let h = 0;
@@ -140,6 +159,25 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   // ─── Proximity detection (for WebRTC) ────────────────────────
   private readonly PROXIMITY_RADIUS = T * 6;   // ~192px — ~6 tiles
   private nearbyPeers: Set<string> = new Set(); // currently in range
+
+  // ─── WorldEvent zones (stage, hall, booth, portal) ───────────
+  // Cada zone tem `{ name, kind, x, y, w, h, sfuRoomId? }`. Quando
+  // o avatar entra/sai de uma zone, dispatch evento window que o
+  // orchestrator (use-world / page enter) escuta pra:
+  //  - kind=stage   → conectar SFU + suppress mesh
+  //  - kind=portal  → teleporta o avatar pra destino
+  //  - kind=booth   → mostra label da empresa
+  // Aditivo: se `worldEventZones` for null/empty, comportamento atual
+  // (proximity mesh em qualquer lugar do mapa) é preservado.
+  protected worldEventZones: WorldEventZone[] = [];
+  private currentZone: string | null = null;
+
+  // ─── LOD (Level of Detail) ────────────────────────────────────
+  // Acima desse threshold de distância da câmera, sprites remotos
+  // viram "dots" simples — economia de render pra centenas de avatares
+  // em convention center. Mantém posição visível mas sem sprite/anim.
+  private readonly LOD_THRESHOLD = T * 30;   // ~960px = fora viewport zoom 1
+  private remoteDots: Map<string, Phaser.GameObjects.Graphics> = new Map();
 
   // ─── Proximity circle visual ──────────────────────────────────
   private proximityCircle:      Phaser.GameObjects.Graphics | null = null;
@@ -4038,6 +4076,10 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     if (this.game.getFrame() % 30 === 0) {
       this.checkProximity();
       this.checkAreaTriggers();
+      // Zone check: só ativo se worldEventZones foi populado (modo evento).
+      if (this.worldEventZones.length > 0) this.checkWorldEventZones();
+      // LOD: re-avalia dots a cada 30 frames também (suficiente pra movimento normal).
+      this.updateRemoteLOD();
     }
 
     // ── Animate proximity circle ──────────────────────────────────
@@ -4136,6 +4178,107 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     this.nearbyPeers = nowNear;
   }
 
+  // ─── WorldEvent zones ──────────────────────────────────────────
+  // Quando o avatar entra/sai de uma zone (stage/booth/portal/hall),
+  // dispatch evento custom pra que o orquestrator de página trate:
+  //   - stage  → conecta SFU, suprime mesh
+  //   - portal → teleport
+  //   - booth  → mostra label da empresa, mantém mesh
+  //   - hall   → comportamento default (proximity mesh)
+
+  /** API pública: configura as zones do evento atual. */
+  public setWorldEventZones(zones: WorldEventZone[]): void {
+    this.worldEventZones = zones ?? [];
+    this.currentZone = null;
+  }
+
+  private checkWorldEventZones(this: Phaser.Scene & WorldScene) {
+    const active = this.lpcSprite ?? this.player;
+    if (!active) return;
+    const px = active.x;
+    const py = active.y;
+
+    let inside: WorldEventZone | null = null;
+    for (const z of this.worldEventZones) {
+      if (px >= z.x && px <= z.x + z.w && py >= z.y && py <= z.y + z.h) {
+        // Stage > booth > hall (priorizar a mais "específica" se houver overlap).
+        if (!inside || zonePriority(z.kind) > zonePriority(inside.kind)) {
+          inside = z;
+        }
+      }
+    }
+
+    const newKey = inside ? `${inside.kind}:${inside.name}` : null;
+    if (newKey === this.currentZone) return;
+
+    // Saiu da zona anterior
+    if (this.currentZone) {
+      const [prevKind, prevName] = this.currentZone.split(":");
+      window.dispatchEvent(
+        new CustomEvent("space-station:zone-leave", {
+          detail: { kind: prevKind, name: prevName },
+        }),
+      );
+    }
+    // Entrou em zona nova
+    if (inside) {
+      window.dispatchEvent(
+        new CustomEvent("space-station:zone-enter", {
+          detail: {
+            kind: inside.kind,
+            name: inside.name,
+            sfuRoomId: inside.sfuRoomId ?? null,
+            destination: inside.destination ?? null,
+            label: inside.label ?? null,
+          },
+        }),
+      );
+    }
+    this.currentZone = newKey;
+  }
+
+  // ─── LOD: dots pra avatares distantes ──────────────────────────
+  // Pra cenários de evento grande (centenas/milhares no mesmo mapa),
+  // sprites animados de cada peer custam muito GPU + memória. Acima
+  // de `LOD_THRESHOLD` da câmera, escondemos o sprite e desenhamos
+  // 1 dot colorido. Reativa o sprite ao se aproximar.
+
+  private updateRemoteLOD(this: Phaser.Scene & WorldScene) {
+    const active = this.lpcSprite ?? this.player;
+    if (!active) return;
+    const cx = active.x;
+    const cy = active.y;
+    const threshold = this.LOD_THRESHOLD;
+    const threshold2 = threshold * threshold;
+
+    this.remotePlayers.forEach((rp, userId) => {
+      const dx = rp.gfx.x - cx;
+      const dy = rp.gfx.y - cy;
+      const dist2 = dx * dx + dy * dy;
+      const isFar = dist2 > threshold2;
+
+      if (isFar) {
+        // Esconde sprite (poupa render) + desenha dot
+        if (rp.sprite?.visible) rp.sprite.setVisible(false);
+        if (rp.nameText.visible) rp.nameText.setVisible(false);
+        let dot = this.remoteDots.get(userId);
+        if (!dot) {
+          dot = this.add.graphics().setDepth(20);
+          dot.fillStyle(0x9b87f5, 0.85);
+          dot.fillCircle(0, 0, 3);
+          this.remoteDots.set(userId, dot);
+        }
+        dot.setPosition(rp.gfx.x, rp.gfx.y);
+        dot.setVisible(true);
+      } else {
+        if (rp.sprite && !rp.sprite.visible) rp.sprite.setVisible(true);
+        if (!rp.nameText.visible) rp.nameText.setVisible(true);
+        const dot = this.remoteDots.get(userId);
+        if (dot?.visible) dot.setVisible(false);
+      }
+    });
+  }
+
   // ─── Area triggers ────────────────────────────────────────────
 
   private checkAreaTriggers(this: Phaser.Scene & WorldScene) {
@@ -4207,5 +4350,15 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
 
   private circle(g: Phaser.GameObjects.Graphics, color: number, cx: number, cy: number, r: number, alpha = 1) {
     g.fillStyle(color, alpha); g.fillCircle(cx, cy, r);
+  }
+}
+
+/** Priority pra resolver overlap de zones (stage > booth > portal > hall). */
+function zonePriority(kind: WorldEventZone["kind"]): number {
+  switch (kind) {
+    case "stage": return 3;
+    case "booth": return 2;
+    case "portal": return 1;
+    case "hall": return 0;
   }
 }

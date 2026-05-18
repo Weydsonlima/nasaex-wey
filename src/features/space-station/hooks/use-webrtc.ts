@@ -83,6 +83,13 @@ export function useWebRTC({ stationId, userId, userName, userImage }: UseWebRTCO
   const [bubbleLocked, setBubbleLocked] = useState(false);
   const bubbleLockedRef = useRef(false);
 
+  // ─── Mesh suppression flag (handoff pra SFU) ──────────────────────────────
+  // Quando o avatar entra numa stage zone, o orchestrator chama `suppress(true)`.
+  // Isso silencia o mesh (mic muted nos peers, sem novos PCs em proximity).
+  // Sair da stage → `suppress(false)` reativa o comportamento normal.
+  const [meshSuppressed, setMeshSuppressed] = useState(false);
+  const meshSuppressedRef = useRef(false);
+
   // Refs — sobrevivem re-renders sem disparar effects
   const localStreamRef  = useRef<MediaStream | null>(null);
   const pcsRef          = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -101,6 +108,7 @@ export function useWebRTC({ stationId, userId, userName, userImage }: UseWebRTCO
   useEffect(() => { selectedVideoRef.current = selectedVideo; }, [selectedVideo]);
   useEffect(() => { bubbleLockedRef.current = bubbleLocked; }, [bubbleLocked]);
   useEffect(() => { screenOnRef.current = screenOn; }, [screenOn]);
+  useEffect(() => { meshSuppressedRef.current = meshSuppressed; }, [meshSuppressed]);
 
   // ── Enumerate devices ────────────────────────────────────────────────────
   const refreshDevices = useCallback(async () => {
@@ -211,6 +219,9 @@ export function useWebRTC({ stationId, userId, userName, userImage }: UseWebRTCO
         if (peerId === userId) return;
         // Don't admit new peers if bubble is locked
         if (bubbleLockedRef.current) return;
+        // Mesh suprimido (avatar dentro de stage zone do WorldEvent) — não
+        // cria PC mesh. SFU handles voice/video em vez disso.
+        if (meshSuppressedRef.current) return;
         setBubblePeers(prev => new Set([...prev, peerId]));
         // Tie-breaker: only the "smaller" userId initiates the offer → avoids glare.
         // The other side creates the PC and waits for the incoming offer.
@@ -612,6 +623,25 @@ export function useWebRTC({ stationId, userId, userName, userImage }: UseWebRTCO
     setBubbleLocked(prev => !prev);
   }, []);
 
+  // ── Suppress mesh (handoff pra SFU em stage zone) ────────────────────────
+  // Quando habilitado:
+  //  1. Não cria novos PCs em proximity-enter.
+  //  2. Fecha PCs existentes (libera banda + CPU pra SFU).
+  //  3. Bubble peers limpo (UI mostra "no palco").
+  const suppressMesh = useCallback((suppress: boolean) => {
+    setMeshSuppressed(suppress);
+    meshSuppressedRef.current = suppress;
+    if (suppress) {
+      // Fecha PCs ativos
+      pcsRef.current.forEach((pc, peerId) => {
+        try { pc.close(); } catch { /* ok */ }
+        pcsRef.current.delete(peerId);
+      });
+      setPeers(new Map());
+      setBubblePeers(new Set());
+    }
+  }, []);
+
   return {
     micOn, camOn, camError,
     localStream,
@@ -626,5 +656,7 @@ export function useWebRTC({ stationId, userId, userName, userImage }: UseWebRTCO
     screenOn, screenStream, screenStreamRef, toggleScreen,
     // Communication bubble
     bubblePeers, bubbleLocked, toggleBubbleLock,
+    // Mesh suppression (handoff pra SFU em WorldEvent stage zones)
+    meshSuppressed, suppressMesh,
   };
 }

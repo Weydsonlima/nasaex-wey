@@ -81,6 +81,14 @@ export function EventPublicPage({ event }: { event: EventData }) {
   const isEnded = event.status === "ENDED" || event.status === "CANCELLED";
   const isUpcoming = new Date(event.startsAt).getTime() > Date.now();
 
+  // Capacity guard visual: bloqueia compra quando ocupação >= 95%.
+  // No backend o `redeemTicket` também valida (defense-in-depth), mas a
+  // UI tem que sinalizar antes do user gastar tempo no checkout.
+  const utilization =
+    event.capacity > 0 ? event.currentOccupancy / event.capacity : 0;
+  const isFull = utilization >= 0.95;
+  const isAlmostFull = utilization >= 0.8 && !isFull;
+
   const enterHref = resultToken
     ? `/eventos/${event.slug}/enter?token=${resultToken}`
     : null;
@@ -162,8 +170,22 @@ export function EventPublicPage({ event }: { event: EventData }) {
           </div>
         )}
 
-        {/* CTA box */}
-        {!isEnded && (
+        {/* Capacity warnings */}
+        {!isEnded && isFull && (
+          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <strong>Evento lotado</strong> ({event.currentOccupancy}/{event.capacity}).
+            Não é mais possível comprar ingressos.
+          </div>
+        )}
+        {!isEnded && isAlmostFull && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <strong>Quase lotado</strong> — {Math.round(utilization * 100)}%
+            da capacidade preenchida. Garanta seu ingresso logo.
+          </div>
+        )}
+
+        {/* CTA box — escondido quando lotado (capacity guard) */}
+        {!isEnded && !isFull && (
           <div className="rounded-xl border border-zinc-700 bg-zinc-900/80 p-6 space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>

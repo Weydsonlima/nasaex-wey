@@ -24,6 +24,7 @@ import { useMyStation, useCreateStation, useUpdateStation, useUpdateWorld, useUp
 import { MyStationsList } from "./my-stations-list";
 import { AMBIENT_THEMES, MODULE_ICONS, MODULE_LABELS } from "../types";
 import type { StationModule, AmbientTheme } from "../types";
+import { WorldEventsManager } from "@/features/world-events/components/world-events-manager";
 
 const stationSchema = z.object({
   nick: z
@@ -370,6 +371,9 @@ export function SpaceStationAdmin() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* WorldEvents (Convenções/Auditórios) */}
+          <WorldEventsManager stationId={station.id} />
 
           {/* Organograma */}
           <Card className="bg-slate-900 border-white/10">

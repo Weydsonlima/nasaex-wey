@@ -46,6 +46,84 @@ export async function POST(req: NextRequest) {
         const metadata = session.metadata ?? {};
         const { organizationId, itemType, itemSlug, starsPaymentId } = metadata;
 
+        // ── WorldEvent ticket checkout (kind=world_event_ticket) ─────────────
+        // ADITIVO — handler isolado, não toca os caminhos existentes.
+        // Pré-requisito: a UI/checkout cria a session Stripe com:
+        //   metadata: {
+        //     kind: "world_event_ticket",
+        //     worldEventId: "<id>",
+        //     holderUserId: "<id>",      // quem vai portar o ingresso
+        //     buyerUserId: "<id>",       // pode ser igual ao holder
+        //     buyerOrgId?: "<id>",       // opcional (org pagadora)
+        //   }
+        if (metadata.kind === "world_event_ticket" && metadata.worldEventId) {
+          const { worldEventId, holderUserId, buyerUserId, buyerOrgId } = metadata;
+          if (!holderUserId) {
+            console.warn(
+              "[stripe/webhook] world_event_ticket missing holderUserId",
+            );
+            break;
+          }
+
+          // Idempotência: se já existe ticket pra essa session, ignora.
+          const sessionId = session.id;
+          const existing = await prisma.worldEventTicket.findFirst({
+            where: {
+              stripePaymentId: sessionId,
+            },
+            select: { id: true },
+          });
+          if (existing) {
+            console.log(
+              `[stripe/webhook] world_event_ticket já criado pra session ${sessionId} — ignorando.`,
+            );
+            break;
+          }
+
+          const event = await prisma.worldEvent.findUnique({
+            where: { id: worldEventId },
+            select: {
+              id: true,
+              title: true,
+              ticketPriceBrl: true,
+              status: true,
+              endsAt: true,
+            },
+          });
+          if (!event) {
+            console.warn(
+              `[stripe/webhook] world_event_ticket: evento ${worldEventId} não encontrado.`,
+            );
+            break;
+          }
+          if (event.status === "CANCELLED" || event.endsAt.getTime() < Date.now()) {
+            console.warn(
+              `[stripe/webhook] world_event_ticket: evento ${worldEventId} cancelado/encerrado — não emite ticket.`,
+            );
+            break;
+          }
+
+          const accessToken = randomBytes(16).toString("hex");
+          await prisma.worldEventTicket.create({
+            data: {
+              worldEventId,
+              holderUserId,
+              buyerUserId: buyerUserId ?? holderUserId,
+              buyerOrgId: buyerOrgId ?? null,
+              pricePaidBrl: event.ticketPriceBrl,
+              paymentMethod: "stripe",
+              stripePaymentId: sessionId,
+              accessToken,
+              status: "ACTIVE",
+            },
+          });
+
+          console.log(
+            `[stripe/webhook] ✅ world_event_ticket emitido: event=${worldEventId} holder=${holderUserId}`,
+          );
+          break;
+        }
+
         // ── Public course checkout (kind=course_public_purchase) ──────────────
         if (metadata.kind === "course_public_purchase" && metadata.pendingId) {
           const pendingId = metadata.pendingId;

@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { client } from "@/lib/orpc";
-import {
-  Loader2,
-  AlertTriangle,
-  Sparkles,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-} from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+import { Loader2, AlertTriangle, Sparkles, Video } from "lucide-react";
 import { useSfuRoom } from "@/features/space-station/hooks/use-sfu-room";
 import { StageOverlay } from "@/features/space-station/components/world/stage-overlay";
+
+// SpaceGame é dynamic-imported pra evitar SSR do Phaser (window-only).
+const SpaceGame = dynamic(
+  () =>
+    import("@/features/space-station/components/world/space-game").then(
+      (m) => m.SpaceGame,
+    ),
+  { ssr: false },
+);
 
 interface Props {
   slug: string;
@@ -148,8 +151,51 @@ export function EventEnterClient({ slug, token }: Props) {
 
   const { data } = state;
 
-  // Botão manual de "subir ao palco" — útil enquanto o Phaser não está
-  // integrado nessa página; permite testar SFU isoladamente.
+  return <EventLiveView slug={slug} data={data} sfu={sfu} onStage={onStage} setOnStage={setOnStage} />;
+}
+
+/**
+ * Tela "ao vivo" — mostra o mapa Phaser do WorldEvent + StageOverlay sobreposto
+ * quando o avatar entra numa stage zone.
+ */
+function EventLiveView({
+  slug,
+  data,
+  sfu,
+  onStage,
+  setOnStage,
+}: {
+  slug: string;
+  data: RedeemData;
+  sfu: ReturnType<typeof useSfuRoom>;
+  onStage: boolean;
+  setOnStage: (v: boolean) => void;
+}) {
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id ?? "guest";
+  const userName = session?.user?.name ?? "Visitante";
+  const userImage = session?.user?.image ?? null;
+
+  // Constrói um StationWorldConfig a partir do mapData do evento — o SpaceGame
+  // espera esse shape. O resto dos campos é default.
+  const worldConfig = {
+    id: data.eventId,
+    stationId: data.eventId, // usado como key de identidade
+    planetColor: "#4B0082",
+    ambientTheme: "space" as const,
+    avatarConfig: null,
+    meetingPoints: null,
+    npcConfig: null,
+    mapData: data.mapData,
+  } as unknown as Parameters<typeof SpaceGame>[0]["worldConfig"];
+
+  // Zones já vêm tipadas do redeem. Cast leve pra evitar dependência circular.
+  const zones = Array.isArray(data.zones)
+    ? (data.zones as unknown as NonNullable<Parameters<typeof SpaceGame>[0]["worldEventZones"]>)
+    : [];
+
+  // Botão manual de "subir ao palco" — fallback quando o user não consegue
+  // navegar com avatar (mobile sem teclado, etc).
   const tryEnterStage = () => {
     if (!data.sfuStageToken || !data.sfuWsUrl) return;
     void sfu.connect(data.sfuStageToken, data.sfuWsUrl);
@@ -184,58 +230,44 @@ export function EventEnterClient({ slug, token }: Props) {
         </Link>
       </header>
 
-      {/* Conteúdo: mapa (placeholder) + palco quando ativo */}
+      {/* Conteúdo: mapa Phaser + palco quando ativo */}
       <main className="relative flex-1 flex flex-col">
-        {/* Placeholder do mapa Phaser — integração final em PR seguinte */}
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 relative">
-          <div className="text-center space-y-3 max-w-md px-6">
-            <div className="text-xs uppercase tracking-wider text-zinc-500">
-              Mapa do evento (esqueleto)
-            </div>
-            <div className="text-sm text-zinc-400">
-              O renderizador Phaser do WorldEvent (com zones e LOD) está
-              wired no `WorldScene.setWorldEventZones()` — falta plugar
-              o componente Phaser nessa página. Por agora, use o botão
-              abaixo pra testar o palco SFU isoladamente.
-            </div>
-            <div className="text-[11px] text-zinc-600">
-              {Array.isArray(data.zones)
-                ? `${data.zones.length} zonas configuradas`
-                : "0 zonas"}{" "}
-              · Canal: {data.presenceChannel}
-            </div>
-          </div>
+        <div className="flex-1 relative">
+          <SpaceGame
+            worldConfig={worldConfig}
+            stationId={data.eventId}
+            nick={data.slug}
+            userId={userId}
+            userName={userName}
+            userImage={userImage}
+            worldEventZones={zones}
+          />
 
-          {/* Stage overlay (visível quando conectado ao SFU) */}
+          {/* Stage overlay sobreposto quando dentro de stage zone */}
           {onStage && (
             <StageOverlay
               participants={sfu.participants}
               connected={sfu.connected}
               connecting={sfu.connecting}
               error={sfu.error}
-              localIdentity={"self"}
+              localIdentity={userId}
               role={data.role}
               onLeave={leaveStage}
             />
           )}
         </div>
 
-        {/* Toolbar inferior — controles manuais MVP */}
-        {!onStage && (
-          <div className="border-t border-zinc-800 px-6 py-3 flex items-center justify-center gap-3 text-xs">
+        {/* Fallback: botão manual pro palco (se o user preferir não andar). */}
+        {!onStage && data.sfuStageToken && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
             <button
               onClick={tryEnterStage}
-              disabled={!data.sfuStageToken}
-              className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-4 py-2 rounded-md transition-colors"
+              className="inline-flex items-center gap-2 bg-violet-600/95 hover:bg-violet-700 text-white text-xs px-4 py-2 rounded-full shadow-lg transition-colors"
+              title="Conectar direto ao palco sem andar com o avatar"
             >
               <Video className="w-3.5 h-3.5" />
-              Subir ao palco (SFU)
+              Entrar no palco
             </button>
-            {!data.sfuStageToken && (
-              <span className="text-zinc-500">
-                LiveKit não configurado — defina `LIVEKIT_API_KEY/SECRET`.
-              </span>
-            )}
           </div>
         )}
       </main>

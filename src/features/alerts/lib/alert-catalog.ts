@@ -25,6 +25,7 @@ export const ALERT_CATEGORIES = [
   "metric",
   "broadcast",
   "action",
+  "world",
 ] as const;
 export type AlertCategory = (typeof ALERT_CATEGORIES)[number];
 
@@ -450,6 +451,36 @@ const actionOverdue: AlertEventDefinition = {
   },
 };
 
+// WORLD (NASA World — convention events) ────
+const worldEventNearCapacity: AlertEventDefinition = {
+  key: "world.event_near_capacity",
+  label: "Evento perto da lotação",
+  description:
+    "Cron de occupancy dispara quando um WorldEvent ultrapassa 80% da capacidade.",
+  category: "world",
+  paramsSchema: z.object({}),
+  payloadSchema: z.object({
+    eventId: z.string(),
+    orgId: z.string(),
+    utilization: z.number(), // 0-100 (%)
+    currentOccupancy: z.number(),
+    capacity: z.number(),
+  }),
+  audienceOptions: ["org_admins", "org_supervisors", "user"],
+  supportsCooldown: true,
+  entityKey: (p) => {
+    const today = new Date().toISOString().slice(0, 10);
+    return `world-cap:${(p as { eventId: string }).eventId}:${today}`;
+  },
+  mockPayload: {
+    eventId: "mock_event",
+    orgId: "mock_org",
+    utilization: 85,
+    currentOccupancy: 170,
+    capacity: 200,
+  },
+};
+
 // BROADCAST ──────────────────────────────────
 const broadcastManual: AlertEventDefinition = {
   key: "broadcast.manual",
@@ -493,6 +524,7 @@ export const ALERT_CATALOG = [
   integrationMetaTokenExpired,
   metricBelowThreshold,
   actionOverdue,
+  worldEventNearCapacity,
   broadcastManual,
 ] as const satisfies readonly AlertEventDefinition[];
 

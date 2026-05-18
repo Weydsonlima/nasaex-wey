@@ -56,20 +56,34 @@ export function EventPublicPage({ event }: { event: EventData }) {
 
   const purchaseMut = useMutation({
     mutationFn: async (paymentMethod: "stars" | "stripe" | "free") => {
-      return client.worldEvents.purchaseTicket({
+      if (paymentMethod === "stripe") {
+        // Caminho dedicado: cria session Stripe + redireciona pro checkout
+        // hospedado. Webhook (em /api/stripe/webhook) cria o ticket após pagar.
+        const res = await client.worldEvents.createStripeCheckout({
+          eventId: event.id,
+        });
+        return {
+          ...res,
+          stripe: true as const,
+          accessToken: res.accessToken,
+        };
+      }
+      const r = await client.worldEvents.purchaseTicket({
         eventId: event.id,
         paymentMethod,
       });
+      return { ...r, stripe: false as const };
     },
     onSuccess: (res) => {
       setPurchaseError(null);
+      // Fluxo Stripe: tem URL → redireciona
+      if ("stripe" in res && res.stripe && "url" in res && res.url) {
+        window.location.href = res.url;
+        return;
+      }
+      // Já tinha ingresso (mostra access token pra entrar direto)
       if (res.accessToken) {
         setResultToken(res.accessToken);
-      } else if (res.stripeCheckoutHint) {
-        // Stripe Checkout: implementado em PR futura (mocked agora).
-        setPurchaseError(
-          "Checkout via Stripe ainda não disponível. Use STARs ou aguarde.",
-        );
       }
     },
     onError: (err) => {

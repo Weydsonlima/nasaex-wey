@@ -6,6 +6,7 @@ import { purchaseTicket } from "./purchase-ticket";
 import { redeemTicket } from "./redeem-ticket";
 import { listMyTickets } from "./my-tickets";
 import { getEventOccupancy } from "./get-occupancy";
+import { createWorldEventStripeCheckout } from "./create-stripe-checkout";
 
 export const worldEventsRouter = {
   list: listWorldEvents,
@@ -16,4 +17,5 @@ export const worldEventsRouter = {
   redeemTicket,
   myTickets: listMyTickets,
   getOccupancy: getEventOccupancy,
+  createStripeCheckout: createWorldEventStripeCheckout,
 };

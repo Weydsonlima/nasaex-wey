@@ -38,6 +38,23 @@ interface Props {
   userId?:       string;
   userName?:     string;
   userNick?:     string;
+  /**
+   * Zones de um WorldEvent (modo evento dentro da Station).
+   * Quando passado, ativa a detecção de zone-enter/leave via
+   * `WorldScene.setWorldEventZones()` — orquestra handoff mesh↔SFU
+   * em stage zones, portais, etc. Sem zones, comportamento normal.
+   */
+  worldEventZones?: Array<{
+    name: string;
+    kind: "stage" | "hall" | "booth" | "portal";
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    sfuRoomId?: string;
+    destination?: string;
+    label?: string;
+  }>;
 }
 
 export function SpaceGame({
@@ -47,6 +64,7 @@ export function SpaceGame({
   userId: rawUserId = "guest",
   userName  = nick,
   userNick,
+  worldEventZones,
 }: Props) {
   // Guests share the same server-side userId (derived from stationId), which
   // causes each tab to filter out others' events thinking they are themselves.
@@ -212,6 +230,21 @@ export function SpaceGame({
       game = new Phaser.Game(config);
       gameRef.current = game;
       setLoading(false);
+
+      // Modo WorldEvent: passa zones pra cena depois do scene.create().
+      // Aguarda 100ms pra garantir que a scene tenha terminado o init.
+      if (worldEventZones && worldEventZones.length > 0) {
+        setTimeout(() => {
+          try {
+            const scene = (game?.scene.getScene("WorldScene") as unknown as {
+              setWorldEventZones?: (zones: typeof worldEventZones) => void;
+            }) ?? null;
+            scene?.setWorldEventZones?.(worldEventZones);
+          } catch (err) {
+            console.warn("[SpaceGame] setWorldEventZones falhou:", err);
+          }
+        }, 100);
+      }
     }
 
     initGame();

@@ -264,9 +264,15 @@ function useMetaData(from: Date, to: Date) {
   };
 }
 
-function distinctCount(snaps: { entityId: string }[] | undefined): number {
+function distinctCount(
+  snaps: ({ entityId: string } | null)[] | undefined,
+): number {
   if (!snaps) return 0;
-  return new Set(snaps.map((s) => s.entityId)).size;
+  // Procedure pode retornar array com entries nulas em modo fallback live
+  // (mapeamento condicional do `metaAds.snapshots.list`). Filtra antes do Set.
+  return new Set(
+    snaps.filter((s): s is { entityId: string } => !!s).map((s) => s.entityId),
+  ).size;
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────

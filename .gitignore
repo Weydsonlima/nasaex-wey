@@ -47,3 +47,8 @@ next-env.d.ts
 .claude
 .cursor/
 .env.local
+
+# Fallback dev de upload de imagem (NASA Pages /api/upload-local).
+# Em produção o upload vai pro R2 (/api/s3/upload-direct), esses
+# arquivos só existem em dev e não devem entrar no Git.
+/public/uploads/

@@ -186,6 +186,16 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
   private readonly PROXIMITY_RADIUS = T * 6; // ~192px — ~6 tiles
   private nearbyPeers: Set<string> = new Set(); // currently in range
 
+  // ─── Poke indicators (Cutucar feature) ────────────────────────
+  // Map peerUserId → Phaser.GameObjects.Text com o emoji 👋 flutuando acima
+  // do sprite do peer. Removido após POKE_TTL_MS ou ao tomar nova cutucada.
+  private pokeIndicators: Map<string, {
+    text: Phaser.GameObjects.Text;
+    expiresAt: number;
+    tween?: Phaser.Tweens.Tween;
+  }> = new Map();
+  private readonly POKE_TTL_MS = 4000;
+
   // ─── Proximity circle visual ──────────────────────────────────
   private proximityCircle: Phaser.GameObjects.Graphics | null = null;
   private proximityPulse: Phaser.GameObjects.Graphics | null = null;
@@ -611,6 +621,48 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     this.input.on("pointerup",   resetJoystick);
     this.input.on("pointerupoutside", resetJoystick);
 
+    // ── Joystick virtual VISÍVEL (MobileJoystick React) ─────────────
+    // O componente `MobileJoystick` (canto inferior-esquerdo) dispara
+    // `space-station:virtual-joystick` com `{ active, dx, dy }` onde
+    // dx/dy estão clampados em ±MAX_RADIUS (~32px). Aqui mapeamos o
+    // vetor pro mesmo `touchJoystick` que o drag-anywhere já usa —
+    // assim o `update()` (lá embaixo) converte automaticamente em
+    // movimento. Quando `active=false`, reseta o estado.
+    const onVirtualJoystick = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        active: boolean;
+        dx: number;
+        dy: number;
+      };
+      if (!detail.active) {
+        // Só reseta se o pointer não está controlando o joystick
+        // físico (drag-anywhere) — preserva touch drag concorrente.
+        if (this.touchJoystick.pointerId === -1) {
+          this.touchJoystick = {
+            pointerId: null, startX: 0, startY: 0, curX: 0, curY: 0, active: false,
+          };
+        }
+        return;
+      }
+      // Usa pointerId=-1 como sentinela "virtual" pra não conflitar com
+      // pointers reais (Phaser usa IDs positivos).
+      this.touchJoystick = {
+        pointerId: -1,
+        startX: 0,
+        startY: 0,
+        curX: detail.dx,
+        curY: detail.dy,
+        active: true,
+      };
+    };
+    window.addEventListener("space-station:virtual-joystick", onVirtualJoystick);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener("space-station:virtual-joystick", onVirtualJoystick);
+    });
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      window.removeEventListener("space-station:virtual-joystick", onVirtualJoystick);
+    });
+
     // ── Keyboard zoom  +  /  - ────────────────────────────────────
     this.input.keyboard!.on("keydown-PLUS", () =>
       this.applyZoom(this.ZOOM_STEP),
@@ -804,10 +856,30 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
     window.addEventListener("space-station:remote-join", onJoin);
     window.addEventListener("space-station:remote-move", onMove);
     window.addEventListener("space-station:remote-leave", onLeave);
+
+    // ── Cutucar (poke): mostra emoji 👋 acima do avatar do peer cutucado.
+    // Funciona tanto pra peers remotos (lookup em `remotePlayers`) quanto
+    // pro próprio user (toUserId === this.localUserId) usando o sprite local.
+    const onPoked = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        toUserId: string;
+        fromName: string;
+      };
+      this.showPokeAt(detail.toUserId, detail.fromName);
+    };
+    window.addEventListener("space-station:peer-poked", onPoked);
+
     this.events.once("shutdown", () => {
       window.removeEventListener("space-station:remote-join", onJoin);
       window.removeEventListener("space-station:remote-move", onMove);
       window.removeEventListener("space-station:remote-leave", onLeave);
+      window.removeEventListener("space-station:peer-poked", onPoked);
+      // Limpa indicators ativos
+      this.pokeIndicators.forEach((p) => {
+        p.tween?.stop();
+        p.text.destroy();
+      });
+      this.pokeIndicators.clear();
     });
 
     // ── Teleporte local (Conectar pessoas: follow-accept) ─────────────
@@ -5165,6 +5237,87 @@ export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
         }),
       );
     }
+    // Limpa indicator de poke se houver
+    const poke = this.pokeIndicators.get(data.userId);
+    if (poke) {
+      poke.tween?.stop();
+      poke.text.destroy();
+      this.pokeIndicators.delete(data.userId);
+    }
+  }
+
+  /**
+   * showPokeAt — renderiza um "👋 Nome" flutuando acima do avatar do peer
+   * (ou do próprio user) com tween de bobbing e fade out automático após
+   * POKE_TTL_MS. Chamado pelo CustomEvent `space-station:peer-poked` que
+   * vem do broadcast Pusher `peer:poked`.
+   *
+   * Visível pra TODOS no World — feedback que "fulano cutucou ciclano".
+   * O conteúdo da mensagem (preview) só vai no toast pro alvo, fora daqui.
+   */
+  private showPokeAt(targetUserId: string, fromName: string) {
+    // Acha o sprite alvo: local (player/lpcSprite) ou remoto.
+    let targetX: number, targetY: number;
+    if (targetUserId === this.localUserId) {
+      const active = this.lpcSprite ?? this.player;
+      if (!active) return;
+      targetX = active.x;
+      targetY = active.y;
+    } else {
+      const remote = this.remotePlayers.get(targetUserId);
+      if (!remote) return;
+      targetX = remote.gfx.x;
+      targetY = remote.gfx.y;
+    }
+
+    // Remove indicator antigo desse peer (se ainda na tela, "renova" a pose).
+    const existing = this.pokeIndicators.get(targetUserId);
+    if (existing) {
+      existing.tween?.stop();
+      existing.text.destroy();
+    }
+
+    const labelText = `👋 ${fromName.slice(0, 16)} cutucou!`;
+    const text = this.add
+      .text(targetX, targetY - 60, labelText, {
+        fontSize: "12px",
+        color: "#ffffff",
+        backgroundColor: "#7c3aedcc",
+        padding: { x: 6, y: 3 },
+        align: "center",
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(50)
+      .setAlpha(0);
+
+    // Anima: fade in, bobs pra cima, depois fade out.
+    const tween = this.tweens.add({
+      targets: text,
+      alpha: { from: 0, to: 1 },
+      y: { from: targetY - 50, to: targetY - 70 },
+      duration: 300,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        // Fica visível 3s e some
+        this.tweens.add({
+          targets: text,
+          alpha: 0,
+          y: text.y - 20,
+          duration: 700,
+          delay: this.POKE_TTL_MS - 1000,
+          onComplete: () => {
+            text.destroy();
+            this.pokeIndicators.delete(targetUserId);
+          },
+        });
+      },
+    });
+
+    this.pokeIndicators.set(targetUserId, {
+      text,
+      expiresAt: Date.now() + this.POKE_TTL_MS,
+      tween,
+    });
   }
 
   // ─── Avatar scale helpers ────────────────────────────────────

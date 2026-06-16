@@ -322,9 +322,16 @@ export class WorldScene extends PhaserNS.Scene {
   }
 
   preload(this: Phaser.Scene & WorldScene) {
-    // Cenário "image" — pré-carrega a imagem de fundo do user
+    // Cenário "image" e "custom" — pré-carrega a imagem de fundo do user.
+    // O editor de mapa permite anexar `backgroundImageUrl` ao scenario
+    // "custom" também (mapa do zero com imagem por trás dos tiles); antes
+    // a imagem era lida só em "image", então salvava no banco mas nunca
+    // renderizava — usuário via apenas a bg color sólida.
     const raw = this.worldConfig?.mapData as WorldMapData | null;
-    if (raw?.scenario === "image" && raw.backgroundImageUrl) {
+    if (
+      (raw?.scenario === "image" || raw?.scenario === "custom") &&
+      raw.backgroundImageUrl
+    ) {
       this.load.image("__bg_image__", raw.backgroundImageUrl);
     }
   }
@@ -366,12 +373,28 @@ export class WorldScene extends PhaserNS.Scene {
     else if (scenario === "observatory") this.drawObservatory();
     else if (scenario === "bridge") this.drawBridge();
     else if (scenario === "custom") {
+      // 1) Cor sólida de fundo (sempre desenhada — fallback se a imagem
+      // ainda não terminou de carregar).
       const bgColor = raw?.tileLayer?.bgColor ?? "#1a1a2e";
       const bgInt = parseInt(bgColor.replace("#", ""), 16);
       this.add
         .rectangle(0, 0, WORLD_W, WORLD_H, bgInt)
         .setOrigin(0, 0)
         .setDepth(0);
+      // 2) Imagem de fundo (se o user anexou uma) — sobreposta à cor sólida
+      // e por baixo dos tiles (depth 0.5). Permite que o usuário use uma
+      // imagem como cenário base e ainda desenhe tiles/áreas/objetos por cima.
+      if (raw?.backgroundImageUrl && this.textures.exists("__bg_image__")) {
+        const img = this.add
+          .image(0, 0, "__bg_image__")
+          .setOrigin(0, 0)
+          .setDepth(0.5);
+        const customW = raw.backgroundImageWidth;
+        const customH = raw.backgroundImageHeight;
+        if (customW && customH) {
+          img.setDisplaySize(customW, customH);
+        }
+      }
     } else this.drawStation(elements, rooms, meetingCount);
 
     // Render tile layer on top of any scenario (applies to "custom" and overlays on others)

@@ -381,20 +381,26 @@ export class WorldScene extends PhaserNS.Scene {
         .rectangle(0, 0, WORLD_W, WORLD_H, bgInt)
         .setOrigin(0, 0)
         .setDepth(0);
-      // 2) Imagem de fundo (se o user anexou uma) — sobreposta à cor sólida
-      // e por baixo dos tiles (depth 0.5). Permite que o usuário use uma
-      // imagem como cenário base e ainda desenhe tiles/áreas/objetos por cima.
-      // ESTICA pra cobrir o WORLD INTEIRO (WORLD_W × WORLD_H) — o user pediu
-      // que a imagem ocupasse "a tela toda" e o mundo virtual é uma área
-      // maior que a viewport; respeitar `backgroundImageWidth/Height` salvo
-      // (que historicamente vinha 800×400) deixava um quadrado pequeno de
-      // imagem cercado por background sólido nas bordas.
+      // 2) Imagem de fundo (se o user anexou uma) — FIXA NA VIEWPORT.
+      // `setScrollFactor(0)` mantém a imagem fixa relativa à tela do user
+      // (não scrolla com a câmera) e `setDisplaySize(cam.width, cam.height)`
+      // a estica exatamente pra cobrir a janela visível. Isso significa:
+      // independente de onde o player se mova no mundo, a imagem fica
+      // sempre ocupando a tela toda — como um background paralax-zero.
+      // Tiles/áreas/objetos do mapa continuam fluindo livre por cima,
+      // movendo com a câmera (scrollFactor default = 1).
       if (raw?.backgroundImageUrl && this.textures.exists("__bg_image__")) {
-        this.add
+        const cam = this.cameras.main;
+        const bgImg = this.add
           .image(0, 0, "__bg_image__")
           .setOrigin(0, 0)
           .setDepth(0.5)
-          .setDisplaySize(WORLD_W, WORLD_H);
+          .setScrollFactor(0)
+          .setDisplaySize(cam.width, cam.height);
+        // Redimensiona junto com resize da janela (Phaser.Scale.RESIZE)
+        this.scale.on("resize", (size: { width: number; height: number }) => {
+          bgImg.setDisplaySize(size.width, size.height);
+        });
       }
     } else this.drawStation(elements, rooms, meetingCount);
 

@@ -267,12 +267,43 @@ export function SpaceGame({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Quando o useEffect re-roda por dep changed (worldConfig nova ref após
+    // router.refresh, strict-mode double-mount, HMR), o init anterior podia
+    // deixar canvas órfão E iniciar um SEGUNDO canvas vazio (cena montando
+    // assíncrona). Antes de criar novo, destrói o game atual e limpa
+    // qualquer canvas que tenha sobrado.
+    if (gameRef.current) {
+      try { gameRef.current.destroy(true); } catch { /* ignore */ }
+      gameRef.current = null;
+    }
+    {
+      const container = containerRef.current;
+      container.querySelectorAll("canvas").forEach((c) => c.remove());
+    }
+
     let game: import("phaser").Game | null = null;
+    // Cancelation token — se o useEffect for cleaned-up (dep changed, unmount)
+    // antes do initGame() async terminar, descartamos o resultado pra não criar
+    // canvas órfão. Sem isso, dois initGame() simultâneos resultam em 2 canvas.
+    let cancelled = false;
     setLoading(true);
 
     async function initGame() {
       const PhaserModule = await import("phaser");
+      if (cancelled) return;
       const Phaser = PhaserModule.default ?? PhaserModule;
+      // CRÍTICO: garantir que globalThis.Phaser esteja populado ANTES dos
+      // scenes serem importados — eles usam o pattern
+      // `extends (globalThis.Phaser?.Scene ?? class {})` pra SSR-safety,
+      // e se Phaser não estiver no globalThis na hora da avaliação do módulo
+      // da scene, o fallback `class {}` é usado → `super({ key: "..." })`
+      // vira no-op → ambas scenes registram com key "default" → colide →
+      // só uma vence o registro → WorldScene nunca inicia → tela preta.
+      // Esse bug aparecia intermitentemente em mobile/HMR quando a ordem
+      // de avaliação dos módulos era invertida pelo Turbopack.
+      if (typeof globalThis !== "undefined" && !(globalThis as { Phaser?: unknown }).Phaser) {
+        (globalThis as { Phaser: unknown }).Phaser = Phaser;
+      }
       const { PreloadScene } = await import("./scenes/preload-scene");
       const { WorldScene } = await import("./scenes/world-scene");
       const { buildGameConfig } = await import("./game-config");
@@ -335,8 +366,13 @@ export function SpaceGame({
         PreloadScene,
         worldSceneWithData,
       ]);
+      if (cancelled) return; // checked again after async imports
       game = new Phaser.Game(config);
       gameRef.current = game;
+      // Expor pra debug — leitura via DevTools/console: window.__phaserGame
+      if (typeof window !== "undefined") {
+        (window as unknown as { __phaserGame?: import("phaser").Game }).__phaserGame = game;
+      }
       setLoading(false);
     }
 
@@ -515,13 +551,28 @@ export function SpaceGame({
       window.removeEventListener("space-station:zoom-changed", onZoomChanged);
       window.removeEventListener("space-station:area-enter", onAreaEnter);
       window.removeEventListener("space-station:area-leave", onAreaLeave);
+      // Marca o token primeiro pra interromper initGame() que ainda esteja
+      // entre `await`s — evita criar Phaser.Game depois do unmount.
+      cancelled = true;
       // Destroy whichever instance is current (game may still be null if initGame didn't finish)
       const toDestroy = gameRef.current ?? game;
       toDestroy?.destroy(true);
       gameRef.current = null;
+      // Segurança extra contra canvas órfão (Phaser.destroy normalmente já
+      // remove, mas em race conditions de hot-reload às vezes sobra um).
+      const container = containerRef.current;
+      if (container) {
+        container.querySelectorAll("canvas").forEach((c) => c.remove());
+      }
     };
+    // Só re-monta o Phaser se a STATION mudar. worldConfig e avatarConfig
+    // mudam de identidade a cada router.refresh()/setState (são objetos
+    // novos vindos do server) — re-montar Phaser por causa deles causava
+    // canvas duplicado / Phaser pausado (race entre destroy assíncrono e
+    // novo init). As atualizações de worldConfig/avatar continuam chegando
+    // no scene via CustomEvent (onApply) e via Pusher (`world:config-updated`).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [worldConfig, avatarConfig, stationId]);
+  }, [stationId]);
 
   // Feature Cutucar: WorldScene dispara `space-station:peer-click` quando o
   // user clica num sprite remoto. Capturamos as coords (já em screen-space) e

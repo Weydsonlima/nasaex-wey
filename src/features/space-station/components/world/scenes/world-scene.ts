@@ -1,4 +1,9 @@
-import type Phaser from "phaser";
+// Import direto (NÃO `import type`) — precisamos da classe Phaser.Scene em
+// runtime pra estender. O pattern antigo `extends (globalThis.Phaser?.Scene
+// ?? class {})` quebrava em mobile/HMR quando o módulo era avaliado antes do
+// phaser ter populado globalThis → key da scene virava "default" → scene
+// nunca iniciava → tela preta (avatares não apareciam).
+import * as PhaserNS from "phaser";
 import type {
   AvatarConfig,
   StationWorldConfig,
@@ -144,7 +149,7 @@ const LPC_WALK_FRAMES = 9;
 // Player display scale for LPC sprites (64px → 32px logical)
 const LPC_SCALE = 0.5;
 
-export class WorldScene extends (globalThis.Phaser?.Scene ?? class {}) {
+export class WorldScene extends PhaserNS.Scene {
   private player!: Phaser.Physics.Arcade.Image;
   /** Animated LPC sprite — used instead of `player` when lpcSpritesheetUrl is set */
   private lpcSprite: Phaser.Physics.Arcade.Sprite | null = null;

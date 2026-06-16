@@ -384,16 +384,17 @@ export class WorldScene extends PhaserNS.Scene {
       // 2) Imagem de fundo (se o user anexou uma) — sobreposta à cor sólida
       // e por baixo dos tiles (depth 0.5). Permite que o usuário use uma
       // imagem como cenário base e ainda desenhe tiles/áreas/objetos por cima.
+      // ESTICA pra cobrir o WORLD INTEIRO (WORLD_W × WORLD_H) — o user pediu
+      // que a imagem ocupasse "a tela toda" e o mundo virtual é uma área
+      // maior que a viewport; respeitar `backgroundImageWidth/Height` salvo
+      // (que historicamente vinha 800×400) deixava um quadrado pequeno de
+      // imagem cercado por background sólido nas bordas.
       if (raw?.backgroundImageUrl && this.textures.exists("__bg_image__")) {
-        const img = this.add
+        this.add
           .image(0, 0, "__bg_image__")
           .setOrigin(0, 0)
-          .setDepth(0.5);
-        const customW = raw.backgroundImageWidth;
-        const customH = raw.backgroundImageHeight;
-        if (customW && customH) {
-          img.setDisplaySize(customW, customH);
-        }
+          .setDepth(0.5)
+          .setDisplaySize(WORLD_W, WORLD_H);
       }
     } else this.drawStation(elements, rooms, meetingCount);
 
@@ -421,22 +422,26 @@ export class WorldScene extends PhaserNS.Scene {
     const isTiled = scenario === "tiled";
     const isImage = scenario === "image";
     // Cenário "custom" pode opcionalmente ter `backgroundImageUrl` —
-    // nesse caso o player tem que nascer DENTRO da imagem, igual o
-    // cenário "image". Sem isso, o spawn caía em OFFICE_H/2 (~ y=550)
-    // que ficava ABAIXO da imagem (geralmente 800×400) → câmera segue
-    // o player pra fora da área decorada → tela parece preta.
+    // nesse caso a imagem é esticada pra cobrir o WORLD inteiro, então
+    // o spawn vai pro CENTRO do mundo (WORLD_W/2, WORLD_H/2). Pro "image"
+    // (que respeita as dimensões originais salvas) usamos o centro da
+    // imagem em si.
     const isCustomWithBg =
       scenario === "custom" && !!raw?.backgroundImageUrl;
     let startX = isTiled
       ? this.tiledSpawnX || this.tiledMapW / 2
-      : isImage || isCustomWithBg
+      : isImage
         ? (raw?.backgroundImageWidth ?? WORLD_W) / 2
-        : WORLD_W / 4;
+        : isCustomWithBg
+          ? WORLD_W / 2
+          : WORLD_W / 4;
     let startY = isTiled
       ? this.tiledSpawnY || this.tiledMapH / 2
-      : isImage || isCustomWithBg
+      : isImage
         ? (raw?.backgroundImageHeight ?? WORLD_H) / 2
-        : OFFICE_H / 2;
+        : isCustomWithBg
+          ? WORLD_H / 2
+          : OFFICE_H / 2;
 
     // Restore last position from localStorage (persisted by useWorldPresence).
     // Mas só se a posição salva estiver DENTRO do mapa atual — se o usuário
@@ -454,14 +459,15 @@ export class WorldScene extends PhaserNS.Scene {
         const { x, y } = JSON.parse(saved) as { x: number; y: number };
         if (Number.isFinite(x) && Number.isFinite(y) && x > 0 && y > 0) {
           // Calcula bounds máximos do cenário atual pra rejeitar posições stale.
+          // Pro "custom" com bg, a imagem cobre o WORLD inteiro — bounds = WORLD.
           const maxX = isTiled
             ? this.tiledMapW
-            : isImage || isCustomWithBg
+            : isImage
               ? raw?.backgroundImageWidth ?? WORLD_W
               : WORLD_W;
           const maxY = isTiled
             ? this.tiledMapH
-            : isImage || isCustomWithBg
+            : isImage
               ? raw?.backgroundImageHeight ?? WORLD_H
               : WORLD_H;
           if (x <= maxX && y <= maxY) {

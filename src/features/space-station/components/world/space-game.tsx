@@ -123,6 +123,11 @@ export function SpaceGame({
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<import("phaser").Game | null>(null);
   const [loading, setLoading] = useState(true);
+  // Banner visual de erro do Phaser init — sem isso, falhas no setup do
+  // game (import, scene boot, WebGL context) deixavam a tela 100% preta
+  // sem feedback. Render abaixo do loading overlay quando `gameError` é
+  // preenchido.
+  const [gameError, setGameError] = useState<string | null>(null);
   const [galaxyOpen, setGalaxyOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [worldConfig, setWorldConfig] = useState(initialWorldConfig);
@@ -287,6 +292,7 @@ export function SpaceGame({
     // canvas órfão. Sem isso, dois initGame() simultâneos resultam em 2 canvas.
     let cancelled = false;
     setLoading(true);
+    setGameError(null);
 
     async function initGame() {
       const PhaserModule = await import("phaser");
@@ -376,7 +382,15 @@ export function SpaceGame({
       setLoading(false);
     }
 
-    initGame();
+    // Wrap pra capturar TODOS os erros (import falhou, scene boot crashou,
+    // WebGL não disponível, etc.) e mostrar pro user em vez de tela preta.
+    initGame().catch((err: unknown) => {
+      if (cancelled) return;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[SpaceGame] initGame failed:", err);
+      setGameError(message);
+      setLoading(false);
+    });
 
     const onGalaxy = () => setGalaxyOpen(true);
     const onCredits = () => setCreditsOpen(true);
@@ -741,6 +755,28 @@ export function SpaceGame({
               style={{ width: "0%" }}
             />
           </div>
+        </div>
+      )}
+      {/* ── Error banner (Phaser init falhou) ──
+          Substitui a tela 100% preta por um banner com a mensagem real do erro
+          e botão pra recarregar. Útil quando WebGL não disponível, módulo phaser
+          falha em importar, ou scene boot dispara exceção. */}
+      {gameError && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950 px-6">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="text-white text-base font-medium mb-2">
+            Erro ao carregar o mundo virtual
+          </p>
+          <p className="text-slate-400 text-xs text-center max-w-md mb-4 font-mono">
+            {gameError}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium transition-colors"
+          >
+            Recarregar
+          </button>
         </div>
       )}
 

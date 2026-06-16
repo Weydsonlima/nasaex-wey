@@ -420,18 +420,29 @@ export class WorldScene extends PhaserNS.Scene {
 
     const isTiled = scenario === "tiled";
     const isImage = scenario === "image";
+    // Cenário "custom" pode opcionalmente ter `backgroundImageUrl` —
+    // nesse caso o player tem que nascer DENTRO da imagem, igual o
+    // cenário "image". Sem isso, o spawn caía em OFFICE_H/2 (~ y=550)
+    // que ficava ABAIXO da imagem (geralmente 800×400) → câmera segue
+    // o player pra fora da área decorada → tela parece preta.
+    const isCustomWithBg =
+      scenario === "custom" && !!raw?.backgroundImageUrl;
     let startX = isTiled
       ? this.tiledSpawnX || this.tiledMapW / 2
-      : isImage
+      : isImage || isCustomWithBg
         ? (raw?.backgroundImageWidth ?? WORLD_W) / 2
         : WORLD_W / 4;
     let startY = isTiled
       ? this.tiledSpawnY || this.tiledMapH / 2
-      : isImage
+      : isImage || isCustomWithBg
         ? (raw?.backgroundImageHeight ?? WORLD_H) / 2
         : OFFICE_H / 2;
 
-    // Restore last position from localStorage (persisted by useWorldPresence)
+    // Restore last position from localStorage (persisted by useWorldPresence).
+    // Mas só se a posição salva estiver DENTRO do mapa atual — se o usuário
+    // tinha jogado num cenário "station" (grande) e o mapa agora é "image"
+    // ou "custom" (geralmente 800×400), a posição salva fica fora da área
+    // visível → câmera segue o player pra fora da imagem → tela preta.
     try {
       const saved =
         typeof localStorage !== "undefined"
@@ -442,8 +453,22 @@ export class WorldScene extends PhaserNS.Scene {
       if (saved) {
         const { x, y } = JSON.parse(saved) as { x: number; y: number };
         if (Number.isFinite(x) && Number.isFinite(y) && x > 0 && y > 0) {
-          startX = x;
-          startY = y;
+          // Calcula bounds máximos do cenário atual pra rejeitar posições stale.
+          const maxX = isTiled
+            ? this.tiledMapW
+            : isImage || isCustomWithBg
+              ? raw?.backgroundImageWidth ?? WORLD_W
+              : WORLD_W;
+          const maxY = isTiled
+            ? this.tiledMapH
+            : isImage || isCustomWithBg
+              ? raw?.backgroundImageHeight ?? WORLD_H
+              : WORLD_H;
+          if (x <= maxX && y <= maxY) {
+            startX = x;
+            startY = y;
+          }
+          // se fora dos limites, mantém o startX/startY default (centro do bg)
         }
       }
     } catch {

@@ -92,6 +92,11 @@ export const listPaymentEntries = base
     paidFrom: z.string().optional(),
     paidTo: z.string().optional(),
     search: z.string().optional(),
+    // Ordenação da listagem. "paidAtDesc" alimenta o card de últimas
+    // transações do painel; o resto continua no vencimento crescente.
+    orderBy: z
+      .enum(["dueDateAsc", "dueDateDesc", "paidAtDesc"])
+      .default("dueDateAsc"),
     page: z.number().default(1),
     perPage: z.number().default(50),
   }))
@@ -131,11 +136,17 @@ export const listPaymentEntries = base
             }
           : {}),
       };
+      const orderBy = {
+        dueDateAsc: { dueDate: "asc" as const },
+        dueDateDesc: { dueDate: "desc" as const },
+        paidAtDesc: { paidAt: "desc" as const },
+      }[input.orderBy];
+
       const [entries, total] = await Promise.all([
         prisma.paymentEntry.findMany({
           where,
           include: entryInclude,
-          orderBy: { dueDate: "asc" },
+          orderBy,
           skip: (input.page - 1) * input.perPage,
           take: input.perPage,
         }),

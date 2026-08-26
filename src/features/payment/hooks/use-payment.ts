@@ -11,10 +11,6 @@ export function usePaymentAccessList() {
   );
 }
 
-export function useVerifyPaymentPin() {
-  return useMutation(orpc.payment.access.verify.mutationOptions());
-}
-
 export function useGrantPaymentAccess() {
   const qc = useQueryClient();
   return useMutation({
@@ -29,14 +25,6 @@ export function useRevokePaymentAccess() {
     ...orpc.payment.access.revoke.mutationOptions(),
     onSuccess: () => { qc.invalidateQueries({ queryKey: orpc.payment.key() }); },
   });
-}
-
-export function useVerifyPaymentOtp() {
-  return useMutation(orpc.payment.access.verifyOtp.mutationOptions());
-}
-
-export function useRequestPaymentOtp() {
-  return useMutation(orpc.payment.access.requestOtp.mutationOptions());
 }
 
 export function useMyPaymentAccess() {
@@ -65,26 +53,6 @@ export function useUpdatePaymentPermissions() {
     ...orpc.payment.access.updatePermissions.mutationOptions(),
     onSuccess: () => { qc.invalidateQueries({ queryKey: orpc.payment.key() }); },
   });
-}
-
-export function useStartWebauthnRegistration() {
-  return useMutation(orpc.payment.access.startWebauthnReg.mutationOptions());
-}
-
-export function useFinishWebauthnRegistration() {
-  const qc = useQueryClient();
-  return useMutation({
-    ...orpc.payment.access.finishWebauthnReg.mutationOptions(),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: orpc.payment.key() }); },
-  });
-}
-
-export function useStartWebauthnAuth() {
-  return useMutation(orpc.payment.access.startWebauthnAuth.mutationOptions());
-}
-
-export function useFinishWebauthnAuth() {
-  return useMutation(orpc.payment.access.finishWebauthnAuth.mutationOptions());
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -124,6 +92,7 @@ export function usePaymentEntries(params: {
   dateTo?: string;
   paidFrom?: string;
   paidTo?: string;
+  orderBy?: "dueDateAsc" | "dueDateDesc" | "paidAtDesc";
   enabled?: boolean;
 }) {
   const { enabled = true, ...rest } = params;

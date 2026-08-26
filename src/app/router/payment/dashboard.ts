@@ -27,6 +27,18 @@ export const getPaymentDashboard = base
     overduePayable: z.number(),
     balanceTotal: z.number(),
     netResult: z.number(),
+    // Quantidade de recebíveis quitados no período — base do ticket médio.
+    paidReceivableCount: z.number(),
+    // Mesmos números no período imediatamente anterior (de igual duração),
+    // pro dashboard mostrar variação percentual em cada indicador.
+    previous: z.object({
+      totalReceivable: z.number(),
+      totalPayable: z.number(),
+      totalReceived: z.number(),
+      totalPaid: z.number(),
+      netResult: z.number(),
+      paidReceivableCount: z.number(),
+    }),
     upcoming7Days: z.object({ receivable: z.number(), payable: z.number() }),
     upcoming30Days: z.object({ receivable: z.number(), payable: z.number() }),
     monthlyChart: z.array(z.object({
@@ -54,6 +66,11 @@ export const getPaymentDashboard = base
       const monthEnd = input.dateTo
         ? new Date(input.dateTo)
         : new Date(year, month, 0, 23, 59, 59);
+      // Período anterior de mesma duração — termina 1ms antes do início atual.
+      const previousEnd = new Date(monthStart.getTime() - 1);
+      const previousStart = new Date(
+        previousEnd.getTime() - (monthEnd.getTime() - monthStart.getTime()),
+      );
       const today = new Date();
       const in7 = new Date(today); in7.setDate(today.getDate() + 7);
       const in30 = new Date(today); in30.setDate(today.getDate() + 30);
@@ -74,6 +91,12 @@ export const getPaymentDashboard = base
         categoriesRec,
         categoriesPay,
         monthlyEntries,
+        paidReceivableCount,
+        previousReceivableAgg,
+        previousPayableAgg,
+        previousReceivedAgg,
+        previousPaidAgg,
+        previousPaidReceivableCount,
       ] = await Promise.all([
         // total a receber no mês
         prisma.paymentEntry.aggregate({
@@ -151,6 +174,30 @@ export const getPaymentDashboard = base
           },
           select: { type: true, paidAmount: true, paidAt: true },
         }),
+        // quantidade de recebíveis quitados no período (ticket médio)
+        prisma.paymentEntry.count({
+          where: { organizationId: orgId, type: "RECEIVABLE", paidAt: { gte: monthStart, lte: monthEnd }, status: "PAID" },
+        }),
+        // ── período anterior ──────────────────────────────────────────────
+        prisma.paymentEntry.aggregate({
+          where: { organizationId: orgId, type: "RECEIVABLE", dueDate: { gte: previousStart, lte: previousEnd }, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } },
+          _sum: { amount: true },
+        }),
+        prisma.paymentEntry.aggregate({
+          where: { organizationId: orgId, type: "PAYABLE", dueDate: { gte: previousStart, lte: previousEnd }, status: { in: ["PENDING", "PARTIAL", "OVERDUE"] } },
+          _sum: { amount: true },
+        }),
+        prisma.paymentEntry.aggregate({
+          where: { organizationId: orgId, type: "RECEIVABLE", paidAt: { gte: previousStart, lte: previousEnd }, status: "PAID" },
+          _sum: { paidAmount: true },
+        }),
+        prisma.paymentEntry.aggregate({
+          where: { organizationId: orgId, type: "PAYABLE", paidAt: { gte: previousStart, lte: previousEnd }, status: "PAID" },
+          _sum: { paidAmount: true },
+        }),
+        prisma.paymentEntry.count({
+          where: { organizationId: orgId, type: "RECEIVABLE", paidAt: { gte: previousStart, lte: previousEnd }, status: "PAID" },
+        }),
       ]);
 
       // Category names
@@ -196,6 +243,8 @@ export const getPaymentDashboard = base
 
       const totalReceived = receivedAgg._sum.paidAmount ?? 0;
       const totalPaid = paidAgg._sum.paidAmount ?? 0;
+      const previousReceived = previousReceivedAgg._sum.paidAmount ?? 0;
+      const previousPaid = previousPaidAgg._sum.paidAmount ?? 0;
 
       return {
         totalReceivable: receivableAgg._sum.amount ?? 0,
@@ -206,6 +255,15 @@ export const getPaymentDashboard = base
         overduePayable: overduePay._sum.amount ?? 0,
         balanceTotal: accounts._sum.balance ?? 0,
         netResult: totalReceived - totalPaid,
+        paidReceivableCount,
+        previous: {
+          totalReceivable: previousReceivableAgg._sum.amount ?? 0,
+          totalPayable: previousPayableAgg._sum.amount ?? 0,
+          totalReceived: previousReceived,
+          totalPaid: previousPaid,
+          netResult: previousReceived - previousPaid,
+          paidReceivableCount: previousPaidReceivableCount,
+        },
         upcoming7Days: { receivable: up7Rec._sum.amount ?? 0, payable: up7Pay._sum.amount ?? 0 },
         upcoming30Days: { receivable: up30Rec._sum.amount ?? 0, payable: up30Pay._sum.amount ?? 0 },
         monthlyChart,

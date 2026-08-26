@@ -1,7 +1,4 @@
 import {
-  verifyPaymentPin,
-  verifyPaymentOtp,
-  requestPaymentOtp,
   getMyPaymentAccess,
   listPaymentAccess,
   grantPaymentAccess,
@@ -9,10 +6,6 @@ import {
   revokePaymentAccess,
   updatePaymentRole,
   updatePaymentPermissions,
-  startWebauthnRegistration,
-  finishWebauthnRegistration,
-  startWebauthnAuth,
-  finishWebauthnAuth,
 } from "./access";
 import {
   listPaymentAccounts,
@@ -68,20 +61,13 @@ import {
 
 export const paymentRouter = {
   access: {
-    verify:             verifyPaymentPin,
-    verifyOtp:          verifyPaymentOtp,
-    requestOtp:         requestPaymentOtp,
-    getMy:              getMyPaymentAccess,
-    list:               listPaymentAccess,
-    grant:              grantPaymentAccess,
-    setupOwner:         setupOwnerPaymentAccess,
-    revoke:             revokePaymentAccess,
-    updateRole:         updatePaymentRole,
-    updatePermissions:  updatePaymentPermissions,
-    startWebauthnReg:   startWebauthnRegistration,
-    finishWebauthnReg:  finishWebauthnRegistration,
-    startWebauthnAuth:  startWebauthnAuth,
-    finishWebauthnAuth: finishWebauthnAuth,
+    getMy:             getMyPaymentAccess,
+    list:              listPaymentAccess,
+    grant:             grantPaymentAccess,
+    setupOwner:        setupOwnerPaymentAccess,
+    revoke:            revokePaymentAccess,
+    updateRole:        updatePaymentRole,
+    updatePermissions: updatePaymentPermissions,
   },
   accounts: {
     list: listPaymentAccounts,

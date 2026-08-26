@@ -38,7 +38,6 @@ import {
   RefreshCw,
   ChevronDown,
   Crown,
-  Fingerprint,
 } from "lucide-react";
 import {
   usePaymentAccessList,
@@ -91,8 +90,6 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
   const [grantRole, setGrantRole] = useState<Role>("VIEWER");
   const [grantSendVia, setGrantSendVia] = useState<"email" | "whatsapp">("whatsapp");
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
-  const [deliveryWarning, setDeliveryWarning] = useState<string | null>(null);
 
   const records = data?.records ?? [];
 
@@ -106,23 +103,15 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
         sendVia: grantSendVia,
         phone: grantPhone || undefined,
       });
-      if (result.tempPassword) {
-        setTempPassword(result.tempPassword);
-        setDeliveryWarning(result.deliveryWarning ?? null);
-        toast.warning(
-          result.deliveryWarning ?? "Senha gerada — copie agora, não é recuperável",
-        );
-      } else {
+      if (result.deliveryWarning) toast.warning(result.deliveryWarning);
+      else
         toast.success(
-          result.deliveryWarning
-            ? result.deliveryWarning
-            : `Acesso liberado — senha enviada via ${grantSendVia === "email" ? "e-mail" : "WhatsApp"}`,
+          `Acesso liberado — avisamos via ${grantSendVia === "email" ? "e-mail" : "WhatsApp"}`,
         );
-        setShowDialog(false);
-        setGrantUserId("");
-        setGrantPhone("");
-        setGrantRole("VIEWER");
-      }
+      setShowDialog(false);
+      setGrantUserId("");
+      setGrantPhone("");
+      setGrantRole("VIEWER");
     } catch (err) {
       const message = (err as { message?: string })?.message ?? "Erro ao liberar acesso";
       toast.error(message);
@@ -138,7 +127,7 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
     }
   }
 
-  async function handleRegenerate(
+  async function handleResendNotice(
     userId: string,
     role: Role,
     via: "email" | "whatsapp",
@@ -151,15 +140,11 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
         sendVia: via,
         phone: phone || undefined,
       });
-      if (result.tempPassword) {
-        setTempPassword(result.tempPassword);
-        setDeliveryWarning(result.deliveryWarning ?? null);
-        toast.warning(result.deliveryWarning ?? "Senha gerada — copie agora");
-      } else {
-        toast.success(result.deliveryWarning ?? "Nova senha gerada e enviada");
-      }
+      if (result.deliveryWarning) toast.warning(result.deliveryWarning);
+      else toast.success("Aviso de acesso reenviado");
     } catch (err) {
-      const message = (err as { message?: string })?.message ?? "Erro ao regenerar senha";
+      const message =
+        (err as { message?: string })?.message ?? "Erro ao reenviar aviso";
       toast.error(message);
     }
   }
@@ -222,10 +207,9 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
 
       <p className="text-xs text-muted-foreground leading-relaxed">
         Apenas as pessoas abaixo conseguem entrar no NASA Payment — nem mesmo o
-        owner da organização vê dados financeiros sem registro aqui. A senha é
-        gerada e enviada por WhatsApp/e-mail, criptografada com bcrypt e
-        validada por 2FA via WhatsApp a cada N sessões (configurável em
-        Governança).
+        owner da organização vê dados financeiros sem registro aqui. Não há
+        senha separada: cada pessoa entra com a própria conta e o que vale é a
+        autorização concedida nesta tela.
       </p>
 
       <div className="rounded-xl border border-border/50 overflow-hidden">
@@ -270,9 +254,6 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
                             <Crown className="size-3.5 text-amber-400" />
                           )}
                           {record.user.name}
-                          {record.hasWebauthn && (
-                            <Fingerprint className="size-3 text-emerald-400" />
-                          )}
                         </p>
                         <p className="text-xs text-muted-foreground">{record.user.email}</p>
                         {record.user.phone && (
@@ -354,18 +335,25 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
                             <DropdownMenuItem
                               className="gap-2 text-xs"
                               onClick={() =>
-                                handleRegenerate(record.userId, role, "whatsapp", record.phone ?? record.user.phone)
+                                handleResendNotice(
+                                  record.userId,
+                                  role,
+                                  "whatsapp",
+                                  record.phone ?? record.user.phone,
+                                )
                               }
                             >
-                              <RefreshCw className="size-3.5" /> Nova senha (WhatsApp)
+                              <RefreshCw className="size-3.5" /> Reenviar aviso
+                              (WhatsApp)
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="gap-2 text-xs"
                               onClick={() =>
-                                handleRegenerate(record.userId, role, "email")
+                                handleResendNotice(record.userId, role, "email")
                               }
                             >
-                              <RefreshCw className="size-3.5" /> Nova senha (e-mail)
+                              <RefreshCw className="size-3.5" /> Reenviar aviso
+                              (e-mail)
                             </DropdownMenuItem>
                             {hasOverride && (
                               <DropdownMenuItem
@@ -459,53 +447,6 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
         </table>
       </div>
 
-      {/* Dialog de senha temporária — quando WhatsApp/email falharam */}
-      <Dialog
-        open={!!tempPassword}
-        onOpenChange={(open) => {
-          if (!open) {
-            setTempPassword(null);
-            setDeliveryWarning(null);
-            setShowDialog(false);
-            setGrantUserId("");
-            setGrantPhone("");
-            setGrantRole("VIEWER");
-          }
-        }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Senha gerada — copie agora</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            {deliveryWarning && (
-              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
-                ⚠ {deliveryWarning}
-              </p>
-            )}
-            <div className="text-center font-mono text-3xl tracking-[0.4em] font-bold py-4 bg-[#1E90FF]/5 border border-[#1E90FF]/20 rounded-xl select-all">
-              {tempPassword}
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              A senha foi gerada e o hash já está no banco — esta é a única vez
-              que ela aparece em texto claro. Copie e entregue ao usuário por um
-              canal seguro.
-            </p>
-            <Button
-              onClick={() => {
-                if (tempPassword) {
-                  navigator.clipboard?.writeText(tempPassword);
-                  toast.success("Senha copiada");
-                }
-              }}
-              className="w-full"
-            >
-              Copiar senha
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -542,7 +483,7 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Enviar senha via</Label>
+              <Label>Avisar via</Label>
               <Select
                 value={grantSendVia}
                 onValueChange={(value) =>
@@ -586,7 +527,7 @@ export function AccessPanel({ readonly = false }: { readonly?: boolean } = {}) {
                 disabled={grant.isPending}
                 className="flex-1 bg-[#1E90FF] hover:bg-[#1E90FF]/90 text-white"
               >
-                {grant.isPending ? "Enviando..." : "Liberar e enviar senha"}
+                {grant.isPending ? "Liberando..." : "Liberar acesso"}
               </Button>
             </div>
           </form>

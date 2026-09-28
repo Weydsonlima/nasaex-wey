@@ -7,13 +7,14 @@ import { addLeadLast } from "./add-lead-to-last";
 // import { updateLeadOrder } from "./update-order";
 import { getLead } from "./get";
 import { listLead } from "./list";
+import { leadSegments } from "./segments";
 import { createLeadWithTags } from "./create-lead-with-tags";
 import { updateLeadAction } from "./update-action";
 import { archiveLead } from "./archive";
 import { setArchived as setLeadArchived } from "./set-archived";
 import { toggleFavorite as toggleLeadFavorite } from "./toggle-favorite";
 import { listActionsByLead } from "./list-actions";
-// import { createActionByLead } from "./create-action-by-lead";
+import { createActionByLead } from "./create-action-by-lead";
 import { updateActionByLead } from "./update-action-by-lead";
 import { listLeadByWhats } from "./list-lead-by-whats";
 import { listLeadWithoutConversation } from "./list-without-conversation";
@@ -38,9 +39,13 @@ import { getLeadByPublicToken } from "./get-by-public-token";
 import { getLeadPrefillByToken } from "./get-prefill-by-token";
 import { listAllAttachments } from "./list-all-attachments";
 import { listAttachmentsByToken } from "./list-attachments-by-token";
+import { listLeadProducts } from "./list-products";
+import { detectMergeConflicts } from "./detect-merge-conflicts";
+import { mergeLeads } from "./merge-leads";
 
 export const leadRoutes = {
   list: listLead,
+  segments: leadSegments,
   get: getLead,
   search: searchLeads,
   create: createLead,
@@ -55,7 +60,7 @@ export const leadRoutes = {
   setArchived: setLeadArchived,
   toggleFavorite: toggleLeadFavorite,
   listActions: listActionsByLead,
-  // createAction: createActionByLead,
+  createAction: createActionByLead,
   updateActionByLead: updateActionByLead,
   listLeadByWhats: listLeadByWhats,
   listLeadWithoutConversation: listLeadWithoutConversation,
@@ -63,6 +68,7 @@ export const leadRoutes = {
   listLeadsByStatus,
   updateManyStatus: updateManyStatusLead,
   listFiles: listLeadFiles,
+  listProducts: listLeadProducts,
   createFile: createLeadFile,
   deleteFile: deleteLeadFile,
   updateWhatsappTags: updateWhatsappTagsLead,
@@ -80,4 +86,7 @@ export const leadRoutes = {
   getPrefillByToken: getLeadPrefillByToken,
   listAllAttachments,
   listAttachmentsByToken,
+  detectMergeConflicts,
+  mergeLeads,
 };
+

@@ -21,12 +21,23 @@ import {
 import { partnerPayoutCloseCycle } from "@/inngest/functions/crons/partner-payout-close-cycle";
 import { partnerGracePeriodMonitor } from "@/inngest/functions/crons/partner-grace-period-monitor";
 import { starsGracePeriodMonitor } from "@/inngest/functions/crons/stars-grace-period-monitor";
+import { starsMonthlyCycle } from "@/inngest/functions/crons/stars-monthly-cycle";
 import { starsPendingSweep } from "@/inngest/functions/crons/stars-pending-sweep";
 import { coursePublicPurchasePaid } from "@/inngest/functions/course-public-purchase-paid";
+import { trafegoPurchasePaid } from "@/inngest/functions/trafego/purchase-paid";
+import { trafegoOrderRequested } from "@/inngest/functions/trafego/order-requested";
+import { trafegoOrderStatusChanged } from "@/inngest/functions/trafego/order-status-changed";
+import { trafegoReleaseGenerate } from "@/inngest/functions/trafego/release-generate";
+import { trafegoOrderCreated } from "@/inngest/functions/trafego/order-created";
+import { trafegoKanbanDriftSweep } from "@/inngest/functions/crons/trafego-kanban-drift-sweep";
+import { trafegoPixPendingSweep } from "@/inngest/functions/crons/trafego-pix-pending-sweep";
+import { trafegoAsaasPaymentEvent } from "@/inngest/functions/trafego/asaas-payment-event";
+import { trafegoAsaasChargeWatch } from "@/inngest/functions/trafego/asaas-charge-watch";
 import { publishPostHandler } from "@/inngest/functions/nasa-planner/publish-post-handler";
 import { publishScheduledPosts } from "@/inngest/functions/nasa-planner/publish-scheduled-posts";
 import { refreshMetaTokens } from "@/inngest/functions/nasa-planner/refresh-meta-tokens";
 import { syncPostMetricsCron } from "@/inngest/functions/nasa-planner/sync-post-metrics-cron";
+import { syncPriceSuggestionsCron } from "@/inngest/functions/forge/sync-price-suggestions-cron";
 import { syncMetaAdsKpis } from "@/inngest/functions/crons/sync-meta-ads-kpis";
 import { syncMetaAdsStructure } from "@/inngest/functions/crons/sync-meta-ads-structure";
 import { nasaRouteSubscriptionRenew } from "@/inngest/functions/crons/nasa-route-subscription-renew";
@@ -53,6 +64,9 @@ import { worldEventOccupancyTick } from "@/inngest/functions/crons/world-event-o
 import { detectActionsDueSoon } from "@/inngest/functions/crons/detect-actions-due-soon";
 import { formSendWhatsappNotification } from "@/inngest/functions/form/send-whatsapp-notification";
 import { chatAiWhatsappAgent } from "@/inngest/functions/chat-ai/whatsapp-agent";
+import { syncCatalogOrderToNerp } from "@/inngest/functions/nerp-catalog/sync-order-to-nerp";
+import { watchCatalogOrderPayment } from "@/inngest/functions/nerp-catalog/watch-order-payment";
+import { starFriendsExpireStars } from "@/inngest/functions/star-friends/expire-stars";
 import {
   scheduleIdleChecks,
   checkNoFirstResponse,
@@ -74,6 +88,17 @@ import {
 // ── NASA Payment Fase 2 (governança + cobrança event-driven) ──
 import { paymentDunningFire }      from "@/inngest/functions/payment/dunning-fire";
 import { paymentApprovalReminder } from "@/inngest/functions/payment/approval-reminder";
+import { paymentGoalDailyCheck }    from "@/inngest/functions/payment/goal-daily-check";
+import { paymentGoalWeeklySummary } from "@/inngest/functions/payment/goal-weekly-summary";
+// ── Astro Financeiro (lembretes com boleto + caixa Gmail) ──
+import { paymentReminderFire } from "@/inngest/functions/payment/reminder-fire";
+import { paymentInboxSyncCron, paymentInboxSyncOrg } from "@/inngest/functions/payment/inbox-sync";
+// ── Campanhas (disparo em massa WhatsApp Oficial — Fase 3/4) ──
+import { dispatchBroadcast } from "@/inngest/functions/campanhas/dispatch-broadcast";
+import { dispatchDueBroadcasts } from "@/inngest/functions/campanhas/dispatch-due-broadcasts";
+import { watchScheduledBroadcast } from "@/inngest/functions/campanhas/watch-scheduled-broadcast";
+import { syncSeiProcess } from "@/inngest/functions/sei/sync-process";
+import { testSeiConnection } from "@/inngest/functions/sei/test-connection";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -90,10 +115,24 @@ export const { GET, POST, PUT } = serve({
     partnerGracePeriodMonitor,
     // ── STARS grace monitor (diário 09h UTC) ──
     starsGracePeriodMonitor,
+    starsMonthlyCycle,
     // ── STARS: varredura de pendências Stripe órfãs (de hora em hora) ──
     starsPendingSweep,
     // ── NASA Router (checkout público de curso) ──
     coursePublicPurchasePaid,
+    trafegoPurchasePaid,
+    trafegoOrderRequested,
+    trafegoOrderStatusChanged,
+    trafegoReleaseGenerate,
+    trafegoOrderCreated,
+    // ── trafeGO: card do tracking realinhado ao pedido (de hora em hora) ──
+    trafegoKanbanDriftSweep,
+    // ── trafeGO: PIX vencido vira EXPIRED (de hora em hora) ──
+    trafegoPixPendingSweep,
+    // ── trafeGO: evento de cobrança do Asaas (spec 0022) ──
+    trafegoAsaasPaymentEvent,
+    // ── trafeGO: acompanha cada cobrança PIX até resolver (spec 0022) ──
+    trafegoAsaasChargeWatch,
     // ── NASA Planner ──
     publishPostHandler,
     publishScheduledPosts,
@@ -117,6 +156,11 @@ export const { GET, POST, PUT } = serve({
     chatSyncMessages,
     // ── Chat AI (WhatsApp agent interno) ──
     chatAiWhatsappAgent,
+    // ── Catálogo online NERP → Órbita: pagamento e confirmação da venda ──
+    watchCatalogOrderPayment,
+    syncCatalogOrderToNerp,
+    // ── STAR FRIENDS: validade das stars ──
+    starFriendsExpireStars,
     // ── In-Chat (fallback anti-ban): confirma queda → ativa; recuperação preguiçosa ──
     confirmDisconnectAndActivate,
     checkInChatRecovery,
@@ -153,6 +197,20 @@ export const { GET, POST, PUT } = serve({
     // ── NASA Payment Fase 2 — event-driven, sem cron ──
     paymentDunningFire,
     paymentApprovalReminder,
+    paymentGoalDailyCheck,
+    paymentGoalWeeklySummary,
+    // ── Astro Financeiro — lembrete com boleto (event) + caixa Gmail (cron 30 min) ──
+    paymentReminderFire,
+    paymentInboxSyncCron,
+    paymentInboxSyncOrg,
+    // ── Campanhas — disparo em massa (Fase 3) + agendamento (Fase 4, cron) ──
+    dispatchBroadcast,
+    dispatchDueBroadcasts,
+    // Disparo agendado por campanha — caminho principal; o cron acima é a rede.
+    watchScheduledBroadcast,
+    // ── SEI — consultas SOAP fora do ciclo das rotas HTTP ──
+    syncSeiProcess,
+    testSeiConnection,
     // bookingNotification,
     // processUserAction,
     // detectAbsence,
@@ -162,5 +220,7 @@ export const { GET, POST, PUT } = serve({
     // checkMilestones,
     // onProposalPaid,
     // onOnboardingFormsCompleted,
+    // ── FORGE (simulador de custos: sync de preços suggest-only) ──
+    syncPriceSuggestionsCron,
   ],
 });

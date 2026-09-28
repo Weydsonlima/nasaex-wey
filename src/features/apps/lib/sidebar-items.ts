@@ -16,6 +16,10 @@ import {
   GraduationCap,
   LayoutTemplate,
   Rocket,
+  Sparkles,
+  Send,
+  TrendingUp,
+  AtSign,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
@@ -31,7 +35,7 @@ export interface SidebarNavItem {
 
 export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   // ── Visíveis por padrão (primeiro acesso) ───────────────────────────────
-  // Núcleo essencial pra novo user: 5 apps + página de Apps. Resto opt-in
+  // Núcleo essencial pra novo user: 6 apps + página de Apps. Resto opt-in
   // via página /apps (botão "+" no card adiciona ao menu).
   {
     key: "tracking",
@@ -82,15 +86,15 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     alwaysVisible: false,
     defaultVisible: true,
   },
-  // ── Ocultos por padrão (opt-in via /apps "+") ───────────────────────────
   {
     key: "contatos",
     title: "Contatos",
     url: "/contatos",
     icon: Users,
     alwaysVisible: false,
-    defaultVisible: false,
+    defaultVisible: true,
   },
+  // ── Ocultos por padrão (opt-in via /apps "+") ───────────────────────────
   {
     key: "integrations",
     title: "Integrações",
@@ -124,6 +128,14 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     defaultVisible: false,
   },
   {
+    key: "star-friends",
+    title: "STAR FRIENDS",
+    url: "/star-friends",
+    icon: Sparkles,
+    alwaysVisible: false,
+    defaultVisible: false,
+  },
+  {
     key: "payment",
     title: "Payment",
     url: "/payment",
@@ -141,7 +153,7 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   },
   {
     key: "nasa-route",
-    title: "NASA Route",
+    title: "ÓRBITA Route",
     url: "/nasa-route",
     icon: GraduationCap,
     alwaysVisible: false,
@@ -149,7 +161,7 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   },
   {
     key: "nasa-pages",
-    title: "NASA Pages",
+    title: "ÓRBITA Pages",
     url: "/pages",
     icon: LayoutTemplate,
     alwaysVisible: false,
@@ -163,7 +175,31 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
     alwaysVisible: false,
     defaultVisible: false,
   },
+  {
+    key: "comments",
+    title: "COMMENTS",
+    url: "/comments",
+    icon: AtSign,
+    alwaysVisible: false,
+    defaultVisible: true,
+  },
+  {
+    key: "campanhas",
+    title: "Campanhas",
+    url: "/campanhas",
+    icon: Send,
+    alwaysVisible: false,
+    defaultVisible: false,
+  },
   // ── Sempre visível ──────────────────────────────────────────────────────
+  {
+    key: "trafego",
+    title: "trafeGO",
+    url: "/trafego/painel",
+    icon: TrendingUp,
+    alwaysVisible: false,
+    defaultVisible: false,
+  },
   {
     key: "apps",
     title: "Apps",
@@ -174,6 +210,15 @@ export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   },
 ];
 
+/**
+ * Organizações com escopo de produto veem apenas os itens listados aqui —
+ * inclusive itens marcados `alwaysVisible`. É restrição de NAVEGAÇÃO: a
+ * barreira de autorização real, se necessária, é `OrgPermission`.
+ */
+export const SCOPED_NAV_KEYS: Record<string, string[]> = {
+  trafego: ["trafego"],
+};
+
 /** Map de app ID → sidebar key (para o toggle nos cards) */
 export const APP_TO_SIDEBAR_KEY: Record<string, string> = {
   tracking: "tracking",
@@ -183,13 +228,16 @@ export const APP_TO_SIDEBAR_KEY: Record<string, string> = {
   nbox: "nbox",
   "nasa-planner": "nasa-planner",
   forge: "forge",
+  "star-friends": "star-friends",
   payment: "payment",
   linnker: "linnker",
   "nasa-route": "nasa-route",
   "nasa-pages": "nasa-pages",
   "space-station": "space-station",
+  campanhas: "campanhas",
   insights: "insights",
   integrations: "integrations",
   contatos: "contatos",
   demand: "workspaces",
+  trafego: "trafego",
 };

@@ -31,6 +31,7 @@ import { trackLeadEvent } from "@/lib/lead-journey/track";
 import { logActivity } from "@/features/admin/lib/activity-logger";
 import { assignLeadRoundRobin } from "@/http/rodizio/create-lead";
 import { LeadSource } from "@/generated/prisma/enums";
+import type { WorkflowLeadMessage } from "@/features/tracking-executions/lib/lead-message";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -59,6 +60,12 @@ export interface FirePostInboundParams {
   fromMe: boolean;
   /** Canal de origem — pro logging/IA decidir nome do event. */
   channel: "WHATSAPP" | "IN_CHAT" | "INSTAGRAM" | "FACEBOOK";
+  /**
+   * Mensagem do lead que originou este inbound, no shape que os gatilhos de
+   * workflow consomem (spec 0008). Só usada quando `fromMe=false`. Ausente em
+   * callers que não têm o texto em mãos.
+   */
+  leadMessage?: WorkflowLeadMessage;
   /** Dados serializáveis pro Pusher per-conversation event. */
   messagePayload: Record<string, any>;
   /** Dados serializáveis pro Pusher per-tracking event (lista de conversas). */
@@ -219,6 +226,7 @@ export async function firePostInboundAutomations(
         trackingId: params.trackingId,
         previousLastInboundAt: params.lead.lastInboundAt,
         interactionAt: now,
+        leadMessage: params.leadMessage,
       });
     } catch (err) {
       console.error("[pipeline] first_interaction_of_day_gate_failed", err);
@@ -267,6 +275,10 @@ export interface CreateInChatLeadParams {
   name: string;
   /** appOrigin pro workflow NEW_LEAD montar URL absoluta. */
   appOrigin?: string;
+  /** Origem do lead — default IN_CHAT. Pedido do Catálogo NERP usa NERP_CATALOG. */
+  source?: LeadSource;
+  /** Rótulo da origem no activity log — default "In-Chat". */
+  sourceLabel?: string;
 }
 
 export interface CreateInChatLeadResult {
@@ -350,7 +362,7 @@ export async function createInChatLead(
       statusId: status.id,
       phone: params.phone,
       trackingId: params.trackingId,
-      source: LeadSource.IN_CHAT,
+      source: params.source ?? LeadSource.IN_CHAT,
       order: firstLead ? Number(firstLead.order) - 1 : 0,
       statusFlow: "WAITING",
       lastInboundAt: new Date(),
@@ -386,13 +398,13 @@ export async function createInChatLead(
       userEmail: "sistema@nasa",
       appSlug: "tracking",
       action: "lead.arrived",
-      actionLabel: `Um lead chegou no tracking "${tracking.name}" via In-Chat (${createdLead.name ?? params.phone})`,
+      actionLabel: `Um lead chegou no tracking "${tracking.name}" via ${params.sourceLabel ?? "In-Chat"} (${createdLead.name ?? params.phone})`,
       resource: createdLead.name ?? params.phone,
       resourceId: createdLead.id,
       metadata: {
         phone: params.phone,
         trackingName: tracking.name,
-        source: "IN_CHAT",
+        source: params.source ?? "IN_CHAT",
       },
     });
   } catch (err) {

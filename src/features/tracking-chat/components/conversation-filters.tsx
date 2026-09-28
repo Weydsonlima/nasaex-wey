@@ -20,20 +20,23 @@ import {
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDownIcon, EllipsisIcon } from "lucide-react";
+import { ChevronDownIcon, EllipsisIcon, ListFilterIcon, ShoppingBasket } from "lucide-react";
+import { ConversationFiltersPanel } from "./conversation-filters-panel";
+import { useConversationFilters } from "../hooks/use-conversation-filters";
 import Link from "next/link";
 import type { SVGProps } from "react";
 import { integrations } from "@/data/integrations";
 import { useMarketplace } from "@/features/integrations/context/marketplace-context";
+import {
+  CATALOG_CHANNEL_LABEL,
+  type ChannelFilter,
+} from "../utils/channel-filter";
 
-type ChannelFilter = "ALL" | "WHATSAPP" | "INSTAGRAM" | "TIKTOK" | "FACEBOOK";
 
 interface ConversationFiltersProps {
   trackingId: string | null;
   selectedChannel: ChannelFilter;
   onChannelChange: (channel: ChannelFilter) => void;
-  statusFlowFilter: "FINISHED" | "ACTIVE" | null;
-  onStatusFlowFilterChange: (filter: "FINISHED" | "ACTIVE" | null) => void;
   favoritesOnly: boolean;
   onFavoritesOnlyChange: (value: boolean) => void;
   archivedOnly: boolean;
@@ -46,8 +49,6 @@ export function ConversationFilters({
   trackingId,
   selectedChannel,
   onChannelChange,
-  statusFlowFilter,
-  onStatusFlowFilterChange,
   favoritesOnly,
   onFavoritesOnlyChange,
   archivedOnly,
@@ -56,6 +57,8 @@ export function ConversationFilters({
   onSelectedTagIdsChange,
 }: ConversationFiltersProps) {
   const { installedSlugs } = useMarketplace();
+  const { statusFlows, toggleStatusFlow, activeCount } =
+    useConversationFilters();
 
   const messengerIntegrations = integrations.filter(
     (integration) =>
@@ -116,6 +119,23 @@ export function ConversationFilters({
           );
         })}
 
+        <button
+          type="button"
+          title={CATALOG_CHANNEL_LABEL}
+          aria-label={CATALOG_CHANNEL_LABEL}
+          onClick={() =>
+            onChannelChange(selectedChannel === "CATALOG" ? "ALL" : "CATALOG")
+          }
+          className={cn(
+            "flex size-11 items-center justify-center rounded-full border transition-colors bg-background",
+            selectedChannel === "CATALOG"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border/70 text-muted-foreground hover:bg-accent",
+          )}
+        >
+          <ShoppingBasket className="size-5 text-emerald-500" />
+        </button>
+
         <Link href="/integrations?category=mensageiros">
           <button
             type="button"
@@ -133,21 +153,17 @@ export function ConversationFilters({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        {/* Atalhos do MESMO estado do filtro "Status" do painel — marcar
+            aqui reflete lá e vice-versa (spec 0011, RF-4). */}
         <QuickFilterButton
           label="Finalizados"
-          active={statusFlowFilter === "FINISHED"}
-          onClick={() =>
-            onStatusFlowFilterChange(
-              statusFlowFilter === "FINISHED" ? null : "FINISHED",
-            )
-          }
+          active={statusFlows.includes("FINISHED")}
+          onClick={() => toggleStatusFlow("FINISHED")}
         />
         <QuickFilterButton
           label="Em atendimento"
-          active={statusFlowFilter === "ACTIVE"}
-          onClick={() =>
-            onStatusFlowFilterChange(statusFlowFilter === "ACTIVE" ? null : "ACTIVE")
-          }
+          active={statusFlows.includes("ACTIVE")}
+          onClick={() => toggleStatusFlow("ACTIVE")}
         />
         <QuickFilterButton
           label="Favoritas"
@@ -219,6 +235,21 @@ export function ConversationFilters({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <ConversationFiltersPanel
+          trackingId={trackingId}
+          trigger={
+            <Button
+              variant={activeCount > 0 ? "default" : "outline"}
+              size="sm"
+              className="h-8 rounded-full px-3 text-xs"
+            >
+              <ListFilterIcon className="size-3.5" />
+              Filtros
+              {activeCount > 0 ? ` (${activeCount})` : ""}
+            </Button>
+          }
+        />
       </div>
     </div>
   );

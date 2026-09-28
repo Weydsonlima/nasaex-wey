@@ -33,6 +33,7 @@ import { adminRouter } from "./admin";
 import { userNotificationsRouter } from "./user-notifications";
 import { userChatPreferencesRoutes } from "./user-chat-preferences";
 import { alertsRouter } from "./alerts";
+import { pushRouter } from "./push";
 import { sidebarPrefsRouter } from "./sidebar-prefs";
 import { spacePointRouter } from "./space-point";
 import { userRouter } from "./user";
@@ -58,6 +59,9 @@ import { metaAdsRouter } from "./meta-ads";
 import { metaMcpRouter } from "./meta-mcp";
 import { astroRoutes } from "@/features/astro/server/routes";
 import { nerpRouter } from "./nerp";
+import { starFriendsRouter } from "./star-friends";
+import { base } from "@/app/middlewares/base";
+import { appRouterPermission } from "@/app/middlewares/app-router-permission";
 import { commentsRouter } from "./comments";
 import { livekitRouter } from "./livekit";
 import { stickersRouter } from "./stickers";
@@ -68,6 +72,9 @@ import { inChatRouter } from "./in-chat";
 import { workflowClipboardRouter } from "./workflow-clipboard";
 import { astroBotRouter } from "./astro-bot";
 import { whatsappAnalyticsRouter } from "./whatsapp-analytics";
+import { campanhasRouter } from "./campanhas";
+import { trafegoRouter } from "./trafego";
+import { seiRouter } from "./sei";
 
 export const router = {
   tracking: trackingRoutes,
@@ -108,6 +115,7 @@ export const router = {
   userNotifications: userNotificationsRouter,
   userChatPreferences: userChatPreferencesRoutes,
   alerts: alertsRouter,
+  push: pushRouter,
   sidebarPrefs: sidebarPrefsRouter,
   spacePoint: spacePointRouter,
   user: userRouter,
@@ -118,22 +126,27 @@ export const router = {
   support: supportRouter,
   scripts: scriptsRouter,
   linnker: linnkerRouter,
-  spaceStation: spaceStationRouter,
+  spaceStation: base.use(appRouterPermission("space-station")).router(spaceStationRouter),
   worldEvents: worldEventsRouter,
   companySpace: companySpaceRouter,
   profileCard: profileCardRouter,
   spaceHelp: spaceHelpRouter,
   nasaRoute: nasaRouteRouter,
-  pages: pagesRouter,
+  pages: base.use(appRouterPermission("nasa-pages", { skipPathSegments: ["registerVisit"] })).router(pagesRouter),
   inviteLinks: inviteLinksRouter,
   workspaceWorkflow: workspaceWorkflowRoutes,
   reminder: reminderRouter,
   partner: partnerRouter,
   metaAds: metaAdsRouter,
   metaMcp: metaMcpRouter,
-  astro: astroRoutes,
-  nerp: nerpRouter,
-  commentsApp: commentsRouter,
+  astro: base.use(appRouterPermission("astro")).router(astroRoutes),
+  // Integração/conexão do NERP têm chave própria ("catalogo-online").
+  nerp: base
+    .use(appRouterPermission("nerp", { skipPathSegments: ["catalogIntegration", "disconnect", "getConnectionStatus"] }))
+    .router(nerpRouter),
+  starFriends: starFriendsRouter,
+  /** App COMMENTS — automações de Instagram nativas (spec 0024). */
+  comments: base.use(appRouterPermission("comments")).router(commentsRouter),
   livekit: livekitRouter,
   stickers: stickersRouter,
   brand: brandRouter,
@@ -142,4 +155,9 @@ export const router = {
   workflowClipboard: workflowClipboardRouter,
   /** Analytics do WhatsApp Oficial (Meta Cloud) — mensagens/conversas/custo. */
   whatsappAnalytics: whatsappAnalyticsRouter,
+  /** Campanhas — disparos WhatsApp API Oficial (MM API). Ver docs/campanhas-overview.md. */
+  campanhas: campanhasRouter,
+  trafego: trafegoRouter,
+  /** Integração com processos administrativos do SEI por lead. */
+  sei: seiRouter,
 };
